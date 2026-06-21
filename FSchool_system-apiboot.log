@@ -1,0 +1,98 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] -------------------------< com.srms:srms-api >--------------------------
+[INFO] Building srms-api 0.0.1-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] >>> spring-boot:3.2.5:run (default-cli) > test-compile @ srms-api >>>
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ srms-api ---
+[INFO] Copying 1 resource from src\main\resources to target\classes
+[INFO] Copying 0 resource from src\main\resources to target\classes
+[INFO] 
+[INFO] --- compiler:3.11.0:compile (default-compile) @ srms-api ---
+[INFO] Nothing to compile - all classes are up to date
+[INFO] 
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ srms-api ---
+[INFO] skip non existing resourceDirectory F:\School_system-api\src\test\resources
+[INFO] 
+[INFO] --- compiler:3.11.0:testCompile (default-testCompile) @ srms-api ---
+[INFO] No sources to compile
+[INFO] 
+[INFO] <<< spring-boot:3.2.5:run (default-cli) < test-compile @ srms-api <<<
+[INFO] 
+[INFO] 
+[INFO] --- spring-boot:3.2.5:run (default-cli) @ srms-api ---
+[INFO] Attaching agents: []
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+ :: Spring Boot ::                (v3.2.5)
+
+2026-05-24T06:51:08.155+02:00  INFO 21164 --- [srms-api] [           main] com.srms.api.SrmsApiApplication          : Starting SrmsApiApplication using Java 21.0.11 with PID 21164 (F:\School_system-api\target\classes started by chris in F:\School_system-api)
+2026-05-24T06:51:08.157+02:00  INFO 21164 --- [srms-api] [           main] com.srms.api.SrmsApiApplication          : No active profile set, falling back to 1 default profile: "default"
+2026-05-24T06:51:09.284+02:00  INFO 21164 --- [srms-api] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-05-24T06:51:09.518+02:00  INFO 21164 --- [srms-api] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 225 ms. Found 38 JPA repository interfaces.
+2026-05-24T06:51:10.266+02:00  INFO 21164 --- [srms-api] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+2026-05-24T06:51:10.284+02:00  INFO 21164 --- [srms-api] [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-05-24T06:51:10.284+02:00  INFO 21164 --- [srms-api] [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.20]
+2026-05-24T06:51:10.378+02:00  INFO 21164 --- [srms-api] [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-05-24T06:51:10.379+02:00  INFO 21164 --- [srms-api] [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 2167 ms
+2026-05-24T06:51:10.621+02:00  INFO 21164 --- [srms-api] [           main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-05-24T06:51:10.737+02:00  INFO 21164 --- [srms-api] [           main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.4.4.Final
+2026-05-24T06:51:10.794+02:00  INFO 21164 --- [srms-api] [           main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-05-24T06:51:11.158+02:00  INFO 21164 --- [srms-api] [           main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-05-24T06:51:11.201+02:00  INFO 21164 --- [srms-api] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-05-24T06:51:11.465+02:00  INFO 21164 --- [srms-api] [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@1640f20f
+2026-05-24T06:51:11.467+02:00  INFO 21164 --- [srms-api] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-05-24T06:51:11.519+02:00  WARN 21164 --- [srms-api] [           main] org.hibernate.orm.deprecation            : HHH90000025: PostgreSQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-05-24T06:51:13.576+02:00  INFO 21164 --- [srms-api] [           main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-05-24T06:51:13.713+02:00  INFO 21164 --- [srms-api] [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-05-24T06:51:14.085+02:00  INFO 21164 --- [srms-api] [           main] o.s.d.j.r.query.QueryEnhancerFactory     : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-05-24T06:51:15.494+02:00  WARN 21164 --- [srms-api] [           main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-05-24T06:51:15.515+02:00  WARN 21164 --- [srms-api] [           main] .s.s.UserDetailsServiceAutoConfiguration : 
+
+Using generated security password: a712aa43-fbc5-4421-b610-381fd76bff26
+
+This generated password is for development use only. Your security configuration must be updated before running your application in production.
+
+2026-05-24T06:51:16.107+02:00  INFO 21164 --- [srms-api] [           main] o.s.s.web.DefaultSecurityFilterChain     : Will secure any request with [org.springframework.security.web.session.DisableEncodeUrlFilter@8da0e54, org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter@7af8b02, org.springframework.security.web.context.SecurityContextHolderFilter@1bf64e55, org.springframework.security.web.header.HeaderWriterFilter@7ce00985, org.springframework.web.filter.CorsFilter@1eb9a3ef, org.springframework.security.web.authentication.logout.LogoutFilter@ff5aa42, com.srms.api.security.JwtAuthenticationFilter@3aed69dd, org.springframework.security.web.savedrequest.RequestCacheAwareFilter@50f95c8, org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter@5710598e, org.springframework.security.web.authentication.AnonymousAuthenticationFilter@5d706283, org.springframework.security.web.session.SessionManagementFilter@287c4e96, org.springframework.security.web.access.ExceptionTranslationFilter@6ac9b6d, org.springframework.security.web.access.intercept.AuthorizationFilter@50cbe633]
+2026-05-24T06:51:16.601+02:00  WARN 21164 --- [srms-api] [           main] ConfigServletWebServerApplicationContext : Exception encountered during context initialization - cancelling refresh attempt: org.springframework.context.ApplicationContextException: Failed to start bean 'webServerStartStop'
+2026-05-24T06:51:16.612+02:00  INFO 21164 --- [srms-api] [           main] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-05-24T06:51:16.614+02:00  INFO 21164 --- [srms-api] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+2026-05-24T06:51:16.619+02:00  INFO 21164 --- [srms-api] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
+2026-05-24T06:51:16.639+02:00  INFO 21164 --- [srms-api] [           main] .s.b.a.l.ConditionEvaluationReportLogger : 
+
+Error starting ApplicationContext. To display the condition evaluation report re-run your application with 'debug' enabled.
+2026-05-24T06:51:16.660+02:00 ERROR 21164 --- [srms-api] [           main] o.s.b.d.LoggingFailureAnalysisReporter   : 
+
+***************************
+APPLICATION FAILED TO START
+***************************
+
+Description:
+
+Web server failed to start. Port 8080 was already in use.
+
+Action:
+
+Identify and stop the process that's listening on port 8080 or configure this application to listen on another port.
+
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD FAILURE
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  12.932 s
+[INFO] Finished at: 2026-05-24T06:51:16+02:00
+[INFO] ------------------------------------------------------------------------
+[ERROR] Failed to execute goal org.springframework.boot:spring-boot-maven-plugin:3.2.5:run (default-cli) on project srms-api: Process terminated with exit code: 1 -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoExecutionException

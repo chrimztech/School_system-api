@@ -1,0 +1,16 @@
+{
+  "properties": [
+    {
+      "name": "app.admin.email",
+      "type": "java.lang.String",
+      "description": "Email address for the bootstrap system administrator account. Only used when no account with this email exists.",
+      "defaultValue": "admin@srms.zm"
+    },
+    {
+      "name": "app.admin.password",
+      "type": "java.lang.String",
+      "description": "Initial password for the bootstrap system administrator account. Only applied when the account is first created.",
+      "defaultValue": "Admin@SRMS2024!"
+    }
+  ]
+}
