@@ -40,6 +40,7 @@ public class SchoolDto {
     private String accentColor;
     private String fontFamily;
     private String logoUrl;
+    private String faviconUrl;
     private String reportFooter;
     private String registrationNo;
     private String tpinNo;

@@ -95,6 +95,7 @@ public class SchoolService {
                 .fontFamily(school.getFontFamily())
                 .reportFooter(school.getReportFooter())
                 .logoUrl(school.getLogoUrl())
+                .faviconUrl(school.getFaviconUrl())
                 .registrationNo(school.getRegistrationNo())
                 .tpinNo(school.getTpinNo())
                 .moeCode(school.getMoeCode())
@@ -166,6 +167,7 @@ public class SchoolService {
         if (dto.getFontFamily() != null) school.setFontFamily(dto.getFontFamily());
         if (dto.getReportFooter() != null) school.setReportFooter(dto.getReportFooter());
         if (dto.getLogoUrl() != null) school.setLogoUrl(dto.getLogoUrl());
+        if (dto.getFaviconUrl() != null) school.setFaviconUrl(dto.getFaviconUrl());
         if (dto.getRegistrationNo() != null) school.setRegistrationNo(dto.getRegistrationNo());
         if (dto.getTpinNo() != null) school.setTpinNo(dto.getTpinNo());
         if (dto.getMoeCode() != null) school.setMoeCode(dto.getMoeCode());

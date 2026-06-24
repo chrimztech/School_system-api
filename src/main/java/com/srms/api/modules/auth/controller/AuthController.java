@@ -11,6 +11,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
@@ -25,5 +27,17 @@ public class AuthController {
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<UserDto>> me(Authentication auth) {
         return ResponseEntity.ok(ApiResponse.ok(authService.getMe(auth.getName())));
+    }
+
+    @PostMapping("/change-password")
+    public ResponseEntity<ApiResponse<Void>> changePassword(
+            Authentication auth,
+            @RequestBody Map<String, String> body) {
+        authService.changePassword(
+                auth.getName(),
+                body.get("currentPassword"),
+                body.get("newPassword")
+        );
+        return ResponseEntity.ok(ApiResponse.ok("Password changed successfully", null));
     }
 }

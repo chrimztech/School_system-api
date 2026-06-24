@@ -88,3 +88,5 @@ This generated password is for development use only. Your security configuration
 2026-06-21T19:37:16.509+02:00  INFO 42116 --- [srms-api] [nio-8080-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
 2026-06-21T19:37:16.509+02:00  INFO 42116 --- [srms-api] [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
 2026-06-21T19:37:16.514+02:00  INFO 42116 --- [srms-api] [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 5 ms
+2026-06-22T08:32:14.581+02:00  WARN 42116 --- [srms-api] [l-1 housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=7h17m59s69ms845µs800ns).
+2026-06-22T11:16:48.119+02:00  WARN 42116 --- [srms-api] [l-1 housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=4m30s802ms254µs500ns).

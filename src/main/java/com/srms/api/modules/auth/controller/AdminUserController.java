@@ -45,7 +45,8 @@ public class AdminUserController {
                 body.get("role"),
                 body.get("schoolId"),
                 body.get("phone"),
-                body.containsKey("active") ? Boolean.valueOf(body.get("active")) : null
+                body.containsKey("active") ? Boolean.valueOf(body.get("active")) : null,
+                body.get("password")
         );
         return ResponseEntity.ok(ApiResponse.ok(updated));
     }

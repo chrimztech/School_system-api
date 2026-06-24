@@ -60,6 +60,10 @@ public class AuthService {
     }
 
     public UserDto updateUser(String userId, String roleValue, String schoolId, String phone, Boolean active) {
+        return updateUser(userId, roleValue, schoolId, phone, active, null);
+    }
+
+    public UserDto updateUser(String userId, String roleValue, String schoolId, String phone, Boolean active, String rawPassword) {
         AppUser user = findUserEntity(userId);
         AppUser.UserRole nextRole = roleValue == null || roleValue.isBlank() ? user.getRole() : parseRole(roleValue);
         String resolvedSchoolId = nextRole == AppUser.UserRole.SUPER_ADMIN
@@ -74,8 +78,23 @@ public class AuthService {
         user.setSchoolId(resolvedSchoolId);
         if (phone != null) user.setPhone(phone);
         if (active != null) user.setActive(active);
+        if (rawPassword != null && !rawPassword.isBlank()) {
+            user.setPasswordHash(passwordEncoder.encode(rawPassword));
+        }
 
         return toDto(userRepository.save(user));
+    }
+
+    public void changePassword(String userId, String currentPassword, String newPassword) {
+        AppUser user = findUserEntity(userId);
+        if (!passwordEncoder.matches(currentPassword, user.getPasswordHash())) {
+            throw new BusinessException("Current password is incorrect");
+        }
+        if (newPassword == null || newPassword.length() < 8) {
+            throw new BusinessException("New password must be at least 8 characters");
+        }
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
     }
 
     public void deactivateUser(String userId) {
