@@ -10,6 +10,7 @@ import java.util.Optional;
 @Repository
 public interface SchoolRepository extends JpaRepository<School, String> {
     Optional<School> findByShortCode(String shortCode);
+    Optional<School> findBySlugAndActiveTrue(String slug);
     List<School> findByActiveTrue();
     List<School> findBySubscriptionStatus(School.SubscriptionStatus status);
 

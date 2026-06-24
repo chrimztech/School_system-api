@@ -23,6 +23,8 @@ public class HostelAllocation extends BaseEntity {
     private LocalDate checkOutDate;
     private String status; // ACTIVE, VACATED
     @Builder.Default
+    @Column(columnDefinition = "varchar(3) default 'IN'") private String signInStatus = "IN"; // IN, OUT
+    @Builder.Default
     @Column(columnDefinition = "boolean default false") private Boolean keyIssued = false;
     private LocalDate keyIssuedDate;
     private String emergencyContactName;

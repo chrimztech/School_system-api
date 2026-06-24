@@ -34,6 +34,26 @@ public class SchoolService {
         return toDto(findEntityById(id));
     }
 
+    @Transactional(readOnly = true)
+    public java.util.Optional<java.util.Map<String, Object>> findPublicBySlug(String slug) {
+        return schoolRepository.findBySlugAndActiveTrue(slug).map(s -> {
+            java.util.Map<String, Object> m = new java.util.LinkedHashMap<>();
+            m.put("id", s.getId());
+            m.put("name", s.getName());
+            m.put("shortCode", s.getShortCode());
+            m.put("slug", s.getSlug());
+            m.put("primaryColor", s.getPrimaryColor());
+            m.put("secondaryColor", s.getSecondaryColor());
+            m.put("logoUrl", s.getLogoUrl());
+            m.put("faviconUrl", s.getFaviconUrl());
+            m.put("district", s.getDistrict());
+            m.put("province", s.getProvince());
+            m.put("type", s.getType());
+            m.put("motto", s.getMotto());
+            return m;
+        });
+    }
+
     public SchoolDto create(SchoolDto dto) {
         School school = new School();
         mapDto(school, dto);
@@ -130,6 +150,7 @@ public class SchoolService {
                 .notes(school.getSubscriptionNotes())
                 .offlineMode(school.getOfflineMode())
                 .active(school.isActive())
+                .slug(school.getSlug())
                 .levels(readJson(school.getLevelsJson(), new TypeReference<List<String>>() {}, new ArrayList<>()))
                 .campuses(readJson(school.getCampusesJson(), new TypeReference<List<SchoolDto.CampusDto>>() {}, new ArrayList<>()))
                 .features(readJson(school.getFeaturesJson(), new TypeReference<Map<String, Boolean>>() {}, new LinkedHashMap<>()))
@@ -207,6 +228,7 @@ public class SchoolService {
         if (dto.getLevels() != null) school.setLevelsJson(writeJson(dto.getLevels()));
         if (dto.getCampuses() != null) school.setCampusesJson(writeJson(dto.getCampuses()));
         if (dto.getFeatures() != null) school.setFeaturesJson(writeJson(dto.getFeatures()));
+        if (dto.getSlug() != null) school.setSlug(dto.getSlug().trim().toLowerCase().replaceAll("[^a-z0-9-]", "-").replaceAll("-+", "-").replaceAll("^-|-$", ""));
     }
 
     private void applyDefaults(School school) {
@@ -245,6 +267,16 @@ public class SchoolService {
         }
         if (school.getOfflineMode() == null) {
             school.setOfflineMode(Boolean.FALSE);
+        }
+        if (school.getSlug() == null || school.getSlug().isBlank()) {
+            String base = (school.getShortCode() == null ? school.getName() : school.getShortCode())
+                    .toLowerCase().replaceAll("[^a-z0-9]", "-").replaceAll("-+", "-").replaceAll("^-|-$", "");
+            // Ensure uniqueness by appending id suffix if another school has the same slug
+            String candidate = base;
+            if (schoolRepository.findBySlugAndActiveTrue(candidate).isPresent()) {
+                candidate = base + "-" + (school.getId() != null ? school.getId().substring(0, 6) : String.valueOf(System.currentTimeMillis()).substring(8));
+            }
+            school.setSlug(candidate);
         }
         if (school.getLevelsJson() == null || school.getLevelsJson().isBlank()) {
             school.setLevelsJson(writeJson(defaultLevelsForType(school.getType())));

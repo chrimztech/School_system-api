@@ -15,4 +15,6 @@ public class UserDto {
     private String schoolId;
     private String phone;
     private boolean active;
+    private boolean notifyEmail;
+    private boolean notifySms;
 }

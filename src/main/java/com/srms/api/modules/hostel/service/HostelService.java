@@ -53,4 +53,10 @@ public class HostelService {
         leave.setStatus(status);
         return leaveRepo.save(leave);
     }
+
+    public HostelAllocation updateSignInStatus(String schoolId, String id, String status) {
+        HostelAllocation allocation = allocationRepo.findById(id).filter(a -> a.getSchoolId().equals(schoolId)).orElseThrow();
+        allocation.setSignInStatus(status);
+        return allocationRepo.save(allocation);
+    }
 }

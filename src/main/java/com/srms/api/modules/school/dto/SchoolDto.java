@@ -76,6 +76,7 @@ public class SchoolDto {
     private String notes;
     private Boolean offlineMode;
     private Boolean active;
+    private String slug;
     private List<String> levels;
     private List<CampusDto> campuses;
     private Map<String, Boolean> features;

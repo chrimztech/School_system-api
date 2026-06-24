@@ -28,4 +28,5 @@ public class HostelController {
     @GetMapping("/leaves") public ResponseEntity<ApiResponse<List<HostelLeave>>> getLeaves(@PathVariable String schoolId) { return ResponseEntity.ok(ApiResponse.ok(hostelService.getLeaves(schoolId))); }
     @PostMapping("/leaves") public ResponseEntity<ApiResponse<HostelLeave>> createLeave(@PathVariable String schoolId, @RequestBody HostelLeave leave) { return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(hostelService.createLeave(schoolId, leave))); }
     @PatchMapping("/leaves/{id}/status") public ResponseEntity<ApiResponse<HostelLeave>> updateLeaveStatus(@PathVariable String schoolId, @PathVariable String id, @RequestParam String status) { return ResponseEntity.ok(ApiResponse.ok(hostelService.updateLeaveStatus(schoolId, id, status))); }
+    @PatchMapping("/allocations/{id}/sign-in") public ResponseEntity<ApiResponse<HostelAllocation>> updateSignIn(@PathVariable String schoolId, @PathVariable String id, @RequestParam String status) { return ResponseEntity.ok(ApiResponse.ok(hostelService.updateSignInStatus(schoolId, id, status))); }
 }

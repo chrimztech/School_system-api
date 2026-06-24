@@ -105,5 +105,8 @@ public class School extends BaseEntity {
 
     private boolean active = true;
 
+    @Column(unique = true)
+    private String slug; // e.g. "greenfields-secondary" — used for subdomain routing
+
     public enum SubscriptionStatus { trial, active, past_due, suspended }
 }

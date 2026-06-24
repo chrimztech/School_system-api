@@ -64,6 +64,10 @@ public class AuthService {
     }
 
     public UserDto updateUser(String userId, String roleValue, String schoolId, String phone, Boolean active, String rawPassword) {
+        return updateUser(userId, roleValue, schoolId, phone, active, rawPassword, null, null);
+    }
+
+    public UserDto updateUser(String userId, String roleValue, String schoolId, String phone, Boolean active, String rawPassword, Boolean notifyEmail, Boolean notifySms) {
         AppUser user = findUserEntity(userId);
         AppUser.UserRole nextRole = roleValue == null || roleValue.isBlank() ? user.getRole() : parseRole(roleValue);
         String resolvedSchoolId = nextRole == AppUser.UserRole.SUPER_ADMIN
@@ -81,6 +85,8 @@ public class AuthService {
         if (rawPassword != null && !rawPassword.isBlank()) {
             user.setPasswordHash(passwordEncoder.encode(rawPassword));
         }
+        if (notifyEmail != null) user.setNotifyEmail(notifyEmail);
+        if (notifySms != null) user.setNotifySms(notifySms);
 
         return toDto(userRepository.save(user));
     }
@@ -123,6 +129,8 @@ public class AuthService {
                 .schoolId(user.getSchoolId())
                 .phone(user.getPhone())
                 .active(user.isActive())
+                .notifyEmail(user.isNotifyEmail())
+                .notifySms(user.isNotifySms())
                 .build();
     }
 

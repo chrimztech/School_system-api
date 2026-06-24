@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
+import java.util.Map;
 @RestController @RequestMapping("/api/schools/{schoolId}/assessments") @RequiredArgsConstructor
 public class AssessmentController {
     private final AssessmentService assessmentService;
@@ -18,4 +19,5 @@ public class AssessmentController {
     @GetMapping("/{id}/results") public ResponseEntity<ApiResponse<List<AssessmentResult>>> getResults(@PathVariable String schoolId, @PathVariable String id) { return ResponseEntity.ok(ApiResponse.ok(assessmentService.getResults(id))); }
     @PostMapping("/{id}/results") public ResponseEntity<ApiResponse<AssessmentResult>> saveResult(@PathVariable String schoolId, @PathVariable String id, @RequestBody AssessmentResult result) { result.setSchoolId(schoolId); result.setAssessmentId(id); return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(assessmentService.saveResult(result))); }
     @GetMapping("/student/{studentId}") public ResponseEntity<ApiResponse<List<AssessmentResult>>> getStudentResults(@PathVariable String schoolId, @PathVariable String studentId) { return ResponseEntity.ok(ApiResponse.ok(assessmentService.getStudentResults(schoolId, studentId))); }
+    @GetMapping("/student/{studentId}/enriched") public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getEnrichedStudentResults(@PathVariable String schoolId, @PathVariable String studentId) { return ResponseEntity.ok(ApiResponse.ok(assessmentService.getEnrichedStudentResults(schoolId, studentId))); }
 }

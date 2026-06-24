@@ -6,7 +6,10 @@ import com.srms.api.modules.assessment.repository.AssessmentRepository;
 import com.srms.api.modules.assessment.repository.ResultRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 @Service @RequiredArgsConstructor
 public class AssessmentService {
     private final AssessmentRepository assessmentRepository;
@@ -18,4 +21,27 @@ public class AssessmentService {
     public List<AssessmentResult> getResults(String assessmentId) { return resultRepository.findByAssessmentId(assessmentId); }
     public AssessmentResult saveResult(AssessmentResult result) { return resultRepository.save(result); }
     public List<AssessmentResult> getStudentResults(String schoolId, String studentId) { return resultRepository.findBySchoolIdAndStudentId(schoolId, studentId); }
+
+    public List<Map<String, Object>> getEnrichedStudentResults(String schoolId, String studentId) {
+        List<AssessmentResult> results = resultRepository.findBySchoolIdAndStudentId(schoolId, studentId);
+        return results.stream().map(r -> {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", r.getId());
+            m.put("assessmentId", r.getAssessmentId());
+            m.put("score", r.getScore());
+            m.put("grade", r.getGrade());
+            m.put("remarks", r.getRemarks());
+            m.put("absent", r.isAbsent());
+            assessmentRepository.findById(r.getAssessmentId()).ifPresent(a -> {
+                m.put("title", a.getTitle());
+                m.put("subjectName", a.getSubjectName());
+                m.put("type", a.getType() != null ? a.getType().name() : null);
+                m.put("maxScore", a.getMaxScore());
+                m.put("date", a.getDate() != null ? a.getDate().toString() : null);
+                m.put("weight", a.getWeight());
+                m.put("published", a.isPublished());
+            });
+            return m;
+        }).collect(Collectors.toList());
+    }
 }
