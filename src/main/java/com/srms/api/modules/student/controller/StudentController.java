@@ -1,6 +1,7 @@
 package com.srms.api.modules.student.controller;
 
 import com.srms.api.common.ApiResponse;
+import com.srms.api.modules.academic.service.AcademicService;
 import com.srms.api.modules.student.dto.StudentDto;
 import com.srms.api.modules.student.entity.Student;
 import com.srms.api.modules.student.service.StudentService;
@@ -15,10 +16,16 @@ import java.util.List;
 @RequiredArgsConstructor
 public class StudentController {
     private final StudentService studentService;
+    private final AcademicService academicService;
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<Student>>> getAll(@PathVariable String schoolId) {
-        return ResponseEntity.ok(ApiResponse.ok(studentService.findAll(schoolId)));
+    public ResponseEntity<ApiResponse<List<Student>>> getAll(
+            @PathVariable String schoolId,
+            @RequestParam(required = false) String teacherEmail) {
+        List<Student> result = (teacherEmail != null && !teacherEmail.isBlank())
+            ? academicService.findStudentsByTeacherEmail(schoolId, teacherEmail)
+            : studentService.findAll(schoolId);
+        return ResponseEntity.ok(ApiResponse.ok(result));
     }
 
     @GetMapping("/by-guardian")

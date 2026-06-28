@@ -20,6 +20,11 @@ public class AssessmentService {
     public Assessment update(String id, String schoolId, Assessment dto) { Assessment a = findById(id, schoolId); if (dto.getTitle() != null) a.setTitle(dto.getTitle()); if (dto.getMaxScore() > 0) a.setMaxScore(dto.getMaxScore()); if (dto.getWeight() > 0) a.setWeight(dto.getWeight()); a.setPublished(dto.isPublished()); return assessmentRepository.save(a); }
     public List<AssessmentResult> getResults(String assessmentId) { return resultRepository.findByAssessmentId(assessmentId); }
     public AssessmentResult saveResult(AssessmentResult result) { return resultRepository.save(result); }
+    public List<AssessmentResult> saveResultsBulk(String assessmentId, String schoolId, List<AssessmentResult> results) {
+        results.forEach(r -> { r.setAssessmentId(assessmentId); r.setSchoolId(schoolId); });
+        resultRepository.deleteByAssessmentId(assessmentId);
+        return resultRepository.saveAll(results);
+    }
     public List<AssessmentResult> getStudentResults(String schoolId, String studentId) { return resultRepository.findBySchoolIdAndStudentId(schoolId, studentId); }
 
     public List<Map<String, Object>> getEnrichedStudentResults(String schoolId, String studentId) {

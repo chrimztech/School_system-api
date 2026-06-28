@@ -22,11 +22,26 @@ public class AttendanceService {
     }
     public List<AttendanceRecord> markAttendance(String schoolId, AttendanceDto dto) {
         return dto.getEntries().stream().map(entry -> {
-            AttendanceRecord record = AttendanceRecord.builder()
-                    .schoolId(schoolId).studentId(entry.getStudentId())
-                    .classId(dto.getClassId()).date(dto.getDate())
-                    .status(AttendanceRecord.AttendanceStatus.valueOf(entry.getStatus()))
-                    .remarks(entry.getRemarks()).build();
+            List<AttendanceRecord> existing = attendanceRepository
+                    .findBySchoolIdAndStudentIdAndDate(schoolId, entry.getStudentId(), dto.getDate());
+            AttendanceRecord record;
+            if (!existing.isEmpty()) {
+                record = existing.get(0);
+                if (existing.size() > 1) {
+                    attendanceRepository.deleteAll(existing.subList(1, existing.size()));
+                }
+            } else {
+                record = AttendanceRecord.builder()
+                        .schoolId(schoolId)
+                        .studentId(entry.getStudentId())
+                        .classId(dto.getClassId())
+                        .date(dto.getDate())
+                        .build();
+            }
+            record.setStudentName(entry.getStudentName());
+            record.setClassName(dto.getClassName());
+            record.setStatus(AttendanceRecord.AttendanceStatus.valueOf(entry.getStatus()));
+            record.setRemarks(entry.getRemarks());
             return attendanceRepository.save(record);
         }).collect(Collectors.toList());
     }

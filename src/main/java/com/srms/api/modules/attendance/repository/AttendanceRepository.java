@@ -8,6 +8,7 @@ import java.util.List;
 @Repository
 public interface AttendanceRepository extends JpaRepository<AttendanceRecord, String> {
     List<AttendanceRecord> findBySchoolIdAndDate(String schoolId, LocalDate date);
+    List<AttendanceRecord> findBySchoolIdAndStudentIdAndDate(String schoolId, String studentId, LocalDate date);
     List<AttendanceRecord> findBySchoolIdAndStudentIdOrderByDateDesc(String schoolId, String studentId);
     List<AttendanceRecord> findBySchoolIdAndClassIdAndDate(String schoolId, String classId, LocalDate date);
     List<AttendanceRecord> findBySchoolIdAndDateBetween(String schoolId, LocalDate from, LocalDate to);

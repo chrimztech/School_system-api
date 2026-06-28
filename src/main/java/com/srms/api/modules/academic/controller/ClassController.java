@@ -18,8 +18,13 @@ public class ClassController {
 
     // ── Classes ──────────────────────────────────────────────────
     @GetMapping
-    public ResponseEntity<ApiResponse<List<SchoolClass>>> getAll(@PathVariable String schoolId) {
-        return ResponseEntity.ok(ApiResponse.ok(academicService.findAllClasses(schoolId)));
+    public ResponseEntity<ApiResponse<List<SchoolClass>>> getAll(
+            @PathVariable String schoolId,
+            @RequestParam(required = false) String teacherEmail) {
+        List<SchoolClass> result = (teacherEmail != null && !teacherEmail.isBlank())
+            ? academicService.findClassesByTeacherEmail(schoolId, teacherEmail)
+            : academicService.findAllClasses(schoolId);
+        return ResponseEntity.ok(ApiResponse.ok(result));
     }
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<SchoolClass>> getById(@PathVariable String schoolId, @PathVariable String id) {

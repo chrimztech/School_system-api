@@ -3,11 +3,18 @@ package com.srms.api.modules.academic.service;
 import com.srms.api.exception.ResourceNotFoundException;
 import com.srms.api.modules.academic.entity.*;
 import com.srms.api.modules.academic.repository.*;
+import com.srms.api.modules.student.entity.Student;
+import com.srms.api.modules.student.repository.StudentRepository;
+import com.srms.api.modules.teacher.repository.TeacherRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service @RequiredArgsConstructor @Transactional
 public class AcademicService {
@@ -16,9 +23,41 @@ public class AcademicService {
     private final ClassEnrolmentRepository enrolmentRepository;
     private final TeacherClassSubjectRepository teacherSubjectRepository;
     private final DepartmentRepository departmentRepository;
+    private final TeacherRepository teacherRepository;
+    private final StudentRepository studentRepository;
 
     // ── Classes ──────────────────────────────────────────────────
     public List<SchoolClass> findAllClasses(String schoolId) { return classRepository.findBySchoolIdAndActiveTrue(schoolId); }
+
+    /** Returns only the classes a teacher is assigned to (subject teacher or homeroom teacher). */
+    public List<SchoolClass> findClassesByTeacherEmail(String schoolId, String email) {
+        return teacherRepository.findByEmailAndSchoolId(email, schoolId).map(teacher -> {
+            String tid = teacher.getId();
+            Set<String> classIds = new HashSet<>();
+            teacherSubjectRepository.findByTeacherIdAndSchoolId(tid, schoolId)
+                .forEach(a -> classIds.add(a.getClassId()));
+            List<SchoolClass> all = classRepository.findBySchoolIdAndActiveTrue(schoolId);
+            // Also include classes where the teacher is the homeroom (class) teacher
+            all.stream()
+                .filter(c -> tid.equals(c.getClassTeacherId()))
+                .map(SchoolClass::getId)
+                .forEach(classIds::add);
+            if (classIds.isEmpty()) return List.<SchoolClass>of();
+            return all.stream().filter(c -> classIds.contains(c.getId())).collect(Collectors.toList());
+        }).orElse(List.of());
+    }
+
+    /** Returns only the students enrolled in the teacher's classes. */
+    public List<Student> findStudentsByTeacherEmail(String schoolId, String email) {
+        List<SchoolClass> teacherClasses = findClassesByTeacherEmail(schoolId, email);
+        if (teacherClasses.isEmpty()) return List.of();
+        Set<String> studentIds = teacherClasses.stream()
+            .flatMap(c -> enrolmentRepository.findByClassIdAndSchoolId(c.getId(), schoolId).stream())
+            .map(ClassEnrolment::getStudentId)
+            .collect(Collectors.toCollection(HashSet::new));
+        if (studentIds.isEmpty()) return List.of();
+        return studentRepository.findBySchoolIdAndIdIn(schoolId, new ArrayList<>(studentIds));
+    }
     public SchoolClass findClassById(String id, String schoolId) { return classRepository.findByIdAndSchoolId(id, schoolId).orElseThrow(() -> new ResourceNotFoundException("Class", id)); }
     public SchoolClass createClass(String schoolId, SchoolClass dto) { dto.setSchoolId(schoolId); dto.setActive(true); return classRepository.save(dto); }
     public SchoolClass updateClass(String id, String schoolId, SchoolClass dto) {

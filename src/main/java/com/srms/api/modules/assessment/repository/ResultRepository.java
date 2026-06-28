@@ -7,4 +7,5 @@ import java.util.List;
 public interface ResultRepository extends JpaRepository<AssessmentResult, String> {
     List<AssessmentResult> findByAssessmentId(String assessmentId);
     List<AssessmentResult> findBySchoolIdAndStudentId(String schoolId, String studentId);
+    void deleteByAssessmentId(String assessmentId);
 }

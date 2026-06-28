@@ -8,6 +8,7 @@ import java.util.Optional;
 public interface TeacherRepository extends JpaRepository<Teacher, String> {
     List<Teacher> findBySchoolId(String schoolId);
     Optional<Teacher> findByIdAndSchoolId(String id, String schoolId);
+    Optional<Teacher> findByEmailAndSchoolId(String email, String schoolId);
     List<Teacher> findBySchoolIdAndStatus(String schoolId, Teacher.TeacherStatus status);
     long countBySchoolIdAndStatus(String schoolId, Teacher.TeacherStatus status);
 }

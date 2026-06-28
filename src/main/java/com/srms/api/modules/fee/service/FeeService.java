@@ -9,6 +9,7 @@ import com.srms.api.modules.fee.repository.FeeDiscountRuleRepository;
 import com.srms.api.modules.fee.repository.FeeLevyRepository;
 import com.srms.api.modules.fee.repository.FeePaymentRepository;
 import com.srms.api.modules.fee.repository.FeeStructureRepository;
+import com.srms.api.modules.student.repository.StudentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,9 +23,20 @@ public class FeeService {
     private final FeeLevyRepository levyRepository;
     private final FeeDiscountRuleRepository discountRuleRepository;
     private final FeeBillingRuleRepository billingRuleRepository;
+    private final StudentRepository studentRepository;
     public List<FeePayment> getAllPayments(String schoolId) { return paymentRepository.findBySchoolIdOrderByPaymentDateDesc(schoolId); }
     public List<FeePayment> getStudentPayments(String schoolId, String studentId) { return paymentRepository.findBySchoolIdAndStudentId(schoolId, studentId); }
-    public FeePayment recordPayment(String schoolId, FeePayment payment) { payment.setSchoolId(schoolId); payment.setStatus(FeePayment.PaymentStatus.completed); return paymentRepository.save(payment); }
+    public FeePayment recordPayment(String schoolId, FeePayment payment) {
+        payment.setSchoolId(schoolId);
+        payment.setStatus(FeePayment.PaymentStatus.completed);
+        FeePayment saved = paymentRepository.save(payment);
+        studentRepository.findByIdAndSchoolId(payment.getStudentId(), schoolId).ifPresent(student -> {
+            double newBalance = Math.max(0.0, student.getFeeBalance() - payment.getAmount());
+            student.setFeeBalance(newBalance);
+            studentRepository.save(student);
+        });
+        return saved;
+    }
     public double getTotalCollected(String schoolId) { Double sum = paymentRepository.sumCollected(schoolId); return sum != null ? sum : 0; }
     public List<FeeStructure> getFeeStructures(String schoolId) { return structureRepository.findBySchoolIdOrderByAcademicYearDescGradeFromAscTermAsc(schoolId); }
     public FeeStructure createFeeStructure(String schoolId, FeeStructure fs) { fs.setSchoolId(schoolId); return structureRepository.save(fs); }
