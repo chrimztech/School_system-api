@@ -10,6 +10,8 @@ import com.srms.api.modules.communication.repository.MessageRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -22,6 +24,7 @@ public class CommunicationService {
 
     private final AnnouncementRepository announcementRepository;
     private final MessageRepository messageRepository;
+    private final NotificationService notificationService;
 
     // ── Announcements ──────────────────────────────────────────────────────────
 
@@ -40,8 +43,20 @@ public class CommunicationService {
                 .publishDate(dto.getPublishDate() != null ? dto.getPublishDate() : LocalDate.now())
                 .createdBy(dto.getCreatedBy())
                 .active(true)
+                .priority(dto.getPriority())
+                .language(dto.getLanguage())
+                .requireAck(dto.isRequireAck())
+                .scheduledAt(dto.getScheduledAt())
                 .build();
-        return announcementRepository.save(ann);
+        Announcement saved = announcementRepository.save(ann);
+        // Dispatch after transaction commits so the row is visible to async thread
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                notificationService.dispatch(saved);
+            }
+        });
+        return saved;
     }
 
     public Announcement updateAnnouncement(String schoolId, String id, AnnouncementDto dto) {
@@ -54,6 +69,10 @@ public class CommunicationService {
         ann.setChannels(dto.getChannels());
         if (dto.getPublishDate() != null) ann.setPublishDate(dto.getPublishDate());
         ann.setActive(dto.isActive());
+        ann.setPriority(dto.getPriority());
+        ann.setLanguage(dto.getLanguage());
+        ann.setRequireAck(dto.isRequireAck());
+        ann.setScheduledAt(dto.getScheduledAt());
         return announcementRepository.save(ann);
     }
 
@@ -93,6 +112,14 @@ public class CommunicationService {
         msg.setReplyBody(replyBody);
         msg.setStatus("REPLIED");
         msg.setRepliedAt(LocalDateTime.now());
+        return messageRepository.save(msg);
+    }
+
+    public Message closeMessage(String schoolId, String id) {
+        Message msg = messageRepository.findById(id)
+                .filter(m -> m.getSchoolId().equals(schoolId))
+                .orElseThrow(() -> new ResourceNotFoundException("Message", id));
+        msg.setStatus("CLOSED");
         return messageRepository.save(msg);
     }
 }

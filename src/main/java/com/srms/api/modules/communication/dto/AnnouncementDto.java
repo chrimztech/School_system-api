@@ -14,4 +14,8 @@ public class AnnouncementDto {
     private LocalDate publishDate;
     private String createdBy;
     private boolean active;
+    private String priority;
+    private String language;
+    private boolean requireAck;
+    private String scheduledAt;
 }

@@ -77,4 +77,11 @@ public class CommunicationController {
         String replyBody = body.get("replyBody");
         return ResponseEntity.ok(ApiResponse.ok(communicationService.replyToMessage(schoolId, id, replyBody)));
     }
+
+    @PutMapping("/messages/{id}/close")
+    public ResponseEntity<ApiResponse<Message>> closeMessage(
+            @PathVariable String schoolId,
+            @PathVariable String id) {
+        return ResponseEntity.ok(ApiResponse.ok(communicationService.closeMessage(schoolId, id)));
+    }
 }

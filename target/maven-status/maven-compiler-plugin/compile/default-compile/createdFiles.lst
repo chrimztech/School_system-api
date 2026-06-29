@@ -236,6 +236,7 @@ com\srms\api\modules\vendor\service\VendorService.class
 com\srms\api\modules\strategic\entity\StrategicReview$StrategicReviewBuilder.class
 com\srms\api\modules\communication\repository\MessageRepository.class
 com\srms\api\modules\duty\entity\DutyAssignment.class
+com\srms\api\modules\communication\service\NotificationService.class
 com\srms\api\modules\development\entity\TrainingRecord.class
 com\srms\api\modules\communication\controller\CommunicationController.class
 com\srms\api\modules\school\repository\SchoolRepository.class
@@ -389,4 +390,5 @@ com\srms\api\modules\auth\dto\UserDto$UserDtoBuilder.class
 com\srms\api\modules\hr\entity\LeaveRequest.class
 com\srms\api\modules\platform\controller\PlatformWorkspaceController.class
 com\srms\api\modules\dashboard\dto\DashboardStats$FeeStats$FeeStatsBuilder.class
+com\srms\api\modules\communication\service\CommunicationService$1.class
 com\srms\api\modules\visitor\controller\VisitorController.class
