@@ -1,6 +1,7 @@
 com\srms\api\modules\lostfound\repository\LostFoundRepository.class
 com\srms\api\modules\report\repository\ReportCommentRepository.class
 com\srms\api\modules\compliance\entity\ComplianceItem.class
+com\srms\api\modules\ptc\controller\PtcController.class
 com\srms\api\modules\academic\entity\ClassEnrolment$ClassEnrolmentBuilder.class
 com\srms\api\modules\auth\entity\AppUser.class
 com\srms\api\modules\development\entity\StaffDevelopmentPlan.class
@@ -53,6 +54,7 @@ com\srms\api\modules\academic\repository\ClassEnrolmentRepository.class
 com\srms\api\modules\assessment\entity\AssessmentResult.class
 com\srms\api\modules\bursary\entity\BursaryAward$BursaryAwardBuilder.class
 com\srms\api\modules\discipline\repository\DisciplineRepository.class
+com\srms\api\modules\ptc\entity\PtcMeeting$PtcMeetingBuilder.class
 com\srms\api\modules\auth\controller\UserController.class
 com\srms\api\modules\auth\entity\AppUser$UserRole.class
 com\srms\api\modules\calendar\controller\CalendarController.class
@@ -79,6 +81,7 @@ com\srms\api\modules\teacher\entity\Teacher$TeacherBuilder.class
 com\srms\api\modules\transport\service\TransportService.class
 com\srms\api\modules\audit\service\AuditService.class
 com\srms\api\modules\alumni\repository\AlumniRepository.class
+com\srms\api\modules\ptc\repository\PtcMeetingRepository.class
 com\srms\api\modules\calendar\service\CalendarService.class
 com\srms\api\modules\facility\controller\FacilityController.class
 com\srms\api\modules\exam\controller\ExamController.class
@@ -86,11 +89,13 @@ com\srms\api\modules\school\entity\School$SchoolBuilder.class
 com\srms\api\modules\hostel\entity\HostelRoom$HostelRoomBuilder.class
 com\srms\api\modules\hostel\repository\HostelRoomRepository.class
 com\srms\api\modules\fee\service\FeeService.class
+com\srms\api\modules\ptc\service\PtcService.class
 com\srms\api\modules\accounting\entity\Expense$ExpenseBuilder.class
 com\srms\api\modules\platform\entity\PlatformWorkspace.class
 com\srms\api\modules\report\entity\ReportComment.class
 com\srms\api\modules\exam\entity\ExamPaper$ExamPaperBuilder.class
 com\srms\api\modules\hostel\controller\HostelController.class
+com\srms\api\modules\ptc\entity\PtcMeeting.class
 com\srms\api\modules\inventory\service\InventoryService.class
 com\srms\api\modules\hr\entity\StaffRecord$ContractType.class
 com\srms\api\modules\welfare\entity\CounselingSession$CounselingSessionBuilder.class
@@ -141,6 +146,7 @@ com\srms\api\modules\payroll\entity\PayrollRun$PayrollRunBuilder.class
 com\srms\api\modules\library\entity\LibraryLoan$Status.class
 com\srms\api\modules\strategic\entity\ActionItem$ActionItemBuilder.class
 com\srms\api\modules\transport\repository\TransportEnrolmentRepository.class
+com\srms\api\modules\ptc\repository\PtcMemberRepository.class
 com\srms\api\modules\hostel\entity\HostelRoom.class
 com\srms\api\modules\bursary\repository\BursaryRepository.class
 com\srms\api\modules\hostel\repository\HostelAllocationRepository.class
@@ -149,7 +155,9 @@ com\srms\api\modules\auth\dto\UserDto.class
 com\srms\api\modules\auth\entity\CustomRolePermission.class
 com\srms\api\modules\integration\service\IntegrationService.class
 com\srms\api\modules\student\entity\Student$StudentBuilder.class
+com\srms\api\modules\ptc\entity\PtcTransaction.class
 com\srms\api\modules\academic\controller\DepartmentController.class
+com\srms\api\modules\ptc\entity\PtcMember.class
 com\srms\api\modules\academic\entity\SchoolClass.class
 com\srms\api\modules\inventory\controller\InventoryController.class
 com\srms\api\modules\health\entity\HealthVisit.class
@@ -199,6 +207,7 @@ com\srms\api\modules\strategic\entity\StrategicReview.class
 com\srms\api\modules\fee\entity\FeePayment.class
 com\srms\api\modules\fee\repository\FeePaymentRepository.class
 com\srms\api\modules\alumni\entity\AlumniRecord$AlumniRecordBuilder.class
+com\srms\api\modules\ptc\repository\PtcTransactionRepository.class
 com\srms\api\modules\strategic\entity\StrategicGoal$StrategicGoalBuilder.class
 com\srms\api\modules\academic\entity\Department.class
 com\srms\api\modules\bursary\entity\BursaryAward.class
@@ -207,6 +216,7 @@ com\srms\api\modules\bursary\repository\BursaryRenewalRepository.class
 com\srms\api\modules\development\repository\StaffAppraisalRepository.class
 com\srms\api\modules\bursary\entity\BursaryRenewal.class
 com\srms\api\modules\platform\entity\PlatformWorkspace$PlatformWorkspaceBuilder.class
+com\srms\api\modules\ptc\entity\PtcTransaction$PtcTransactionBuilder.class
 com\srms\api\modules\reporting\service\ReportingService.class
 com\srms\api\modules\communication\entity\Message.class
 com\srms\api\modules\procurement\entity\ProcurementRequest$ProcurementRequestBuilder.class
@@ -358,6 +368,7 @@ com\srms\api\modules\billing\entity\BillingInvoice$BillingInvoiceBuilder.class
 com\srms\api\modules\fee\entity\FeeBillingRule.class
 com\srms\api\modules\academic\entity\SchoolClass$SchoolClassBuilder.class
 com\srms\api\modules\auth\entity\CustomRolePermission$CustomRolePermissionBuilder.class
+com\srms\api\modules\ptc\entity\PtcMember$PtcMemberBuilder.class
 com\srms\api\modules\bursary\entity\BursaryApplication.class
 com\srms\api\modules\risk\entity\RiskEntry$RiskEntryBuilder.class
 com\srms\api\modules\procurement\entity\ProcurementRequest.class
