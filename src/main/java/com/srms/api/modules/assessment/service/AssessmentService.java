@@ -6,11 +6,12 @@ import com.srms.api.modules.assessment.repository.AssessmentRepository;
 import com.srms.api.modules.assessment.repository.ResultRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-@Service @RequiredArgsConstructor
+@Service @RequiredArgsConstructor @Transactional
 public class AssessmentService {
     private final AssessmentRepository assessmentRepository;
     private final ResultRepository resultRepository;
