@@ -113,8 +113,12 @@ public class AuthService {
         return switch ((value == null ? "" : value).trim().toUpperCase().replace(" ", "_")) {
             case "SUPER_ADMIN" -> AppUser.UserRole.SUPER_ADMIN;
             case "TEACHER" -> AppUser.UserRole.TEACHER;
+            case "HOD", "HEAD_OF_DEPARTMENT" -> AppUser.UserRole.HOD;
             case "FINANCE", "FINANCE_OFFICER" -> AppUser.UserRole.FINANCE;
             case "PARENT" -> AppUser.UserRole.PARENT;
+            case "PRINCIPAL", "HEAD_MASTER", "HEADMASTER" -> AppUser.UserRole.PRINCIPAL;
+            case "DEPUTY_HEAD", "DEPUTY_HEADTEACHER" -> AppUser.UserRole.DEPUTY_HEAD;
+            case "CAREER_GUIDANCE", "CAREER_GUIDANCE_TEACHER" -> AppUser.UserRole.CAREER_GUIDANCE;
             default -> AppUser.UserRole.SCHOOL_ADMIN;
         };
     }

@@ -12,7 +12,7 @@ import java.util.Map;
 @RestController @RequestMapping("/api/schools/{schoolId}/assessments") @RequiredArgsConstructor
 public class AssessmentController {
     private final AssessmentService assessmentService;
-    @GetMapping public ResponseEntity<ApiResponse<List<Assessment>>> getAll(@PathVariable String schoolId) { return ResponseEntity.ok(ApiResponse.ok(assessmentService.findAll(schoolId))); }
+    @GetMapping public ResponseEntity<ApiResponse<List<Assessment>>> getAll(@PathVariable String schoolId, @RequestParam(required = false) String term, @RequestParam(required = false) String academicYear) { return ResponseEntity.ok(ApiResponse.ok(assessmentService.findAll(schoolId, term, academicYear))); }
     @GetMapping("/{id}") public ResponseEntity<ApiResponse<Assessment>> getById(@PathVariable String schoolId, @PathVariable String id) { return ResponseEntity.ok(ApiResponse.ok(assessmentService.findById(id, schoolId))); }
     @PostMapping public ResponseEntity<ApiResponse<Assessment>> create(@PathVariable String schoolId, @RequestBody Assessment dto) { return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(assessmentService.create(schoolId, dto))); }
     @PutMapping("/{id}") public ResponseEntity<ApiResponse<Assessment>> update(@PathVariable String schoolId, @PathVariable String id, @RequestBody Assessment dto) { return ResponseEntity.ok(ApiResponse.ok(assessmentService.update(id, schoolId, dto))); }

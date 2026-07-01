@@ -1,0 +1,27 @@
+package com.srms.api.modules.assessment.service;
+import com.srms.api.exception.BusinessException;
+import com.srms.api.modules.assessment.entity.GradeWeightConfig;
+import com.srms.api.modules.assessment.repository.GradeWeightConfigRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+@Service @RequiredArgsConstructor
+public class GradeWeightConfigService {
+    private final GradeWeightConfigRepository repository;
+
+    public GradeWeightConfig get(String schoolId) {
+        return repository.findBySchoolId(schoolId)
+                .orElse(GradeWeightConfig.builder().schoolId(schoolId).caWeight(30).midtermWeight(30).examWeight(40).build());
+    }
+
+    public GradeWeightConfig upsert(String schoolId, int caWeight, int midtermWeight, int examWeight) {
+        if (caWeight + midtermWeight + examWeight != 100) {
+            throw new BusinessException("Grade weights must sum to 100");
+        }
+        GradeWeightConfig config = repository.findBySchoolId(schoolId)
+                .orElse(GradeWeightConfig.builder().schoolId(schoolId).build());
+        config.setCaWeight(caWeight);
+        config.setMidtermWeight(midtermWeight);
+        config.setExamWeight(examWeight);
+        return repository.save(config);
+    }
+}

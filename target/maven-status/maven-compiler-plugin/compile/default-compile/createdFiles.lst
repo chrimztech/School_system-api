@@ -19,6 +19,7 @@ com\srms\api\modules\bursary\repository\BursaryApplicationRepository.class
 com\srms\api\modules\canteen\entity\MenuItem.class
 com\srms\api\modules\fee\entity\FeeDiscountRule$FeeDiscountRuleBuilder.class
 com\srms\api\modules\welfare\entity\WelfareCase.class
+com\srms\api\modules\assessment\service\GradeThresholds.class
 com\srms\api\modules\transport\entity\Vehicle.class
 com\srms\api\modules\dashboard\dto\DashboardStats$TrendPoint$TrendPointBuilder.class
 com\srms\api\modules\auth\repository\UserRepository.class
@@ -26,6 +27,7 @@ com\srms\api\modules\development\entity\StaffAppraisal$StaffAppraisalBuilder.cla
 com\srms\api\modules\procurement\controller\ProcurementController.class
 com\srms\api\modules\welfare\controller\WelfareController.class
 com\srms\api\modules\health\entity\HealthVisit$HealthVisitBuilder.class
+com\srms\api\modules\assessment\entity\TermGrade$TermGradeBuilder.class
 com\srms\api\modules\report\service\ReportCommentService.class
 com\srms\api\modules\platform\service\PlatformWorkspaceService$1.class
 com\srms\api\common\ApiResponse.class
@@ -96,6 +98,7 @@ com\srms\api\modules\health\repository\HealthRecordRepository.class
 com\srms\api\modules\hr\repository\StaffRepository.class
 com\srms\api\config\SystemAdminInitializer.class
 com\srms\api\modules\vendor\controller\VendorController.class
+com\srms\api\modules\assessment\entity\GradeWeightConfig$GradeWeightConfigBuilder.class
 com\srms\api\modules\strategic\service\StrategicPlanService.class
 com\srms\api\SrmsApiApplication.class
 com\srms\api\modules\auth\controller\CustomRoleController.class
@@ -132,6 +135,7 @@ com\srms\api\modules\school\dto\SchoolDto$CampusDto.class
 com\srms\api\modules\fee\entity\FeeStructure$FeeStructureBuilder.class
 com\srms\api\modules\teacher\entity\Teacher$TeacherStatus.class
 com\srms\api\modules\alumni\entity\AlumniRecord.class
+com\srms\api\modules\assessment\service\GradeWeightConfigService.class
 com\srms\api\modules\academic\entity\Department$DepartmentBuilder.class
 com\srms\api\modules\payroll\entity\PayrollRun$PayrollRunBuilder.class
 com\srms\api\modules\library\entity\LibraryLoan$Status.class
@@ -242,6 +246,7 @@ com\srms\api\modules\communication\controller\CommunicationController.class
 com\srms\api\modules\school\repository\SchoolRepository.class
 com\srms\api\modules\bursary\entity\BursaryApplication$BursaryApplicationBuilder.class
 com\srms\api\modules\payroll\service\PayrollService.class
+com\srms\api\modules\assessment\controller\TermGradeController.class
 com\srms\api\modules\academic\entity\TeacherClassSubject.class
 com\srms\api\modules\visitor\repository\VisitorLogRepository.class
 com\srms\api\modules\health\service\HealthService.class
@@ -279,6 +284,7 @@ com\srms\api\modules\payroll\entity\PayslipEntry$PayslipEntryBuilder.class
 com\srms\api\modules\fee\entity\FeeDiscountRule.class
 com\srms\api\modules\facility\entity\WorkOrder.class
 com\srms\api\modules\auth\dto\AuthResponse.class
+com\srms\api\modules\assessment\service\TermGradeService.class
 com\srms\api\modules\report\controller\ReportCommentController.class
 com\srms\api\modules\billing\controller\BillingInvoiceController.class
 com\srms\api\config\CorsConfig.class
@@ -307,6 +313,7 @@ com\srms\api\modules\activities\repository\ActivityEnrolmentRepository.class
 com\srms\api\modules\auth\service\AuthService.class
 com\srms\api\modules\dashboard\controller\PlatformDashboardController.class
 com\srms\api\modules\exam\repository\ExamRepository.class
+com\srms\api\modules\assessment\repository\TermGradeRepository.class
 com\srms\api\modules\hostel\entity\HostelLeave.class
 com\srms\api\modules\transport\controller\TransportController.class
 com\srms\api\modules\library\entity\LibraryLoan$BorrowerType.class
@@ -326,6 +333,7 @@ com\srms\api\modules\admission\entity\AdmissionApplication.class
 com\srms\api\modules\vendor\entity\Vendor$VendorBuilder.class
 com\srms\api\modules\activities\entity\ActivityEnrolment$ActivityEnrolmentBuilder.class
 com\srms\api\modules\payroll\entity\PayslipEntry.class
+com\srms\api\modules\assessment\repository\GradeWeightConfigRepository.class
 com\srms\api\modules\calendar\repository\CalendarEventRepository.class
 com\srms\api\modules\discipline\service\DisciplineService.class
 com\srms\api\modules\school\entity\School.class
@@ -338,9 +346,11 @@ com\srms\api\modules\health\controller\HealthController.class
 com\srms\api\modules\school\service\SchoolService$3.class
 com\srms\api\modules\integration\entity\IntegrationConnection$IntegrationConnectionBuilder.class
 com\srms\api\modules\compliance\controller\ComplianceController.class
+com\srms\api\modules\assessment\controller\GradeWeightConfigController.class
 com\srms\api\modules\welfare\repository\WelfareCaseRepository.class
 com\srms\api\modules\hostel\entity\HostelAllocation.class
 com\srms\api\modules\hostel\service\HostelService.class
+com\srms\api\modules\assessment\entity\GradeWeightConfig.class
 com\srms\api\modules\platform\repository\PlatformWorkspaceRepository.class
 com\srms\api\modules\transport\entity\TransportRoute.class
 com\srms\api\modules\school\service\SchoolService$1.class
@@ -377,6 +387,7 @@ com\srms\api\modules\bursary\entity\BursaryRenewal$BursaryRenewalBuilder.class
 com\srms\api\modules\transport\entity\TransportEnrolment$TransportEnrolmentBuilder.class
 com\srms\api\modules\welfare\repository\CounselingSessionRepository.class
 com\srms\api\modules\fee\entity\FeeLevy.class
+com\srms\api\modules\assessment\entity\TermGrade.class
 com\srms\api\modules\accounting\entity\Expense$ExpenseStatus.class
 com\srms\api\modules\platform\dto\PlatformWorkspaceDto.class
 com\srms\api\modules\attendance\dto\AttendanceSummary$ClassAttendance$ClassAttendanceBuilder.class

@@ -1,6 +1,7 @@
 F:\school\School_system-api\src\main\java\com\srms\api\modules\accounting\repository\JournalEntryRepository.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\alumni\repository\AlumniRepository.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\development\repository\StaffDevelopmentPlanRepository.java
+F:\school\School_system-api\src\main\java\com\srms\api\modules\assessment\controller\GradeWeightConfigController.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\report\service\ReportCommentService.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\fee\entity\FeeBillingRule.java
 F:\school\School_system-api\src\main\java\com\srms\api\exception\ResourceNotFoundException.java
@@ -43,6 +44,7 @@ F:\school\School_system-api\src\main\java\com\srms\api\modules\activities\entity
 F:\school\School_system-api\src\main\java\com\srms\api\modules\vendor\repository\VendorRepository.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\fee\entity\FeeStructure.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\attendance\service\AttendanceService.java
+F:\school\School_system-api\src\main\java\com\srms\api\modules\assessment\repository\GradeWeightConfigRepository.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\academic\repository\DepartmentRepository.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\bursary\entity\BursaryAward.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\fee\repository\FeeLevyRepository.java
@@ -143,16 +145,19 @@ F:\school\School_system-api\src\main\java\com\srms\api\modules\billing\service\B
 F:\school\School_system-api\src\main\java\com\srms\api\modules\incident\controller\IncidentController.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\accounting\repository\ExpenseRepository.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\bursary\controller\BursaryController.java
+F:\school\School_system-api\src\main\java\com\srms\api\modules\assessment\service\GradeWeightConfigService.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\auth\repository\CustomRoleRepository.java
 F:\school\School_system-api\src\main\java\com\srms\api\exception\BusinessException.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\procurement\service\ProcurementService.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\report\entity\ReportComment.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\alumni\entity\AlumniRecord.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\school\controller\SchoolController.java
+F:\school\School_system-api\src\main\java\com\srms\api\modules\assessment\controller\TermGradeController.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\hostel\repository\HostelLeaveRepository.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\platform\service\PlatformWorkspaceService.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\assessment\service\AssessmentService.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\activities\service\ActivitiesService.java
+F:\school\School_system-api\src\main\java\com\srms\api\modules\assessment\entity\GradeWeightConfig.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\visitor\repository\VisitorLogRepository.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\discipline\service\DisciplineService.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\procurement\controller\ProcurementController.java
@@ -161,6 +166,7 @@ F:\school\School_system-api\src\main\java\com\srms\api\modules\transport\reposit
 F:\school\School_system-api\src\main\java\com\srms\api\modules\attendance\controller\AttendanceController.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\discipline\repository\DisciplineRepository.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\canteen\entity\MenuItem.java
+F:\school\School_system-api\src\main\java\com\srms\api\modules\assessment\entity\TermGrade.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\teacher\service\TeacherService.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\hostel\entity\HostelAllocation.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\admission\controller\AdmissionController.java
@@ -190,6 +196,7 @@ F:\school\School_system-api\src\main\java\com\srms\api\modules\development\repos
 F:\school\School_system-api\src\main\java\com\srms\api\modules\fee\repository\FeeDiscountRuleRepository.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\academic\entity\TeacherClassSubject.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\strategic\entity\StrategicReview.java
+F:\school\School_system-api\src\main\java\com\srms\api\modules\assessment\service\GradeThresholds.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\strategic\repository\ActionItemRepository.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\auth\dto\UserDto.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\calendar\controller\CalendarController.java
@@ -250,12 +257,14 @@ F:\school\School_system-api\src\main\java\com\srms\api\modules\attendance\dto\At
 F:\school\School_system-api\src\main\java\com\srms\api\modules\communication\entity\Announcement.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\reporting\service\ReportingService.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\payroll\entity\PayslipEntry.java
+F:\school\School_system-api\src\main\java\com\srms\api\modules\assessment\service\TermGradeService.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\hostel\entity\HostelRoom.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\student\dto\StudentDto.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\academic\repository\SchoolClassRepository.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\auth\service\RoleService.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\communication\repository\AnnouncementRepository.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\health\repository\HealthRecordRepository.java
+F:\school\School_system-api\src\main\java\com\srms\api\modules\assessment\repository\TermGradeRepository.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\fee\entity\FeeDiscountRule.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\attendance\dto\AttendanceSummary.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\hr\entity\LeaveRequest.java

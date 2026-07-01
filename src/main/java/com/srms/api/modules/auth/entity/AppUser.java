@@ -23,5 +23,5 @@ public class AppUser extends BaseEntity {
     @Builder.Default private boolean active = true;
     @Builder.Default private boolean notifyEmail = true;
     @Builder.Default private boolean notifySms = false;
-    public enum UserRole { SUPER_ADMIN, SCHOOL_ADMIN, TEACHER, HOD, FINANCE, PARENT }
+    public enum UserRole { SUPER_ADMIN, SCHOOL_ADMIN, TEACHER, HOD, FINANCE, PARENT, PRINCIPAL, DEPUTY_HEAD, CAREER_GUIDANCE }
 }

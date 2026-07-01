@@ -25,5 +25,7 @@ public class Assessment extends BaseEntity {
     private String gradingScheme;
     private boolean retakeAllowed;
     private String markingCompletedBy;
-    public enum AssessmentType { exam, cat, project, homework, quiz, practical }
+    private String term;
+    private String academicYear;
+    public enum AssessmentType { exam, cat, project, homework, quiz, practical, midterm }
 }

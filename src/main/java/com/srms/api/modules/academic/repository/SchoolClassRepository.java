@@ -9,4 +9,5 @@ public interface SchoolClassRepository extends JpaRepository<SchoolClass, String
     List<SchoolClass> findBySchoolIdAndActiveTrue(String schoolId);
     Optional<SchoolClass> findByIdAndSchoolId(String id, String schoolId);
     List<SchoolClass> findBySchoolIdAndGrade(String schoolId, int grade);
+    Optional<SchoolClass> findBySchoolIdAndName(String schoolId, String name);
 }

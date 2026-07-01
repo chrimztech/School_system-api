@@ -15,9 +15,13 @@ public class AssessmentService {
     private final AssessmentRepository assessmentRepository;
     private final ResultRepository resultRepository;
     public List<Assessment> findAll(String schoolId) { return assessmentRepository.findBySchoolIdOrderByDateDesc(schoolId); }
+    public List<Assessment> findAll(String schoolId, String term, String academicYear) {
+        if (term == null && academicYear == null) return findAll(schoolId);
+        return assessmentRepository.findBySchoolIdAndTermAndAcademicYear(schoolId, term, academicYear);
+    }
     public Assessment findById(String id, String schoolId) { return assessmentRepository.findByIdAndSchoolId(id, schoolId).orElseThrow(() -> new ResourceNotFoundException("Assessment", id)); }
     public Assessment create(String schoolId, Assessment dto) { dto.setSchoolId(schoolId); return assessmentRepository.save(dto); }
-    public Assessment update(String id, String schoolId, Assessment dto) { Assessment a = findById(id, schoolId); if (dto.getTitle() != null) a.setTitle(dto.getTitle()); if (dto.getMaxScore() > 0) a.setMaxScore(dto.getMaxScore()); if (dto.getWeight() > 0) a.setWeight(dto.getWeight()); a.setPublished(dto.isPublished()); return assessmentRepository.save(a); }
+    public Assessment update(String id, String schoolId, Assessment dto) { Assessment a = findById(id, schoolId); if (dto.getTitle() != null) a.setTitle(dto.getTitle()); if (dto.getMaxScore() > 0) a.setMaxScore(dto.getMaxScore()); if (dto.getWeight() > 0) a.setWeight(dto.getWeight()); if (dto.getSubjectName() != null) a.setSubjectName(dto.getSubjectName()); if (dto.getSubjectId() != null) a.setSubjectId(dto.getSubjectId()); if (dto.getTerm() != null) a.setTerm(dto.getTerm()); if (dto.getAcademicYear() != null) a.setAcademicYear(dto.getAcademicYear()); a.setPublished(dto.isPublished()); return assessmentRepository.save(a); }
     public List<AssessmentResult> getResults(String assessmentId) { return resultRepository.findByAssessmentId(assessmentId); }
     public AssessmentResult saveResult(AssessmentResult result) { return resultRepository.save(result); }
     public List<AssessmentResult> saveResultsBulk(String assessmentId, String schoolId, List<AssessmentResult> results) {
