@@ -1,5 +1,6 @@
 package com.srms.api.modules.teacher.controller;
 import com.srms.api.common.ApiResponse;
+import com.srms.api.common.BulkImportResult;
 import com.srms.api.modules.teacher.dto.TeacherDto;
 import com.srms.api.modules.teacher.entity.Teacher;
 import com.srms.api.modules.teacher.service.TeacherService;
@@ -14,6 +15,7 @@ public class TeacherController {
     @GetMapping public ResponseEntity<ApiResponse<List<Teacher>>> getAll(@PathVariable String schoolId) { return ResponseEntity.ok(ApiResponse.ok(teacherService.findAll(schoolId))); }
     @GetMapping("/{id}") public ResponseEntity<ApiResponse<Teacher>> getById(@PathVariable String schoolId, @PathVariable String id) { return ResponseEntity.ok(ApiResponse.ok(teacherService.findById(id, schoolId))); }
     @PostMapping public ResponseEntity<ApiResponse<Teacher>> create(@PathVariable String schoolId, @RequestBody TeacherDto dto) { return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(teacherService.create(schoolId, dto))); }
+    @PostMapping("/bulk") public ResponseEntity<ApiResponse<BulkImportResult>> bulkCreate(@PathVariable String schoolId, @RequestBody List<TeacherDto> dtos) { return ResponseEntity.ok(ApiResponse.ok(teacherService.bulkCreate(schoolId, dtos))); }
     @PutMapping("/{id}") public ResponseEntity<ApiResponse<Teacher>> update(@PathVariable String schoolId, @PathVariable String id, @RequestBody TeacherDto dto) { return ResponseEntity.ok(ApiResponse.ok(teacherService.update(id, schoolId, dto))); }
     @DeleteMapping("/{id}") public ResponseEntity<ApiResponse<Void>> delete(@PathVariable String schoolId, @PathVariable String id) { teacherService.delete(id, schoolId); return ResponseEntity.ok(ApiResponse.ok("Teacher deactivated", null)); }
 }

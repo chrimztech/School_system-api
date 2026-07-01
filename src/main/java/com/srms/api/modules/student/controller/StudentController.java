@@ -1,6 +1,7 @@
 package com.srms.api.modules.student.controller;
 
 import com.srms.api.common.ApiResponse;
+import com.srms.api.common.BulkImportResult;
 import com.srms.api.modules.academic.service.AcademicService;
 import com.srms.api.modules.student.dto.StudentDto;
 import com.srms.api.modules.student.entity.Student;
@@ -43,6 +44,11 @@ public class StudentController {
     @PostMapping
     public ResponseEntity<ApiResponse<Student>> create(@PathVariable String schoolId, @RequestBody StudentDto dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(studentService.create(schoolId, dto)));
+    }
+
+    @PostMapping("/bulk")
+    public ResponseEntity<ApiResponse<BulkImportResult>> bulkCreate(@PathVariable String schoolId, @RequestBody List<StudentDto> dtos) {
+        return ResponseEntity.ok(ApiResponse.ok(studentService.bulkCreate(schoolId, dtos)));
     }
 
     @PutMapping("/{id}")

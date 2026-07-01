@@ -16,5 +16,5 @@ public class AttendanceRecord extends BaseEntity {
     private AttendanceStatus status;
     private String remarks;
     private String teacherId;
-    public enum AttendanceStatus { present, absent, late, excused }
+    public enum AttendanceStatus { present, absent, late, excused, sick }
 }

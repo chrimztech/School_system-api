@@ -4,7 +4,7 @@ import lombok.Data;
 import java.util.List;
 @Data @Builder
 public class AttendanceSummary {
-    private int present, absent, late, excused, total;
+    private int present, absent, late, excused, sick, total;
     private double rate;
     private List<ClassAttendance> byClass;
     @Data @Builder public static class ClassAttendance {

@@ -113,6 +113,7 @@ com\srms\api\modules\accounting\repository\ExpenseRepository.class
 com\srms\api\modules\assessment\repository\ResultRepository.class
 com\srms\api\modules\teacher\repository\TeacherRepository.class
 com\srms\api\modules\hr\entity\StaffRecord$StaffRecordBuilder.class
+com\srms\api\common\BulkImportResult$RowError.class
 com\srms\api\modules\library\entity\LibraryBook.class
 com\srms\api\modules\development\entity\StaffDevelopmentPlan$StaffDevelopmentPlanBuilder.class
 com\srms\api\modules\communication\dto\AnnouncementDto.class
@@ -343,6 +344,7 @@ com\srms\api\modules\admission\entity\AdmissionApplication.class
 com\srms\api\modules\vendor\entity\Vendor$VendorBuilder.class
 com\srms\api\modules\activities\entity\ActivityEnrolment$ActivityEnrolmentBuilder.class
 com\srms\api\modules\payroll\entity\PayslipEntry.class
+com\srms\api\common\BulkImportResult.class
 com\srms\api\modules\assessment\repository\GradeWeightConfigRepository.class
 com\srms\api\modules\calendar\repository\CalendarEventRepository.class
 com\srms\api\modules\discipline\service\DisciplineService.class

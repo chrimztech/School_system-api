@@ -1,5 +1,6 @@
 package com.srms.api.modules.student.service;
 
+import com.srms.api.common.BulkImportResult;
 import com.srms.api.exception.ResourceNotFoundException;
 import com.srms.api.modules.school.repository.SchoolRepository;
 import com.srms.api.modules.student.dto.StudentDto;
@@ -10,6 +11,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.Year;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -60,6 +62,20 @@ public class StudentService {
         }
         student.setFeeBalance(0);
         return studentRepository.save(student);
+    }
+
+    public BulkImportResult bulkCreate(String schoolId, List<StudentDto> dtos) {
+        int imported = 0;
+        List<BulkImportResult.RowError> errors = new ArrayList<>();
+        for (int i = 0; i < dtos.size(); i++) {
+            try {
+                create(schoolId, dtos.get(i));
+                imported++;
+            } catch (Exception e) {
+                errors.add(new BulkImportResult.RowError(i, e.getMessage()));
+            }
+        }
+        return new BulkImportResult(imported, errors);
     }
 
     public Student update(String id, String schoolId, StudentDto dto) {

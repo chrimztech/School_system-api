@@ -241,6 +241,7 @@ F:\school\School_system-api\src\main\java\com\srms\api\modules\hr\repository\Lea
 F:\school\School_system-api\src\main\java\com\srms\api\modules\payroll\repository\PayrollRunRepository.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\activities\repository\ActivityEnrolmentRepository.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\teacher\repository\TeacherRepository.java
+F:\school\School_system-api\src\main\java\com\srms\api\common\BulkImportResult.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\compliance\repository\ComplianceRepository.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\transport\repository\VehicleRepository.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\canteen\service\CanteenService.java

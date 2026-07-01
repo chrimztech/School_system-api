@@ -52,11 +52,12 @@ public class AttendanceService {
         long absent = records.stream().filter(r -> r.getStatus() == AttendanceRecord.AttendanceStatus.absent).count();
         long late = records.stream().filter(r -> r.getStatus() == AttendanceRecord.AttendanceStatus.late).count();
         long excused = records.stream().filter(r -> r.getStatus() == AttendanceRecord.AttendanceStatus.excused).count();
+        long sick = records.stream().filter(r -> r.getStatus() == AttendanceRecord.AttendanceStatus.sick).count();
         int total = records.size();
         double rate = total > 0 ? (double) present / total * 100 : 0;
         return AttendanceSummary.builder()
                 .present((int)present).absent((int)absent).late((int)late)
-                .excused((int)excused).total(total).rate(Math.round(rate * 10.0) / 10.0)
+                .excused((int)excused).sick((int)sick).total(total).rate(Math.round(rate * 10.0) / 10.0)
                 .build();
     }
 }

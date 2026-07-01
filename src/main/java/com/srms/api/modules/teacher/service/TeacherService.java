@@ -1,10 +1,12 @@
 package com.srms.api.modules.teacher.service;
+import com.srms.api.common.BulkImportResult;
 import com.srms.api.exception.ResourceNotFoundException;
 import com.srms.api.modules.teacher.dto.TeacherDto;
 import com.srms.api.modules.teacher.entity.Teacher;
 import com.srms.api.modules.teacher.repository.TeacherRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import java.util.ArrayList;
 import java.util.List;
 @Service
 @RequiredArgsConstructor
@@ -24,6 +26,20 @@ public class TeacherService {
         mapDto(t, dto);
         return teacherRepository.save(t);
     }
+    public BulkImportResult bulkCreate(String schoolId, List<TeacherDto> dtos) {
+        int imported = 0;
+        List<BulkImportResult.RowError> errors = new ArrayList<>();
+        for (int i = 0; i < dtos.size(); i++) {
+            try {
+                create(schoolId, dtos.get(i));
+                imported++;
+            } catch (Exception e) {
+                errors.add(new BulkImportResult.RowError(i, e.getMessage()));
+            }
+        }
+        return new BulkImportResult(imported, errors);
+    }
+
     public Teacher update(String id, String schoolId, TeacherDto dto) {
         Teacher t = findById(id, schoolId); mapDto(t, dto); return teacherRepository.save(t);
     }
