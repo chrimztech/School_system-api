@@ -4,9 +4,13 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.srms.api.exception.ResourceNotFoundException;
+import com.srms.api.modules.academic.repository.SchoolClassRepository;
 import com.srms.api.modules.school.dto.SchoolDto;
 import com.srms.api.modules.school.entity.School;
 import com.srms.api.modules.school.repository.SchoolRepository;
+import com.srms.api.modules.student.repository.StudentRepository;
+import com.srms.api.modules.teacher.entity.Teacher;
+import com.srms.api.modules.teacher.repository.TeacherRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +27,9 @@ import java.util.Map;
 public class SchoolService {
     private final SchoolRepository schoolRepository;
     private final ObjectMapper objectMapper;
+    private final StudentRepository studentRepository;
+    private final TeacherRepository teacherRepository;
+    private final SchoolClassRepository schoolClassRepository;
 
     @Transactional(readOnly = true)
     public List<SchoolDto> findAll() {
@@ -132,9 +139,9 @@ public class SchoolService {
                 .termEnd(school.getTermEnd())
                 .currentTerm(school.getCurrentTerm())
                 .currentYear(school.getCurrentYear())
-                .totalStudents(school.getTotalStudents())
-                .totalTeachers(school.getTotalTeachers())
-                .totalClasses(school.getTotalClasses())
+                .totalStudents((int) studentRepository.countActiveBySchoolId(school.getId()))
+                .totalTeachers((int) teacherRepository.countBySchoolIdAndStatus(school.getId(), Teacher.TeacherStatus.active))
+                .totalClasses((int) schoolClassRepository.countBySchoolIdAndActiveTrue(school.getId()))
                 .subscriptionStatus(school.getSubscriptionStatus() == null ? null : school.getSubscriptionStatus().name())
                 .planId(school.getPlanId())
                 .billingCycle(school.getBillingCycle())

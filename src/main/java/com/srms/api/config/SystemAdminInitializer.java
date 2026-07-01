@@ -32,7 +32,7 @@ public class SystemAdminInitializer implements CommandLineRunner {
             AppUser admin = new AppUser();
             admin.setEmail(adminEmail);
             admin.setPasswordHash(passwordEncoder.encode(adminPassword));
-            admin.setName("System Administrator");
+            admin.setName("Matakala Chrishent Mutondo");
             admin.setInitials("SA");
             admin.setRole(AppUser.UserRole.SUPER_ADMIN);
             admin.setActive(true);
