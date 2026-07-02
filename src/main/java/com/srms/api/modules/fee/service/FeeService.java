@@ -30,12 +30,16 @@ public class FeeService {
         payment.setSchoolId(schoolId);
         payment.setStatus(FeePayment.PaymentStatus.completed);
         FeePayment saved = paymentRepository.save(payment);
-        studentRepository.findByIdAndSchoolId(payment.getStudentId(), schoolId).ifPresent(student -> {
+        applyToStudentBalance(saved);
+        return saved;
+    }
+
+    public void applyToStudentBalance(FeePayment payment) {
+        studentRepository.findByIdAndSchoolId(payment.getStudentId(), payment.getSchoolId()).ifPresent(student -> {
             double newBalance = Math.max(0.0, student.getFeeBalance() - payment.getAmount());
             student.setFeeBalance(newBalance);
             studentRepository.save(student);
         });
-        return saved;
     }
     public double getTotalCollected(String schoolId) { Double sum = paymentRepository.sumCollected(schoolId); return sum != null ? sum : 0; }
     public List<FeeStructure> getFeeStructures(String schoolId) { return structureRepository.findBySchoolIdOrderByAcademicYearDescGradeFromAscTermAsc(schoolId); }

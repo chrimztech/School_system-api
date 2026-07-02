@@ -9,4 +9,5 @@ import java.util.List;
 public interface TransportEnrolmentRepository extends JpaRepository<TransportEnrolment, String> {
     List<TransportEnrolment> findBySchoolId(String schoolId);
     List<TransportEnrolment> findBySchoolIdAndStatus(String schoolId, TransportEnrolment.Status status);
+    List<TransportEnrolment> findBySchoolIdAndStudentId(String schoolId, String studentId);
 }

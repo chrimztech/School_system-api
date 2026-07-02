@@ -22,5 +22,10 @@ public class FeePayment extends BaseEntity {
     private String termPeriod;
     private boolean latePenaltyApplied;
     private double penaltyAmount;
+    private String gatewayProvider;
+    private String gatewayChannel;
+    private String gatewayTransactionId;
+    private String gatewayResponseCode;
+    @Column(length = 1000) private String gatewayRedirectUrl;
     public enum PaymentStatus { completed, pending, failed, reversed }
 }

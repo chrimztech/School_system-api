@@ -5,16 +5,18 @@ import com.srms.api.modules.assessment.entity.AssessmentResult;
 import com.srms.api.modules.assessment.repository.AssessmentRepository;
 import com.srms.api.modules.assessment.repository.ResultRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-@Service @RequiredArgsConstructor @Transactional
+@Service @RequiredArgsConstructor @Transactional @Slf4j
 public class AssessmentService {
     private final AssessmentRepository assessmentRepository;
     private final ResultRepository resultRepository;
+    private final TermGradeService termGradeService;
     public List<Assessment> findAll(String schoolId) { return assessmentRepository.findBySchoolIdOrderByDateDesc(schoolId); }
     public List<Assessment> findAll(String schoolId, String term, String academicYear) {
         if (term == null && academicYear == null) return findAll(schoolId);
@@ -28,7 +30,24 @@ public class AssessmentService {
     public List<AssessmentResult> saveResultsBulk(String assessmentId, String schoolId, List<AssessmentResult> results) {
         results.forEach(r -> { r.setAssessmentId(assessmentId); r.setSchoolId(schoolId); });
         resultRepository.deleteByAssessmentId(assessmentId);
-        return resultRepository.saveAll(results);
+        List<AssessmentResult> saved = resultRepository.saveAll(results);
+        assessmentRepository.findByIdAndSchoolId(assessmentId, schoolId).ifPresent(a -> {
+            a.setSubmitted(saved.size());
+            a.setTotal(saved.size());
+            assessmentRepository.save(a);
+            // Keep report cards populated automatically: recompute (but don't publish)
+            // this class/subject/term's TermGrade rows every time marks are saved, so
+            // staff always see current standing without a separate manual step. Parents
+            // still only see it once a teacher explicitly publishes (unchanged).
+            if (a.getClassId() != null && a.getSubjectName() != null && a.getTerm() != null && a.getAcademicYear() != null) {
+                try {
+                    termGradeService.compute(schoolId, a.getClassId(), a.getSubjectName(), a.getTerm(), a.getAcademicYear());
+                } catch (Exception e) {
+                    log.warn("Term grade auto-compute failed for assessment {}: {}", assessmentId, e.getMessage());
+                }
+            }
+        });
+        return saved;
     }
     public List<AssessmentResult> getStudentResults(String schoolId, String studentId) { return resultRepository.findBySchoolIdAndStudentId(schoolId, studentId); }
 

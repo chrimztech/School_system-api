@@ -173,6 +173,7 @@ com\srms\api\modules\health\entity\HealthRecord.class
 com\srms\api\modules\payroll\entity\PayrollRun.class
 com\srms\api\modules\strategic\repository\StrategicGoalRepository.class
 com\srms\api\modules\integration\repository\IntegrationConnectionRepository.class
+com\srms\api\modules\payment\dto\PaymentStatusView.class
 com\srms\api\modules\development\entity\StaffObservation.class
 com\srms\api\modules\development\controller\DevelopmentController.class
 com\srms\api\modules\canteen\service\CanteenService.class
@@ -197,6 +198,7 @@ com\srms\api\modules\student\entity\Student$StudentStatus.class
 com\srms\api\modules\incident\repository\IncidentRepository.class
 com\srms\api\modules\accounting\entity\JournalEntry$JournalStatus.class
 com\srms\api\modules\audit\controller\AuditController.class
+com\srms\api\modules\payment\controller\PaymentGatewayController.class
 com\srms\api\modules\activities\controller\ActivitiesController.class
 com\srms\api\modules\auth\controller\PlatformUserController.class
 com\srms\api\modules\facility\repository\WorkOrderRepository.class
@@ -224,6 +226,7 @@ com\srms\api\modules\procurement\entity\ProcurementRequest$ProcurementRequestBui
 com\srms\api\modules\school\controller\SchoolController.class
 com\srms\api\modules\calendar\entity\CalendarEvent.class
 com\srms\api\modules\accounting\entity\JournalEntry$JournalEntryBuilder.class
+com\srms\api\modules\payment\service\ZynlePayClient.class
 com\srms\api\modules\teacher\entity\Teacher.class
 com\srms\api\modules\transport\entity\Vehicle$Status.class
 com\srms\api\modules\activities\entity\ActivityEnrolment.class
@@ -274,6 +277,7 @@ com\srms\api\modules\auth\dto\AuthResponse$AuthResponseBuilder.class
 com\srms\api\modules\communication\entity\Message$MessageBuilder.class
 com\srms\api\modules\auth\repository\CustomRoleRepository.class
 com\srms\api\modules\incident\service\IncidentService.class
+com\srms\api\modules\payment\dto\CardPaymentRequest.class
 com\srms\api\modules\canteen\entity\CanteenOrder.class
 com\srms\api\modules\academic\controller\ClassController.class
 com\srms\api\modules\auth\entity\AppUser$AppUserBuilder.class
@@ -309,6 +313,8 @@ com\srms\api\modules\inventory\entity\InventoryItem$InventoryItemBuilder.class
 com\srms\api\modules\hostel\repository\HostelLeaveRepository.class
 com\srms\api\modules\dashboard\controller\DashboardController.class
 com\srms\api\modules\communication\dto\MessageDto.class
+com\srms\api\modules\payment\controller\PaymentCallbackController.class
+com\srms\api\modules\payment\dto\MomoPaymentRequest.class
 com\srms\api\modules\hr\controller\HrController.class
 com\srms\api\modules\auth\controller\AuthController.class
 com\srms\api\modules\academic\repository\DepartmentRepository.class
@@ -347,6 +353,7 @@ com\srms\api\modules\payroll\entity\PayslipEntry.class
 com\srms\api\common\BulkImportResult.class
 com\srms\api\modules\assessment\repository\GradeWeightConfigRepository.class
 com\srms\api\modules\calendar\repository\CalendarEventRepository.class
+com\srms\api\modules\payment\service\PaymentGatewayService.class
 com\srms\api\modules\discipline\service\DisciplineService.class
 com\srms\api\modules\school\entity\School.class
 com\srms\api\modules\school\dto\SchoolDto$CampusDto$CampusDtoBuilder.class

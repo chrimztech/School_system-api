@@ -76,4 +76,26 @@ public class TransportService {
         enrolment.setStatus(TransportEnrolment.Status.ACTIVE);
         return enrolmentRepository.save(enrolment);
     }
+
+    public TransportEnrolment updateEnrolment(String schoolId, String id, TransportEnrolment updated) {
+        TransportEnrolment enrolment = enrolmentRepository.findById(id)
+                .filter(e -> e.getSchoolId().equals(schoolId))
+                .orElseThrow(() -> new RuntimeException("Enrolment not found"));
+        enrolment.setRouteId(updated.getRouteId());
+        enrolment.setRouteName(updated.getRouteName());
+        enrolment.setPickupStop(updated.getPickupStop());
+        enrolment.setTerm(updated.getTerm());
+        enrolment.setAcademicYear(updated.getAcademicYear());
+        if (updated.getStatus() != null) {
+            enrolment.setStatus(updated.getStatus());
+        }
+        return enrolmentRepository.save(enrolment);
+    }
+
+    public void deleteEnrolment(String schoolId, String id) {
+        TransportEnrolment enrolment = enrolmentRepository.findById(id)
+                .filter(e -> e.getSchoolId().equals(schoolId))
+                .orElseThrow(() -> new RuntimeException("Enrolment not found"));
+        enrolmentRepository.delete(enrolment);
+    }
 }
