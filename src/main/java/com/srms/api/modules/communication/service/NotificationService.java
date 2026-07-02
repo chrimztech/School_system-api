@@ -103,6 +103,20 @@ public class NotificationService {
         }
     }
 
+    /** Best-effort payment confirmation — reuses the same email/SMS senders as announcements. */
+    public void sendPaymentReceipt(String guardianEmail, String guardianPhone, String studentName, double amount, String referenceNumber) {
+        String subject = "Payment received — " + studentName;
+        String body = String.format(
+                "We've received a payment of ZMW %.2f for %s (ref: %s). Thank you.",
+                amount, studentName, referenceNumber);
+        if (guardianEmail != null && !guardianEmail.isBlank()) {
+            sendEmails(List.of(guardianEmail), subject, body);
+        }
+        if (guardianPhone != null && !guardianPhone.isBlank()) {
+            sendSms(List.of(normalizePhone(guardianPhone)), body);
+        }
+    }
+
     private void sendEmails(List<String> recipients, String subject, String body) {
         if (recipients.isEmpty()) return;
         if (atApiKey.isBlank() && fromEmail.equals("noreply@srms.zm")) {

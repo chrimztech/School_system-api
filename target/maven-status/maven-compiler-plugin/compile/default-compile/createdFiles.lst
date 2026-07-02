@@ -321,6 +321,7 @@ com\srms\api\modules\academic\repository\DepartmentRepository.class
 com\srms\api\modules\dashboard\dto\DashboardStats$AttendanceStats.class
 com\srms\api\modules\assessment\repository\AssessmentRepository.class
 com\srms\api\modules\dashboard\dto\DashboardStats$PhaseEnrolment$PhaseEnrolmentBuilder.class
+com\srms\api\modules\payment\controller\PlatformPaymentController.class
 com\srms\api\modules\billing\service\BillingInvoiceService.class
 com\srms\api\modules\integration\controller\IntegrationController.class
 com\srms\api\modules\library\entity\LibraryLoan.class
@@ -346,6 +347,7 @@ com\srms\api\modules\academic\repository\TeacherClassSubjectRepository.class
 com\srms\api\modules\transport\repository\TransportRouteRepository.class
 com\srms\api\modules\compliance\service\ComplianceService.class
 com\srms\api\modules\attendance\dto\AttendanceSummary$ClassAttendance.class
+com\srms\api\modules\payment\dto\MerchantBalanceView.class
 com\srms\api\modules\admission\entity\AdmissionApplication.class
 com\srms\api\modules\vendor\entity\Vendor$VendorBuilder.class
 com\srms\api\modules\activities\entity\ActivityEnrolment$ActivityEnrolmentBuilder.class

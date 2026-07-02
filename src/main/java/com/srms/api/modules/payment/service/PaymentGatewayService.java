@@ -2,21 +2,26 @@ package com.srms.api.modules.payment.service;
 
 import com.srms.api.exception.BusinessException;
 import com.srms.api.exception.ResourceNotFoundException;
+import com.srms.api.modules.communication.service.NotificationService;
 import com.srms.api.modules.fee.entity.FeePayment;
 import com.srms.api.modules.fee.repository.FeePaymentRepository;
 import com.srms.api.modules.fee.service.FeeService;
 import com.srms.api.modules.payment.dto.CardPaymentRequest;
+import com.srms.api.modules.payment.dto.MerchantBalanceView;
 import com.srms.api.modules.payment.dto.MomoPaymentRequest;
 import com.srms.api.modules.payment.dto.PaymentStatusView;
 import com.srms.api.modules.student.entity.Student;
 import com.srms.api.modules.student.repository.StudentRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -30,6 +35,7 @@ public class PaymentGatewayService {
     private final FeePaymentRepository feePaymentRepository;
     private final StudentRepository studentRepository;
     private final FeeService feeService;
+    private final NotificationService notificationService;
 
     public Map<String, Object> initiateCardPayment(String schoolId, CardPaymentRequest req) {
         if (req.getAmount() <= 0) {
@@ -171,19 +177,82 @@ public class PaymentGatewayService {
         return new PaymentStatusView(payment.getStatus().name(), payment.getAmount(), payment.getStudentName(), payment.getReferenceNumber());
     }
 
+    /**
+     * Called from three places that can race each other on the same payment: the ZynlePay callback,
+     * the frontend's own status poll, and the scheduled reconciliation sweep below. The transition
+     * itself is an atomic "UPDATE ... WHERE status = 'pending'" so only one caller ever wins and
+     * applies the balance change — the others see 0 rows affected and back off.
+     */
     private void applyGatewayStatus(FeePayment payment, Map<String, Object> statusResponse) {
         String code = String.valueOf(statusResponse.get("response_code"));
-        payment.setGatewayResponseCode(code);
         if ("100".equals(code)) {
-            payment.setStatus(FeePayment.PaymentStatus.completed);
-            feePaymentRepository.save(payment);
-            feeService.applyToStudentBalance(payment);
+            transitionIfPending(payment, FeePayment.PaymentStatus.completed, code, true);
         } else if ("995".equals(code)) {
-            payment.setStatus(FeePayment.PaymentStatus.failed);
-            feePaymentRepository.save(payment);
+            transitionIfPending(payment, FeePayment.PaymentStatus.failed, code, false);
         } else {
-            // 990 (pending) or any other transient/unknown code — leave pending, just record the latest code.
-            feePaymentRepository.save(payment);
+            // 990 (pending) or any other transient/unknown code — no status change, just record the latest code.
+            feePaymentRepository.updateGatewayResponseCode(payment.getId(), code);
+            payment.setGatewayResponseCode(code);
         }
+    }
+
+    private void transitionIfPending(FeePayment payment, FeePayment.PaymentStatus newStatus, String code, boolean applyBalanceOnSuccess) {
+        int updated = feePaymentRepository.markStatusIfPending(payment.getId(), newStatus, code);
+        if (updated == 0) {
+            log.info("Payment {} already settled by a concurrent update — skipping duplicate transition", payment.getId());
+            feePaymentRepository.findById(payment.getId()).ifPresent(fresh -> {
+                payment.setStatus(fresh.getStatus());
+                payment.setGatewayResponseCode(fresh.getGatewayResponseCode());
+            });
+            return;
+        }
+        payment.setStatus(newStatus);
+        payment.setGatewayResponseCode(code);
+        if (applyBalanceOnSuccess) {
+            feeService.applyToStudentBalance(payment);
+            sendReceiptBestEffort(payment);
+        }
+    }
+
+    private void sendReceiptBestEffort(FeePayment payment) {
+        try {
+            studentRepository.findByIdAndSchoolId(payment.getStudentId(), payment.getSchoolId()).ifPresent(student ->
+                    notificationService.sendPaymentReceipt(student.getGuardianEmail(), student.getGuardianPhone(),
+                            payment.getStudentName(), payment.getAmount(), payment.getReferenceNumber()));
+        } catch (Exception e) {
+            log.warn("Failed to send payment receipt for {}: {}", payment.getId(), e.getMessage());
+        }
+    }
+
+    /**
+     * Safety net for the gap between "ZynlePay says it's initiated" and "ZynlePay tells us what
+     * happened": if the callback never arrives (dropped webhook, parent closed the app before the
+     * frontend's own poll could pick it up), this periodically re-checks any payment that's still
+     * pending a minute or more after it started.
+     */
+    @Scheduled(fixedDelay = 120_000)
+    public void reconcilePendingGatewayPayments() {
+        List<FeePayment> stale = feePaymentRepository.findByStatusAndGatewayProviderIsNotNullAndCreatedAtBefore(
+                FeePayment.PaymentStatus.pending, LocalDateTime.now().minusMinutes(1));
+        if (stale.isEmpty()) return;
+        log.info("Reconciling {} pending gateway payment(s)", stale.size());
+        for (FeePayment payment : stale) {
+            try {
+                Map<String, Object> statusResponse = zynlePayClient.checkStatus(payment.getReferenceNumber());
+                applyGatewayStatus(payment, statusResponse);
+            } catch (Exception e) {
+                log.warn("Reconciliation check failed for payment {}: {}", payment.getId(), e.getMessage());
+            }
+        }
+    }
+
+    public MerchantBalanceView getMerchantBalance() {
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("method", "checkBalance");
+        Map<String, Object> response = zynlePayClient.postToGateway(null, data);
+        return new MerchantBalanceView(
+                String.valueOf(response.getOrDefault("merchant_information", "")),
+                String.valueOf(response.getOrDefault("disbursement_balance", "0")),
+                String.valueOf(response.getOrDefault("collection_balance", "0")));
     }
 }
