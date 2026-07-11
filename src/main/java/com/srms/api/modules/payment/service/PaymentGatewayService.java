@@ -1,5 +1,6 @@
 package com.srms.api.modules.payment.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.srms.api.exception.BusinessException;
 import com.srms.api.exception.ResourceNotFoundException;
 import com.srms.api.modules.communication.service.NotificationService;
@@ -10,10 +11,13 @@ import com.srms.api.modules.payment.dto.CardPaymentRequest;
 import com.srms.api.modules.payment.dto.MerchantBalanceView;
 import com.srms.api.modules.payment.dto.MomoPaymentRequest;
 import com.srms.api.modules.payment.dto.PaymentStatusView;
+import com.srms.api.modules.payment.entity.PaymentCallbackLog;
+import com.srms.api.modules.payment.repository.PaymentCallbackLogRepository;
 import com.srms.api.modules.student.entity.Student;
 import com.srms.api.modules.student.repository.StudentRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,9 +37,11 @@ public class PaymentGatewayService {
 
     private final ZynlePayClient zynlePayClient;
     private final FeePaymentRepository feePaymentRepository;
+    private final PaymentCallbackLogRepository callbackLogRepository;
     private final StudentRepository studentRepository;
     private final FeeService feeService;
     private final NotificationService notificationService;
+    private final ObjectMapper objectMapper;
 
     public Map<String, Object> initiateCardPayment(String schoolId, CardPaymentRequest req) {
         if (req.getAmount() <= 0) {
@@ -135,46 +141,63 @@ public class PaymentGatewayService {
         return feePaymentRepository.save(payment);
     }
 
-    public void handleCallback(Map<String, Object> payload) {
+    /**
+     * Fast synchronous half of callback handling: persist the raw payload for audit purposes
+     * (so a disputed payment can always be traced to exactly what ZynlePay sent) and return
+     * immediately. ZynlePay expects a quick HTTP 200 — the actual gateway re-verification happens
+     * in {@link #verifyCallbackAsync}, kicked off by the controller right after this returns.
+     */
+    public String recordCallback(Map<String, Object> payload) {
         Object refObj = payload.get("reference_no");
-        if (refObj == null) {
-            log.warn("ZynlePay callback missing reference_no: {}", payload);
-            return;
+        String referenceNo = refObj != null ? String.valueOf(refObj) : null;
+        try {
+            callbackLogRepository.save(PaymentCallbackLog.builder()
+                    .referenceNumber(referenceNo)
+                    .responseCode(String.valueOf(payload.get("response_code")))
+                    .rawPayload(objectMapper.writeValueAsString(payload))
+                    .build());
+        } catch (Exception e) {
+            log.warn("Failed to persist raw ZynlePay callback payload: {}", e.getMessage());
         }
-        String referenceNo = String.valueOf(refObj);
+        if (referenceNo == null) {
+            log.warn("ZynlePay callback missing reference_no: {}", payload);
+        }
+        return referenceNo;
+    }
+
+    /** Don't trust the callback body's status directly — re-verify against the gateway. */
+    @Async
+    public void verifyCallbackAsync(String referenceNo) {
         FeePayment payment = feePaymentRepository.findByReferenceNumber(referenceNo).orElse(null);
         if (payment == null) {
             log.warn("ZynlePay callback for unknown reference_no: {}", referenceNo);
             return;
         }
-        if (payment.getStatus() != FeePayment.PaymentStatus.pending) {
-            log.info("ZynlePay callback for already-settled reference_no {} (status={}) — ignoring", referenceNo, payment.getStatus());
-            return;
-        }
-        // Don't trust the callback body's status directly — re-verify against the gateway.
-        Map<String, Object> statusResponse = zynlePayClient.checkStatus(referenceNo);
-        applyGatewayStatus(payment, statusResponse);
+        refreshIfPending(payment);
     }
 
     public FeePayment checkPaymentStatus(String schoolId, String paymentId) {
         FeePayment payment = feePaymentRepository.findById(paymentId)
                 .filter(p -> p.getSchoolId().equals(schoolId))
                 .orElseThrow(() -> new ResourceNotFoundException("Payment", paymentId));
-        if (payment.getStatus() == FeePayment.PaymentStatus.pending) {
-            Map<String, Object> statusResponse = zynlePayClient.checkStatus(payment.getReferenceNumber());
-            applyGatewayStatus(payment, statusResponse);
-        }
+        refreshIfPending(payment);
         return payment;
     }
 
     public PaymentStatusView publicStatus(String referenceNo) {
         FeePayment payment = feePaymentRepository.findByReferenceNumber(referenceNo)
                 .orElseThrow(() -> new ResourceNotFoundException("Payment reference not found"));
-        if (payment.getStatus() == FeePayment.PaymentStatus.pending) {
-            Map<String, Object> statusResponse = zynlePayClient.checkStatus(referenceNo);
-            applyGatewayStatus(payment, statusResponse);
-        }
+        refreshIfPending(payment);
         return new PaymentStatusView(payment.getStatus().name(), payment.getAmount(), payment.getStudentName(), payment.getReferenceNumber());
+    }
+
+    private void refreshIfPending(FeePayment payment) {
+        if (payment.getStatus() != FeePayment.PaymentStatus.pending) {
+            log.info("Skipping status refresh for {} — already {}", payment.getReferenceNumber(), payment.getStatus());
+            return;
+        }
+        Map<String, Object> statusResponse = zynlePayClient.checkStatus(payment.getReferenceNumber());
+        applyGatewayStatus(payment, statusResponse);
     }
 
     /**
@@ -238,8 +261,7 @@ public class PaymentGatewayService {
         log.info("Reconciling {} pending gateway payment(s)", stale.size());
         for (FeePayment payment : stale) {
             try {
-                Map<String, Object> statusResponse = zynlePayClient.checkStatus(payment.getReferenceNumber());
-                applyGatewayStatus(payment, statusResponse);
+                refreshIfPending(payment);
             } catch (Exception e) {
                 log.warn("Reconciliation check failed for payment {}: {}", payment.getId(), e.getMessage());
             }

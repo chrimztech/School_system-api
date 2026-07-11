@@ -39,7 +39,10 @@ public class PaymentCallbackController {
 
     private ResponseEntity<Map<String, String>> callback(Map<String, Object> payload) {
         try {
-            paymentGatewayService.handleCallback(payload);
+            String referenceNo = paymentGatewayService.recordCallback(payload);
+            if (referenceNo != null) {
+                paymentGatewayService.verifyCallbackAsync(referenceNo);
+            }
         } catch (Exception e) {
             log.error("Error processing ZynlePay callback: {}", e.getMessage(), e);
         }

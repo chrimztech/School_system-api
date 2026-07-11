@@ -3,6 +3,7 @@ package com.srms.api.modules.communication.entity;
 import com.srms.api.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.ColumnDefault;
 import java.time.LocalDate;
 
 @Entity
@@ -19,6 +20,7 @@ public class Announcement extends BaseEntity {
     private boolean active = true;
     private String priority;      // Normal, Urgent, Emergency
     private String language;      // English, Nyanja, Bemba, Tonga, Lozi
+    @ColumnDefault("false")
     private boolean requireAck;
     private String scheduledAt;   // ISO datetime string for scheduled sends
 }
