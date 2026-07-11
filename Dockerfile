@@ -11,4 +11,6 @@ FROM eclipse-temurin:17-jre-jammy
 WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
 EXPOSE 8080
+HEALTHCHECK --interval=5s --timeout=5s --retries=20 --start-period=20s \
+  CMD bash -c '</dev/tcp/localhost/${PORT:-8080}' || exit 1
 ENTRYPOINT ["java", "-jar", "app.jar"]
