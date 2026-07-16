@@ -1,0 +1,50 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(echo \"EXIT:$?\")",
+      "Bash(npx tsc *)",
+      "Bash(wc -l /tmp_tsc_out.txt)",
+      "Bash(grep -i \"departments.tsx\\\\|subjects.tsx\\\\|teachers.tsx\" /tmp_tsc_out.txt)",
+      "Bash(grep -i 'timetable.tsx\\\\|teachers\\\\.$staffId\\\\|departments.tsx\\\\|subjects.tsx' /tmp_tsc2.txt)",
+      "Bash(wc -l /tmp_tsc2.txt)",
+      "Bash(curl -s http://localhost:8090/actuator/health)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:8080)",
+      "Bash(curl -s -X POST http://localhost:8090/api/auth/login -H \"Content-Type: application/json\" -d '{\"email\":\"admin@srms.zm\",\"password\":\"Admin@SRMS2024!\"}')",
+      "Bash(find / -iname \"*chromium-cli*\" 2>/dev/null | head -5; find \"C:\\\\Users\\\\chris\\\\.claude\" -iname \"*chromium*\" 2>/dev/null | head -10; find \"C:\\\\Users\\\\chris\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\bundled-skills\" -maxdepth 2 -iname \"*chrom*\" 2>/dev/null)",
+      "Read(//f//**)",
+      "Bash(npx --no-install playwright --version)",
+      "Bash(curl -s -X PUT http://localhost:8090/api/schools/__TRACKED_VAR__/departments/__TRACKED_VAR__ -H 'Authorization: Bearer __CMDSUB_OUTPUT__' -H 'Content-Type: application/json' -d '{\"headTeacherId\":\"__TRACKED_VAR__\"}')",
+      "Bash(curl -s http://localhost:8090/api/schools/__TRACKED_VAR__/users -H 'Authorization: Bearer __CMDSUB_OUTPUT__')",
+      "Bash(PGPASSWORD=11111111 psql -h localhost -U postgres -d school_system -c \"\\\\d+ app_users\")",
+      "Bash(PGPASSWORD=11111111 psql -h localhost -U postgres -d school_system -c \"SELECT conname, pg_get_constraintdef\\(oid\\) FROM pg_constraint WHERE conname LIKE '%role%';\")",
+      "Bash(PGPASSWORD=11111111 psql -h localhost -U postgres -d school_system -c \"SELECT conname, pg_get_constraintdef\\(oid\\) FROM pg_constraint WHERE conname LIKE '%_check' AND conrelid = 'app_users'::regclass;\")",
+      "Bash(PGPASSWORD=11111111 psql -h localhost -U postgres -d school_system -c ' *)",
+      "Bash(curl -s http://localhost:8090/api/schools/__TRACKED_VAR__/classes/__TRACKED_VAR__/enrolments -H 'Authorization: Bearer __CMDSUB_OUTPUT__')",
+      "Bash(curl -s -X POST http://localhost:8090/api/schools/__TRACKED_VAR__/classes/__TRACKED_VAR__/enrolments -H 'Authorization: Bearer __CMDSUB_OUTPUT__' -H 'Content-Type: application/json' -d '{\"studentId\":\"__TRACKED_VAR__\",\"studentName\":\"qwerew wertytrew\",\"grade\":\"2\",\"academicYear\":\"2027\"}')",
+      "Bash(curl -s -o /dev/null -w 'HTTP %{http_code}\\\\n' -X POST http://localhost:8090/api/schools/__TRACKED_VAR__/classes/__TRACKED_VAR__/enrolments -H 'Authorization: Bearer __CMDSUB_OUTPUT__' -H 'Content-Type: application/json' -d '{\"studentId\":\"__TRACKED_VAR__\",\"studentName\":\"qwerew wertytrew\",\"grade\":\"2\",\"academicYear\":\"2027\"}')",
+      "Bash(curl -s -o /dev/null -w \"Frontend HTTP %{http_code}\\\\n\" http://localhost:8080)",
+      "Bash(netstat -ano)",
+      "Bash(rm -f /tmp/token.txt /tmp/backend.log /tmp/frontend.log /tmp/backend.pid /tmp/frontend.pid)",
+      "Bash(grep -i \"departments.tsx\" /tmp_tsc3.txt)",
+      "Bash(wc -l /tmp_tsc3.txt)",
+      "Bash(grep -i \"departments.tsx\" /tmp_tsc4.txt)",
+      "Bash(rm -f /tmp_tsc3.txt /tmp_tsc4.txt)",
+      "Bash(echo \"BACKEND COMPILE EXIT:$?\")",
+      "Bash(curl -s -o /dev/null -w \"8090 status: %{http_code}\\\\n\" http://localhost:8090/actuator/health)",
+      "Bash(curl -s -o /dev/null -w \"8080 status: %{http_code}\\\\n\" http://localhost:8080 --max-time 3)",
+      "Bash(nohup npm run dev)",
+      "Bash(disown)",
+      "Bash(curl -s -o /dev/null -w \"8080 status: %{http_code}\\\\n\" http://localhost:8080)",
+      "Bash(curl -s -w \"\\\\nHTTP %{http_code}\\\\n\" -X POST http://localhost:8090/api/auth/login -H \"Content-Type: application/json\" -d '{\"email\":\"admin@srms.zm\",\"password\":\"Admin@SRMS2024!\"}')",
+      "Bash(curl -s -w \"\\\\nHTTP %{http_code}\\\\n\" -X POST http://localhost:8080/api/auth/login -H \"Content-Type: application/json\" -d '{\"email\":\"admin@srms.zm\",\"password\":\"Admin@SRMS2024!\"}')",
+      "Bash(curl -s -w \"\\\\nHTTP %{http_code}\\\\n\" http://localhost:8080/api/public/testimonials)",
+      "Bash(grep -i \"api.ts\\\\|vite.config\" /tmp_tsc5.txt)",
+      "Bash(rm -f /tmp_tsc5.txt /tmp/frontend2.log)",
+      "Bash(curl -s http://localhost:8090/api/schools/37d5cbf5-d87f-496d-80b0-36dd2fee4442 -H 'Authorization: Bearer __CMDSUB_OUTPUT__')",
+      "Bash(curl -s -o /dev/null -w 'DELETE HTTP %{http_code}\\\\n' -X DELETE http://localhost:8090/api/schools/37d5cbf5-d87f-496d-80b0-36dd2fee4442 -H 'Authorization: Bearer __CMDSUB_OUTPUT__')"
+    ],
+    "additionalDirectories": [
+      "\\tmp"
+    ]
+  }
+}

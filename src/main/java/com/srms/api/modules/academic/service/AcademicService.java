@@ -3,8 +3,11 @@ package com.srms.api.modules.academic.service;
 import com.srms.api.exception.ResourceNotFoundException;
 import com.srms.api.modules.academic.entity.*;
 import com.srms.api.modules.academic.repository.*;
+import com.srms.api.modules.auth.entity.AppUser;
+import com.srms.api.modules.auth.repository.UserRepository;
 import com.srms.api.modules.student.entity.Student;
 import com.srms.api.modules.student.repository.StudentRepository;
+import com.srms.api.modules.teacher.entity.Teacher;
 import com.srms.api.modules.teacher.repository.TeacherRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -13,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -25,6 +29,7 @@ public class AcademicService {
     private final DepartmentRepository departmentRepository;
     private final TeacherRepository teacherRepository;
     private final StudentRepository studentRepository;
+    private final UserRepository userRepository;
 
     // ── Classes ──────────────────────────────────────────────────
     public List<SchoolClass> findAllClasses(String schoolId) { return classRepository.findBySchoolIdAndActiveTrue(schoolId); }
@@ -83,6 +88,15 @@ public class AcademicService {
         if (enrolmentRepository.existsByClassIdAndStudentIdAndAcademicYear(classId, dto.getStudentId(), year)) {
             throw new IllegalArgumentException("Student is already enrolled in this class for " + year);
         }
+        enrolmentRepository.findByStudentIdAndSchoolId(dto.getStudentId(), schoolId).stream()
+            .filter(e -> year.equals(e.getAcademicYear()) && "ACTIVE".equals(e.getStatus()) && !e.getClassId().equals(classId))
+            .findFirst()
+            .ifPresent(e -> {
+                String className = classRepository.findById(e.getClassId()).map(SchoolClass::getName).orElse("another class");
+                throw new IllegalArgumentException(
+                    (dto.getStudentName() != null ? dto.getStudentName() : "Student") + " is already enrolled in " + className
+                        + " for " + year + ". Remove them from that class or use Promote to move them instead.");
+            });
         dto.setClassId(classId);
         dto.setSchoolId(schoolId);
         dto.setAcademicYear(year);
@@ -179,9 +193,16 @@ public class AcademicService {
         if (departmentRepository.existsBySchoolIdAndName(schoolId, dto.getName())) {
             throw new IllegalArgumentException("Department '" + dto.getName() + "' already exists");
         }
+        String headTeacherId = dto.getHeadTeacherId();
         dto.setSchoolId(schoolId);
         dto.setActive(true);
-        return departmentRepository.save(dto);
+        dto.setHeadTeacherId(null);
+        Department saved = departmentRepository.save(dto);
+        if (headTeacherId != null && !headTeacherId.isBlank()) {
+            setDepartmentHead(saved, schoolId, headTeacherId);
+            saved = departmentRepository.save(saved);
+        }
+        return saved;
     }
 
     public Department updateDepartment(String id, String schoolId, Department dto) {
@@ -189,13 +210,65 @@ public class AcademicService {
         if (dto.getName() != null) d.setName(dto.getName());
         if (dto.getCode() != null) d.setCode(dto.getCode());
         if (dto.getDescription() != null) d.setDescription(dto.getDescription());
-        if (dto.getHead() != null) d.setHead(dto.getHead());
+        if (dto.getHeadTeacherId() != null) {
+            setDepartmentHead(d, schoolId, dto.getHeadTeacherId().isBlank() ? null : dto.getHeadTeacherId());
+        }
         return departmentRepository.save(d);
     }
 
     public void deleteDepartment(String id, String schoolId) {
         Department d = findDepartmentById(id, schoolId);
         d.setActive(false);
+        if (d.getHeadTeacherId() != null) {
+            String previousHeadTeacherId = d.getHeadTeacherId();
+            d.setHeadTeacherId(null);
+            demoteIfNoLongerHead(previousHeadTeacherId, schoolId, id);
+        }
         departmentRepository.save(d);
+    }
+
+    /** Sets (or clears, if newHeadTeacherId is null) the department's head, keeping the
+     * corresponding teacher's login role (HOD ⇄ TEACHER) in sync. */
+    private void setDepartmentHead(Department d, String schoolId, String newHeadTeacherId) {
+        String previousHeadTeacherId = d.getHeadTeacherId();
+        if (Objects.equals(previousHeadTeacherId, newHeadTeacherId)) return;
+
+        if (newHeadTeacherId != null) {
+            Teacher teacher = teacherRepository.findByIdAndSchoolId(newHeadTeacherId, schoolId)
+                .orElseThrow(() -> new ResourceNotFoundException("Teacher", newHeadTeacherId));
+            promoteToHod(teacher);
+        }
+        d.setHeadTeacherId(newHeadTeacherId);
+
+        if (previousHeadTeacherId != null) {
+            demoteIfNoLongerHead(previousHeadTeacherId, schoolId, d.getId());
+        }
+    }
+
+    private void promoteToHod(Teacher teacher) {
+        if (teacher.getEmail() == null) return;
+        userRepository.findByEmail(teacher.getEmail()).ifPresent(u -> {
+            if (u.getRole() == AppUser.UserRole.TEACHER) {
+                u.setRole(AppUser.UserRole.HOD);
+                userRepository.save(u);
+            }
+        });
+    }
+
+    /** Demotes a teacher's login back to TEACHER once they no longer head any active department. */
+    private void demoteIfNoLongerHead(String teacherId, String schoolId, String excludeDeptId) {
+        boolean stillHeadsAnother = departmentRepository.findBySchoolIdAndActiveTrue(schoolId).stream()
+            .anyMatch(dep -> !dep.getId().equals(excludeDeptId) && teacherId.equals(dep.getHeadTeacherId()));
+        if (stillHeadsAnother) return;
+
+        teacherRepository.findByIdAndSchoolId(teacherId, schoolId).ifPresent(teacher -> {
+            if (teacher.getEmail() == null) return;
+            userRepository.findByEmail(teacher.getEmail()).ifPresent(u -> {
+                if (u.getRole() == AppUser.UserRole.HOD) {
+                    u.setRole(AppUser.UserRole.TEACHER);
+                    userRepository.save(u);
+                }
+            });
+        });
     }
 }

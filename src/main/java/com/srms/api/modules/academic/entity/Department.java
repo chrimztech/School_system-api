@@ -13,6 +13,6 @@ public class Department extends BaseEntity {
     @Column(nullable = false)                      private String name;
     private String code;
     private String description;
-    private String head;
+    private String headTeacherId;
     @Builder.Default private boolean active = true;
 }
