@@ -4,7 +4,7 @@ import com.srms.api.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
-@Entity @Table(name = "work_orders") @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@Entity @Table(name = "work_orders", indexes = @Index(name = "idx_work_orders_school_id", columnList = "school_id")) @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class WorkOrder extends BaseEntity {
     @Column(nullable = false) private String schoolId;
     private String title;

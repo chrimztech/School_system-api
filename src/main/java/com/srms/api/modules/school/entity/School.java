@@ -46,6 +46,8 @@ public class School extends BaseEntity {
 
     @Column(columnDefinition = "TEXT")
     private String faviconUrl;
+
+    @Column(columnDefinition = "TEXT")
     private String reportFooter;
     private String registrationNo;
     private String tpinNo;
@@ -85,21 +87,17 @@ public class School extends BaseEntity {
     private String supportLevel;
     private String billingContact;
 
-    @Lob
     @Column(columnDefinition = "TEXT")
     private String subscriptionNotes;
 
     private Boolean offlineMode = false;
 
-    @Lob
     @Column(columnDefinition = "TEXT")
     private String levelsJson;
 
-    @Lob
     @Column(columnDefinition = "TEXT")
     private String campusesJson;
 
-    @Lob
     @Column(columnDefinition = "TEXT")
     private String featuresJson;
 

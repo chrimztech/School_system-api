@@ -8,6 +8,8 @@ import com.srms.api.modules.communication.entity.Message;
 import com.srms.api.modules.communication.repository.AnnouncementRepository;
 import com.srms.api.modules.communication.repository.MessageRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
@@ -88,6 +90,11 @@ public class CommunicationService {
     @Transactional(readOnly = true)
     public List<Message> getMessages(String schoolId) {
         return messageRepository.findBySchoolIdOrderByCreatedAtDesc(schoolId);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<Message> getMessagesPaged(String schoolId, Pageable pageable) {
+        return messageRepository.findBySchoolIdOrderByCreatedAtDesc(schoolId, pageable);
     }
 
     public Message sendMessage(String schoolId, MessageDto dto) {

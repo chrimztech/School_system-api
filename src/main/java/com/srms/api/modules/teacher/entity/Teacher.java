@@ -5,7 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "teachers")
+@Table(name = "teachers", indexes = @Index(name = "idx_teachers_school_id", columnList = "school_id"))
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class Teacher extends BaseEntity {
     @Column(nullable = false)

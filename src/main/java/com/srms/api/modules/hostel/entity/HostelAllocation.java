@@ -6,7 +6,7 @@ import lombok.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-@Entity @Table(name = "hostel_allocations") @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@Entity @Table(name = "hostel_allocations", indexes = @Index(name = "idx_hostel_allocations_school_id", columnList = "school_id")) @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class HostelAllocation extends BaseEntity {
     @Column(nullable = false) private String schoolId;
     private String studentId;

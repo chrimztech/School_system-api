@@ -2,7 +2,7 @@ package com.srms.api.modules.ptc.entity;
 import com.srms.api.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
-@Entity @Table(name = "ptc_members")
+@Entity @Table(name = "ptc_members", indexes = @Index(name = "idx_ptc_members_school_id", columnList = "school_id"))
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class PtcMember extends BaseEntity {
     @Column(nullable = false) private String schoolId;

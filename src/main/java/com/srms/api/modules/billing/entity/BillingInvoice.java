@@ -4,7 +4,7 @@ import com.srms.api.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
-@Entity @Table(name = "billing_invoices") @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@Entity @Table(name = "billing_invoices", indexes = @Index(name = "idx_billing_invoices_school_id", columnList = "school_id")) @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class BillingInvoice extends BaseEntity {
     @Column(nullable = false) private String schoolId;
     @Column(nullable = false) private String invoiceNumber;

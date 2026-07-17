@@ -2,11 +2,15 @@ package com.srms.api.modules.student.service;
 
 import com.srms.api.common.BulkImportResult;
 import com.srms.api.exception.ResourceNotFoundException;
+import com.srms.api.modules.fee.service.FeeService;
+import com.srms.api.modules.school.entity.School;
 import com.srms.api.modules.school.repository.SchoolRepository;
 import com.srms.api.modules.student.dto.StudentDto;
 import com.srms.api.modules.student.entity.Student;
 import com.srms.api.modules.student.repository.StudentRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -19,9 +23,14 @@ import java.util.List;
 public class StudentService {
     private final StudentRepository studentRepository;
     private final SchoolRepository schoolRepository;
+    private final FeeService feeService;
 
     public List<Student> findAll(String schoolId) {
         return studentRepository.findBySchoolId(schoolId);
+    }
+
+    public Page<Student> findAllPaged(String schoolId, Pageable pageable) {
+        return studentRepository.findBySchoolId(schoolId, pageable);
     }
 
     public List<Student> findByGuardianEmail(String schoolId, String email) {
@@ -60,7 +69,7 @@ public class StudentService {
         if (student.getAdmissionDate() == null || student.getAdmissionDate().isBlank()) {
             student.setAdmissionDate(LocalDate.now().toString());
         }
-        student.setFeeBalance(0);
+        student.setFeeBalance(billInitialTermFee(schoolId, student));
         return studentRepository.save(student);
     }
 
@@ -88,6 +97,12 @@ public class StudentService {
         Student student = findById(id, schoolId);
         student.setStatus(Student.StudentStatus.inactive);
         studentRepository.save(student);
+    }
+
+    private double billInitialTermFee(String schoolId, Student student) {
+        School school = schoolRepository.findById(schoolId).orElse(null);
+        if (school == null) return 0;
+        return feeService.computeInitialBalance(schoolId, student.getGrade(), school.getCurrentTerm(), school.getCurrentYear());
     }
 
     private void mapDto(Student s, StudentDto dto) {

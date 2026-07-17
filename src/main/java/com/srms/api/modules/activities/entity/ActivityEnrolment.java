@@ -5,7 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDate;
 
-@Entity @Table(name = "activity_enrolments") @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@Entity @Table(name = "activity_enrolments", indexes = @Index(name = "idx_activity_enrolments_school_id", columnList = "school_id")) @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class ActivityEnrolment extends BaseEntity {
     @Column(nullable = false) private String schoolId;
     private String activityId;

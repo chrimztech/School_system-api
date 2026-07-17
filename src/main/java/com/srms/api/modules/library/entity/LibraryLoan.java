@@ -7,7 +7,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Entity
-@Table(name = "library_loans")
+@Table(name = "library_loans", indexes = @Index(name = "idx_library_loans_school_id", columnList = "school_id"))
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class LibraryLoan extends BaseEntity {
 

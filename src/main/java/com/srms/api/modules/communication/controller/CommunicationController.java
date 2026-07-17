@@ -1,12 +1,15 @@
 package com.srms.api.modules.communication.controller;
 
 import com.srms.api.common.ApiResponse;
+import com.srms.api.common.PageRequestUtil;
+import com.srms.api.common.PageResponse;
 import com.srms.api.modules.communication.dto.AnnouncementDto;
 import com.srms.api.modules.communication.dto.MessageDto;
 import com.srms.api.modules.communication.entity.Announcement;
 import com.srms.api.modules.communication.entity.Message;
 import com.srms.api.modules.communication.service.CommunicationService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -56,9 +59,13 @@ public class CommunicationController {
     // ── Messages ───────────────────────────────────────────────────────────────
 
     @GetMapping("/messages")
-    public ResponseEntity<ApiResponse<List<Message>>> getMessages(
-            @PathVariable String schoolId) {
-        return ResponseEntity.ok(ApiResponse.ok(communicationService.getMessages(schoolId)));
+    public ResponseEntity<ApiResponse<?>> getMessages(
+            @PathVariable String schoolId,
+            @RequestParam(required = false) Integer page, @RequestParam(required = false) Integer size,
+            @RequestParam(required = false) String sortBy, @RequestParam(required = false) String sortDir) {
+        Pageable pageable = PageRequestUtil.build(page, size, sortBy, sortDir);
+        if (pageable == null) return ResponseEntity.ok(ApiResponse.ok(communicationService.getMessages(schoolId)));
+        return ResponseEntity.ok(ApiResponse.ok(PageResponse.of(communicationService.getMessagesPaged(schoolId, pageable))));
     }
 
     @PostMapping("/messages")

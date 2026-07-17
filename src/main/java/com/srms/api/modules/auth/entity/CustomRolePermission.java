@@ -5,7 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "custom_role_permissions")
+@Table(name = "custom_role_permissions", indexes = @Index(name = "idx_custom_role_permissions_school_id", columnList = "school_id"))
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class CustomRolePermission extends BaseEntity {
     @Column(name = "school_id", nullable = false)

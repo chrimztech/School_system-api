@@ -3,7 +3,7 @@ import com.srms.api.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;
-@Entity @Table(name = "ptc_transactions")
+@Entity @Table(name = "ptc_transactions", indexes = @Index(name = "idx_ptc_transactions_school_id", columnList = "school_id"))
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class PtcTransaction extends BaseEntity {
     @Column(nullable = false) private String schoolId;

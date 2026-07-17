@@ -6,7 +6,7 @@ import lombok.*;
 import java.time.LocalDate;
 
 @Entity
-@Table(name = "leave_requests")
+@Table(name = "leave_requests", indexes = @Index(name = "idx_leave_requests_school_id", columnList = "school_id"))
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class LeaveRequest extends BaseEntity {
 

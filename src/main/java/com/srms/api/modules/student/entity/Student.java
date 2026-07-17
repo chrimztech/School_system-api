@@ -5,7 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "students")
+@Table(name = "students", indexes = @Index(name = "idx_students_school_id", columnList = "school_id"))
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class Student extends BaseEntity {
     @Column(nullable = false)
@@ -66,6 +66,8 @@ public class Student extends BaseEntity {
     private StudentStatus status;
 
     private double feeBalance;
+
+    @Column(columnDefinition = "TEXT")
     private String photoUrl;
 
     public enum StudentStatus { active, inactive, transferred, graduated }

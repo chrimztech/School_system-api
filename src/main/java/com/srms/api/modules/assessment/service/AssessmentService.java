@@ -6,6 +6,8 @@ import com.srms.api.modules.assessment.repository.AssessmentRepository;
 import com.srms.api.modules.assessment.repository.ResultRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.LinkedHashMap;
@@ -50,6 +52,7 @@ public class AssessmentService {
         return saved;
     }
     public List<AssessmentResult> getStudentResults(String schoolId, String studentId) { return resultRepository.findBySchoolIdAndStudentId(schoolId, studentId); }
+    public Page<AssessmentResult> getStudentResultsPaged(String schoolId, String studentId, Pageable pageable) { return resultRepository.findBySchoolIdAndStudentId(schoolId, studentId, pageable); }
 
     public List<Map<String, Object>> getEnrichedStudentResults(String schoolId, String studentId) {
         List<AssessmentResult> results = resultRepository.findBySchoolIdAndStudentId(schoolId, studentId);

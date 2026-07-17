@@ -1,5 +1,7 @@
 package com.srms.api.modules.attendance.repository;
 import com.srms.api.modules.attendance.entity.AttendanceRecord;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
@@ -10,6 +12,7 @@ public interface AttendanceRepository extends JpaRepository<AttendanceRecord, St
     List<AttendanceRecord> findBySchoolIdAndDate(String schoolId, LocalDate date);
     List<AttendanceRecord> findBySchoolIdAndStudentIdAndDate(String schoolId, String studentId, LocalDate date);
     List<AttendanceRecord> findBySchoolIdAndStudentIdOrderByDateDesc(String schoolId, String studentId);
+    Page<AttendanceRecord> findBySchoolIdAndStudentIdOrderByDateDesc(String schoolId, String studentId, Pageable pageable);
     List<AttendanceRecord> findBySchoolIdAndClassIdAndDate(String schoolId, String classId, LocalDate date);
     List<AttendanceRecord> findBySchoolIdAndDateBetween(String schoolId, LocalDate from, LocalDate to);
     @Query("SELECT COUNT(a) FROM AttendanceRecord a WHERE a.schoolId=:schoolId AND a.date=:date AND a.status='present'")

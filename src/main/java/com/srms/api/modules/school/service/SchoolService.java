@@ -12,6 +12,8 @@ import com.srms.api.modules.student.repository.StudentRepository;
 import com.srms.api.modules.teacher.entity.Teacher;
 import com.srms.api.modules.teacher.repository.TeacherRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,12 +26,14 @@ import java.util.Map;
 @Service
 @RequiredArgsConstructor
 @Transactional
+@Slf4j
 public class SchoolService {
     private final SchoolRepository schoolRepository;
     private final ObjectMapper objectMapper;
     private final StudentRepository studentRepository;
     private final TeacherRepository teacherRepository;
     private final SchoolClassRepository schoolClassRepository;
+    private final JdbcTemplate jdbcTemplate;
 
     @Transactional(readOnly = true)
     public List<SchoolDto> findAll() {
@@ -78,10 +82,24 @@ public class SchoolService {
         return toDto(schoolRepository.save(school));
     }
 
+    /** Permanently erases the school and every row across every module keyed to it — this
+     * cannot be undone. There are no real foreign key constraints in this schema (schoolId
+     * is a plain string column on every entity, not a JPA relation), so child tables are
+     * discovered dynamically via information_schema rather than hand-listed: a hard delete
+     * this way can never silently skip a table that a newer module forgot to wire in. */
     public void delete(String id) {
         School school = findEntityById(id);
-        school.setActive(false);
-        schoolRepository.save(school);
+        List<String> tables = jdbcTemplate.queryForList(
+                "SELECT table_name FROM information_schema.columns " +
+                        "WHERE table_schema = 'public' AND column_name = 'school_id' AND table_name <> 'schools'",
+                String.class);
+        for (String table : tables) {
+            int removed = jdbcTemplate.update("DELETE FROM \"" + table + "\" WHERE school_id = ?", id);
+            if (removed > 0) {
+                log.info("Purged {} row(s) from {} for school {}", removed, table, id);
+            }
+        }
+        schoolRepository.delete(school);
     }
 
     private School findEntityById(String id) {

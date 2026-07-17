@@ -6,7 +6,7 @@ import lombok.*;
 import java.time.LocalDate;
 
 @Entity
-@Table(name = "discipline_cases")
+@Table(name = "discipline_cases", indexes = @Index(name = "idx_discipline_cases_school_id", columnList = "school_id"))
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class DisciplineCase extends BaseEntity {
     @Column(nullable = false) private String schoolId;

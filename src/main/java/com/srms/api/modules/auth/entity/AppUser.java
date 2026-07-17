@@ -5,7 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "app_users")
+@Table(name = "app_users", indexes = @Index(name = "idx_app_users_school_id", columnList = "school_id"))
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class AppUser extends BaseEntity {
     @Column(nullable = false, unique = true)

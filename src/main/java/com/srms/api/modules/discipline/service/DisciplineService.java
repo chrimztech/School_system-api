@@ -5,6 +5,8 @@ import com.srms.api.modules.discipline.dto.DisciplineCaseDto;
 import com.srms.api.modules.discipline.entity.DisciplineCase;
 import com.srms.api.modules.discipline.repository.DisciplineRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +25,11 @@ public class DisciplineService {
     @Transactional(readOnly = true)
     public List<DisciplineCase> findAll(String schoolId) {
         return disciplineRepository.findBySchoolIdOrderByIncidentDateDesc(schoolId);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<DisciplineCase> findAllPaged(String schoolId, Pageable pageable) {
+        return disciplineRepository.findBySchoolIdOrderByIncidentDateDesc(schoolId, pageable);
     }
 
     @Transactional(readOnly = true)

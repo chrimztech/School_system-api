@@ -5,7 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "vehicles")
+@Table(name = "vehicles", indexes = @Index(name = "idx_vehicles_school_id", columnList = "school_id"))
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class Vehicle extends BaseEntity {
 

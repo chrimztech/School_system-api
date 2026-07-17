@@ -2,7 +2,7 @@ package com.srms.api.modules.fee.entity;
 import com.srms.api.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
-@Entity @Table(name = "fee_structures")
+@Entity @Table(name = "fee_structures", indexes = @Index(name = "idx_fee_structures_school_id", columnList = "school_id"))
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class FeeStructure extends BaseEntity {
     @Column(nullable = false) private String schoolId;

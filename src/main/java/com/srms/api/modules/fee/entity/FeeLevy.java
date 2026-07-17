@@ -4,6 +4,7 @@ import com.srms.api.common.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
+import jakarta.persistence.Index;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -13,7 +14,7 @@ import lombok.Setter;
 import java.math.BigDecimal;
 
 @Entity
-@Table(name = "fee_levies")
+@Table(name = "fee_levies", indexes = @Index(name = "idx_fee_levies_school_id", columnList = "school_id"))
 @Getter
 @Setter
 @NoArgsConstructor

@@ -5,9 +5,10 @@ import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDate;
 
-@Entity @Table(name = "lost_found_items") @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@Entity @Table(name = "lost_found_items", indexes = @Index(name = "idx_lost_found_items_school_id", columnList = "school_id")) @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class LostFoundItem extends BaseEntity {
     @Column(nullable = false) private String schoolId;
+    @Column(columnDefinition = "TEXT")
     private String itemDescription;
     private String category; // ELECTRONICS, CLOTHING, STATIONERY, BOOK, OTHER
     private String foundLocation;

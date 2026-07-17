@@ -7,7 +7,7 @@ import org.hibernate.annotations.ColumnDefault;
 import java.time.LocalDate;
 
 @Entity
-@Table(name = "announcements")
+@Table(name = "announcements", indexes = @Index(name = "idx_announcements_school_id", columnList = "school_id"))
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class Announcement extends BaseEntity {
     @Column(nullable = false) private String schoolId;

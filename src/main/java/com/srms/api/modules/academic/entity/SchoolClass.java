@@ -2,7 +2,7 @@ package com.srms.api.modules.academic.entity;
 import com.srms.api.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
-@Entity @Table(name = "school_classes")
+@Entity @Table(name = "school_classes", indexes = @Index(name = "idx_school_classes_school_id", columnList = "school_id"))
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class SchoolClass extends BaseEntity {
     @Column(nullable = false) private String schoolId;

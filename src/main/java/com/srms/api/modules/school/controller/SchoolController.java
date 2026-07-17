@@ -49,6 +49,6 @@ public class SchoolController {
     @DeleteMapping("/api/schools/{id}")
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable String id) {
         schoolService.delete(id);
-        return ResponseEntity.ok(ApiResponse.ok("School deactivated", null));
+        return ResponseEntity.ok(ApiResponse.ok("School permanently deleted", null));
     }
 }

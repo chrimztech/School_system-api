@@ -1,5 +1,7 @@
 package com.srms.api.modules.fee.controller;
 import com.srms.api.common.ApiResponse;
+import com.srms.api.common.PageRequestUtil;
+import com.srms.api.common.PageResponse;
 import com.srms.api.modules.fee.entity.FeeBillingRule;
 import com.srms.api.modules.fee.entity.FeeDiscountRule;
 import com.srms.api.modules.fee.entity.FeeLevy;
@@ -7,6 +9,7 @@ import com.srms.api.modules.fee.entity.FeePayment;
 import com.srms.api.modules.fee.entity.FeeStructure;
 import com.srms.api.modules.fee.service.FeeService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -14,7 +17,15 @@ import java.util.List;
 @RestController @RequestMapping("/api/schools/{schoolId}/fees") @RequiredArgsConstructor
 public class FeeController {
     private final FeeService feeService;
-    @GetMapping("/payments") public ResponseEntity<ApiResponse<List<FeePayment>>> getPayments(@PathVariable String schoolId) { return ResponseEntity.ok(ApiResponse.ok(feeService.getAllPayments(schoolId))); }
+    @GetMapping("/payments")
+    public ResponseEntity<ApiResponse<?>> getPayments(
+            @PathVariable String schoolId,
+            @RequestParam(required = false) Integer page, @RequestParam(required = false) Integer size,
+            @RequestParam(required = false) String sortBy, @RequestParam(required = false) String sortDir) {
+        Pageable pageable = PageRequestUtil.build(page, size, sortBy, sortDir);
+        if (pageable == null) return ResponseEntity.ok(ApiResponse.ok(feeService.getAllPayments(schoolId)));
+        return ResponseEntity.ok(ApiResponse.ok(PageResponse.of(feeService.getAllPaymentsPaged(schoolId, pageable))));
+    }
     @GetMapping("/payments/student/{studentId}") public ResponseEntity<ApiResponse<List<FeePayment>>> getStudentPayments(@PathVariable String schoolId, @PathVariable String studentId) { return ResponseEntity.ok(ApiResponse.ok(feeService.getStudentPayments(schoolId, studentId))); }
     @PostMapping("/payments") public ResponseEntity<ApiResponse<FeePayment>> recordPayment(@PathVariable String schoolId, @RequestBody FeePayment payment) { return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(feeService.recordPayment(schoolId, payment))); }
     @GetMapping("/collected") public ResponseEntity<ApiResponse<Double>> getCollected(@PathVariable String schoolId) { return ResponseEntity.ok(ApiResponse.ok(feeService.getTotalCollected(schoolId))); }

@@ -4,6 +4,8 @@ import com.srms.api.modules.attendance.dto.AttendanceSummary;
 import com.srms.api.modules.attendance.entity.AttendanceRecord;
 import com.srms.api.modules.attendance.repository.AttendanceRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.util.List;
@@ -19,6 +21,9 @@ public class AttendanceService {
     }
     public List<AttendanceRecord> getStudentAttendance(String schoolId, String studentId) {
         return attendanceRepository.findBySchoolIdAndStudentIdOrderByDateDesc(schoolId, studentId);
+    }
+    public Page<AttendanceRecord> getStudentAttendancePaged(String schoolId, String studentId, Pageable pageable) {
+        return attendanceRepository.findBySchoolIdAndStudentIdOrderByDateDesc(schoolId, studentId, pageable);
     }
     public List<AttendanceRecord> markAttendance(String schoolId, AttendanceDto dto) {
         return dto.getEntries().stream().map(entry -> {

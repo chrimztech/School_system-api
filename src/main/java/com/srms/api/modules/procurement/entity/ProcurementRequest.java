@@ -5,7 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;
 
-@Entity @Table(name = "procurement_requests") @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@Entity @Table(name = "procurement_requests", indexes = @Index(name = "idx_procurement_requests_school_id", columnList = "school_id")) @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class ProcurementRequest extends BaseEntity {
     @Column(nullable = false) private String schoolId;
     private String requester;

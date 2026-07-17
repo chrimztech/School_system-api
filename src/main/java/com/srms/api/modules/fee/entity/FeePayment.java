@@ -3,7 +3,7 @@ import com.srms.api.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDate;
-@Entity @Table(name = "fee_payments")
+@Entity @Table(name = "fee_payments", indexes = @Index(name = "idx_fee_payments_school_id", columnList = "school_id"))
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class FeePayment extends BaseEntity {
     @Column(nullable = false) private String schoolId;

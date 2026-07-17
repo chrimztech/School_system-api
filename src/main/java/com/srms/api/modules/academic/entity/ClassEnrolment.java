@@ -6,7 +6,7 @@ import lombok.*;
 
 @Entity
 @Table(name = "class_enrolments",
-    uniqueConstraints = @UniqueConstraint(columnNames = {"class_id", "student_id", "academic_year"}))
+    uniqueConstraints = @UniqueConstraint(columnNames = {"class_id", "student_id", "academic_year"}), indexes = @Index(name = "idx_class_enrolments_school_id", columnList = "school_id"))
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class ClassEnrolment extends BaseEntity {
     @Column(name = "school_id", nullable = false) private String schoolId;

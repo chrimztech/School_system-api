@@ -6,7 +6,7 @@ import lombok.*;
 import java.math.BigDecimal;
 
 @Entity
-@Table(name = "transport_routes")
+@Table(name = "transport_routes", indexes = @Index(name = "idx_transport_routes_school_id", columnList = "school_id"))
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class TransportRoute extends BaseEntity {
 
