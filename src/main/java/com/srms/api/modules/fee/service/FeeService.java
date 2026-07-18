@@ -17,7 +17,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Comparator;
 
 @Service @RequiredArgsConstructor @Transactional
 public class FeeService {
@@ -48,10 +47,11 @@ public class FeeService {
     public double getTotalCollected(String schoolId) { Double sum = paymentRepository.sumCollected(schoolId); return sum != null ? sum : 0; }
 
     /**
-     * What a student in the given grade owes for the school's current term: the matching
-     * active FeeStructure's termFee (closest gradeFrom wins if more than one structure
-     * covers the grade) plus every mandatory FeeLevy that applies to that grade.
-     * Returns 0 if no structure has been configured yet, rather than blocking admission.
+     * What a student in the given grade owes for the school's current term: the sum of every
+     * active FeeStructure covering that grade/term/year (schools commonly split this into
+     * separate line items — tuition, boarding, exam registration, etc.) plus every mandatory
+     * FeeLevy that applies to that grade. Returns 0 if nothing has been configured yet, rather
+     * than blocking admission.
      */
     public double computeInitialBalance(String schoolId, int grade, int currentTerm, int currentYear) {
         double structureFee = structureRepository.findBySchoolIdOrderByAcademicYearDescGradeFromAscTermAsc(schoolId).stream()
@@ -59,9 +59,8 @@ public class FeeService {
                 .filter(fs -> fs.getAcademicYear() == currentYear)
                 .filter(fs -> grade >= fs.getGradeFrom() && grade <= fs.getGradeTo())
                 .filter(fs -> termMatches(fs.getTerm(), currentTerm))
-                .min(Comparator.comparingInt(fs -> fs.getGradeTo() - fs.getGradeFrom()))
-                .map(FeeStructure::getTermFee)
-                .orElse(0.0);
+                .mapToDouble(FeeStructure::getTermFee)
+                .sum();
 
         double leviesTotal = levyRepository.findBySchoolIdOrderByCreatedAtDesc(schoolId).stream()
                 .filter(levy -> Boolean.TRUE.equals(levy.getMandatory()))
