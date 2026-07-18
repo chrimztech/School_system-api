@@ -15,7 +15,13 @@ public class AlumniService {
     public AlumniRecord create(String schoolId, AlumniRecord record) { record.setSchoolId(schoolId); if (record.getStatus() == null) record.setStatus("ACTIVE"); return repo.save(record); }
     public AlumniRecord update(String schoolId, String id, AlumniRecord updated) {
         AlumniRecord r = getOne(schoolId, id);
-        r.setFirstName(updated.getFirstName()); r.setLastName(updated.getLastName()); r.setCurrentEmployer(updated.getCurrentEmployer()); r.setCurrentPosition(updated.getCurrentPosition()); r.setEmail(updated.getEmail()); r.setPhone(updated.getPhone()); r.setLocation(updated.getLocation()); r.setStatus(updated.getStatus());
+        r.setFirstName(updated.getFirstName()); r.setLastName(updated.getLastName()); r.setAdmissionNumber(updated.getAdmissionNumber());
+        r.setGraduationYear(updated.getGraduationYear()); r.setLastGrade(updated.getLastGrade());
+        r.setCurrentEmployer(updated.getCurrentEmployer()); r.setCurrentPosition(updated.getCurrentPosition());
+        r.setEmail(updated.getEmail()); r.setPhone(updated.getPhone()); r.setLocation(updated.getLocation()); r.setStatus(updated.getStatus());
+        r.setIndustrySector(updated.getIndustrySector()); r.setHighestQualification(updated.getHighestQualification());
+        r.setQualificationsAchieved(updated.getQualificationsAchieved()); r.setLinkedIn(updated.getLinkedIn());
+        r.setEngagementStatus(updated.getEngagementStatus());
         return repo.save(r);
     }
     public void delete(String schoolId, String id) { repo.findById(id).filter(a -> a.getSchoolId().equals(schoolId)).ifPresent(repo::delete); }

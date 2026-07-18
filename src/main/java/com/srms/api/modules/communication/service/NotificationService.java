@@ -1,6 +1,10 @@
 package com.srms.api.modules.communication.service;
 
+import com.srms.api.modules.alumni.entity.AlumniRecord;
+import com.srms.api.modules.alumni.repository.AlumniRepository;
 import com.srms.api.modules.communication.entity.Announcement;
+import com.srms.api.modules.school.entity.School;
+import com.srms.api.modules.school.repository.SchoolRepository;
 import com.srms.api.modules.student.entity.Student;
 import com.srms.api.modules.student.repository.StudentRepository;
 import com.srms.api.modules.teacher.entity.Teacher;
@@ -21,6 +25,8 @@ import org.springframework.web.client.RestTemplate;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -30,7 +36,14 @@ public class NotificationService {
 
     private final StudentRepository studentRepository;
     private final TeacherRepository teacherRepository;
+    private final SchoolRepository schoolRepository;
+    private final AlumniRepository alumniRepository;
     private final JavaMailSender mailSender;
+
+    private static final Pattern FORM_OR_GRADE = Pattern.compile("(?:form|grade)\\s*(\\d{1,2})");
+
+    /** Who an announcement's audience string actually resolves to. */
+    private record AudienceTarget(boolean staff, boolean parents, boolean students, boolean alumni, Integer gradeFilter, String levelFilter) {}
 
     @Value("${spring.mail.from:noreply@srms.zm}")
     private String fromEmail;
@@ -55,14 +68,14 @@ public class NotificationService {
         }
 
         String schoolId = ann.getSchoolId();
-        String audience = ann.getAudience() != null ? ann.getAudience().toLowerCase() : "all";
+        School school = schoolRepository.findById(schoolId).orElse(null);
+        AudienceTarget target = resolveAudienceTarget(ann.getAudience(), school);
         List<String> channels = parseChannels(ann.getChannels());
 
         List<String> emails = new ArrayList<>();
         List<String> phones = new ArrayList<>();
 
-        // Resolve recipients by audience
-        if (audience.contains("staff") || audience.contains("teacher")) {
+        if (target.staff()) {
             List<Teacher> teachers = teacherRepository.findBySchoolIdAndStatus(schoolId, Teacher.TeacherStatus.active);
             for (Teacher t : teachers) {
                 if (t.getEmail() != null && !t.getEmail().isBlank()) emails.add(t.getEmail());
@@ -70,20 +83,32 @@ public class NotificationService {
             }
         }
 
-        if (audience.contains("parent") || audience.contains("all") || audience.contains("student")) {
+        if (target.parents() || target.students()) {
             List<Student> students = studentRepository.findBySchoolIdAndStatus(schoolId, Student.StudentStatus.active);
             for (Student s : students) {
-                if (s.getGuardianEmail() != null && !s.getGuardianEmail().isBlank())
-                    emails.add(s.getGuardianEmail());
-                if (s.getGuardianPhone() != null && !s.getGuardianPhone().isBlank())
-                    phones.add(normalizePhone(s.getGuardianPhone()));
-                if (s.getGuardianAltPhone() != null && !s.getGuardianAltPhone().isBlank())
-                    phones.add(normalizePhone(s.getGuardianAltPhone()));
-                // Students themselves
-                if (audience.contains("student") || audience.contains("all")) {
-                    if (s.getStudentEmail() != null && !s.getStudentEmail().isBlank())
-                        emails.add(s.getStudentEmail());
+                if (target.gradeFilter() != null && s.getGrade() != target.gradeFilter()) continue;
+                if (target.levelFilter() != null && !matchesLevel(s.getGrade(), school, target.levelFilter())) continue;
+
+                if (target.parents()) {
+                    if (s.getGuardianEmail() != null && !s.getGuardianEmail().isBlank())
+                        emails.add(s.getGuardianEmail());
+                    if (s.getGuardianPhone() != null && !s.getGuardianPhone().isBlank())
+                        phones.add(normalizePhone(s.getGuardianPhone()));
+                    if (s.getGuardianAltPhone() != null && !s.getGuardianAltPhone().isBlank())
+                        phones.add(normalizePhone(s.getGuardianAltPhone()));
                 }
+                if (target.students() && s.getStudentEmail() != null && !s.getStudentEmail().isBlank()) {
+                    emails.add(s.getStudentEmail());
+                }
+            }
+        }
+
+        if (target.alumni()) {
+            List<AlumniRecord> alumni = alumniRepository.findBySchoolId(schoolId);
+            for (AlumniRecord al : alumni) {
+                if (!"ACTIVE".equalsIgnoreCase(al.getStatus())) continue;
+                if (al.getEmail() != null && !al.getEmail().isBlank()) emails.add(al.getEmail());
+                if (al.getPhone() != null && !al.getPhone().isBlank()) phones.add(normalizePhone(al.getPhone()));
             }
         }
 
@@ -101,6 +126,42 @@ public class NotificationService {
                 default -> log.warn("Unknown channel '{}' on announcement {}", channel, ann.getId());
             }
         }
+    }
+
+    /**
+     * Turns a free-form audience string (from the announcement/broadcast UI, e.g. "All staff",
+     * "Form 2", "Grade 5", "All secondary") into who actually gets contacted. Word-boundary
+     * matching, not substring matching — "All staff" must not also match "all" as in "everyone",
+     * and "Form 1"/"Grade 1" must resolve to a real recipient set instead of matching nothing.
+     */
+    private AudienceTarget resolveAudienceTarget(String raw, School school) {
+        String a = (raw == null || raw.isBlank() ? "all" : raw).trim().toLowerCase();
+
+        Matcher gradeMatch = FORM_OR_GRADE.matcher(a);
+        if (gradeMatch.find()) {
+            return new AudienceTarget(false, true, false, false, Integer.parseInt(gradeMatch.group(1)), null);
+        }
+        if (a.contains("secondary")) return new AudienceTarget(false, true, false, false, null, "secondary");
+        if (a.contains("primary")) return new AudienceTarget(false, true, false, false, null, "primary");
+        if (a.contains("staff") || a.contains("teacher")) return new AudienceTarget(true, false, false, false, null, null);
+        if (a.contains("alumni")) return new AudienceTarget(false, false, false, true, null, null);
+        if (a.equals("all") || a.contains("everyone")) return new AudienceTarget(true, true, true, true, null, null);
+        if (a.contains("parent")) return new AudienceTarget(false, true, false, false, null, null);
+        if (a.contains("student")) return new AudienceTarget(false, false, true, false, null, null);
+        log.warn("Unrecognised announcement audience '{}' — no recipients resolved", a);
+        return new AudienceTarget(false, false, false, false, null, null);
+    }
+
+    /** Whether a student's numeric grade falls in the primary or secondary band for this school's type. */
+    private boolean matchesLevel(int grade, School school, String level) {
+        String type = school != null && school.getType() != null ? school.getType().toUpperCase() : "";
+        boolean schoolIsPrimaryOnly = type.equals("PRIMARY");
+        boolean schoolIsSecondaryOnly = type.equals("SECONDARY");
+        if (schoolIsPrimaryOnly) return level.equals("primary");
+        if (schoolIsSecondaryOnly) return level.equals("secondary");
+        // Combined/mixed schools: grades 1-6 are primary, 7-12 are secondary (Form 1-6).
+        boolean isPrimaryGrade = grade >= 1 && grade <= 6;
+        return level.equals("primary") == isPrimaryGrade;
     }
 
     /** Best-effort payment confirmation — reuses the same email/SMS senders as announcements. */

@@ -19,4 +19,9 @@ public class AlumniRecord extends BaseEntity {
     private String location;
     private boolean updatedByUser;
     private String status; // ACTIVE, INACTIVE
+    private String industrySector;
+    private String highestQualification;
+    private String qualificationsAchieved;
+    private String linkedIn;
+    private String engagementStatus; // Active, Mentor, Donor, Inactive
 }
