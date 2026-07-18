@@ -19,6 +19,8 @@ public class TermGrade extends BaseEntity {
     private Double examPercent;
     private double weightedTotal;
     private String letterGrade;
+    private String gradeDescription;
+    private Integer gradePoints;
     private boolean complete;
     @Builder.Default private boolean published = false;
     private String teacherId;

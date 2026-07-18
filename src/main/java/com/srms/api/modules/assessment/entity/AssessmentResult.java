@@ -9,7 +9,7 @@ public class AssessmentResult extends BaseEntity {
     @Column(nullable = false) private String assessmentId;
     @Column(nullable = false) private String studentId;
     private String studentName;
-    private double score;
+    private Double score;
     private String grade;
     private String remarks;
     private boolean absent;

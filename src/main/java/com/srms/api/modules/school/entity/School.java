@@ -57,6 +57,10 @@ public class School extends BaseEntity {
     private String weekStart;
     private String gradingScale;
     private Integer passMark;
+    private String resultPublicationMode; // "SEPARATE" | "COMBINED"
+
+    @Column(columnDefinition = "TEXT")
+    private String gradingBandsJson;
     private String currency;
     private String bankName;
     private String bankAccount;

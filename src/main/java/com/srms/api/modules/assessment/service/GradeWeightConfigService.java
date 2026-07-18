@@ -14,8 +14,9 @@ public class GradeWeightConfigService {
     }
 
     public GradeWeightConfig upsert(String schoolId, int caWeight, int midtermWeight, int examWeight) {
-        if (caWeight + midtermWeight + examWeight != 100) {
-            throw new BusinessException("Grade weights must sum to 100");
+        if (caWeight < 0 || midtermWeight < 0 || examWeight < 0
+                || caWeight + midtermWeight + examWeight != 100) {
+            throw new BusinessException("Grade weights must be non-negative and sum to 100");
         }
         GradeWeightConfig config = repository.findBySchoolId(schoolId)
                 .orElse(GradeWeightConfig.builder().schoolId(schoolId).build());

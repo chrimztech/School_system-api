@@ -60,6 +60,12 @@ public class ClassController {
     }
 
     // ── Teacher-class-subject assignments ────────────────────────
+    @GetMapping("/assignments")
+    public ResponseEntity<ApiResponse<List<TeacherClassSubject>>> getAssignmentsByTeacherEmail(
+            @PathVariable String schoolId,
+            @RequestParam String teacherEmail) {
+        return ResponseEntity.ok(ApiResponse.ok(academicService.findAssignmentsByTeacherEmail(schoolId, teacherEmail)));
+    }
     @GetMapping("/{classId}/teachers")
     public ResponseEntity<ApiResponse<List<TeacherClassSubject>>> getTeachers(@PathVariable String schoolId, @PathVariable String classId) {
         return ResponseEntity.ok(ApiResponse.ok(academicService.getClassTeachers(classId, schoolId)));

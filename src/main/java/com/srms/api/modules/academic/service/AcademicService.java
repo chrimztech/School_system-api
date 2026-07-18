@@ -52,6 +52,14 @@ public class AcademicService {
         }).orElse(List.of());
     }
 
+    /** Every class+subject a teacher is actually assigned to teach — the scoping source of truth
+     * for what a TEACHER can create/grade assessments for and which subjects they see. */
+    public List<TeacherClassSubject> findAssignmentsByTeacherEmail(String schoolId, String email) {
+        return teacherRepository.findByEmailAndSchoolId(email, schoolId)
+                .map(teacher -> teacherSubjectRepository.findByTeacherIdAndSchoolId(teacher.getId(), schoolId))
+                .orElse(List.of());
+    }
+
     /** Returns only the students enrolled in the teacher's classes. */
     public List<Student> findStudentsByTeacherEmail(String schoolId, String email) {
         List<SchoolClass> teacherClasses = findClassesByTeacherEmail(schoolId, email);

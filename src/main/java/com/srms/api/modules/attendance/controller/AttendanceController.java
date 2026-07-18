@@ -2,6 +2,7 @@ package com.srms.api.modules.attendance.controller;
 import com.srms.api.common.ApiResponse;
 import com.srms.api.common.PageRequestUtil;
 import com.srms.api.common.PageResponse;
+import com.srms.api.exception.ForbiddenException;
 import com.srms.api.modules.attendance.dto.AttendanceDto;
 import com.srms.api.modules.attendance.dto.AttendanceSummary;
 import com.srms.api.modules.attendance.entity.AttendanceRecord;
@@ -10,12 +11,20 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Set;
 @RestController @RequestMapping("/api/schools/{schoolId}/attendance") @RequiredArgsConstructor
 public class AttendanceController {
     private final AttendanceService attendanceService;
+
+    /** Roles with "full" (not "read") access to the attendance module. */
+    private static final Set<String> CAN_MARK_ROLES = Set.of(
+            "SUPER_ADMIN", "SCHOOL_ADMIN", "TEACHER", "PRINCIPAL", "DEPUTY_HEAD");
+
     @GetMapping public ResponseEntity<ApiResponse<List<AttendanceRecord>>> getToday(@PathVariable String schoolId) { return ResponseEntity.ok(ApiResponse.ok(attendanceService.getTodayAttendance(schoolId))); }
     @GetMapping("/summary") public ResponseEntity<ApiResponse<AttendanceSummary>> getSummary(@PathVariable String schoolId) { return ResponseEntity.ok(ApiResponse.ok(attendanceService.getTodaySummary(schoolId))); }
     @GetMapping("/date/{date}") public ResponseEntity<ApiResponse<List<AttendanceRecord>>> getByDate(@PathVariable String schoolId, @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) { return ResponseEntity.ok(ApiResponse.ok(attendanceService.getByDate(schoolId, date))); }
@@ -28,5 +37,13 @@ public class AttendanceController {
         if (pageable == null) return ResponseEntity.ok(ApiResponse.ok(attendanceService.getStudentAttendance(schoolId, studentId)));
         return ResponseEntity.ok(ApiResponse.ok(PageResponse.of(attendanceService.getStudentAttendancePaged(schoolId, studentId, pageable))));
     }
-    @PostMapping public ResponseEntity<ApiResponse<List<AttendanceRecord>>> mark(@PathVariable String schoolId, @RequestBody AttendanceDto dto) { return ResponseEntity.ok(ApiResponse.ok(attendanceService.markAttendance(schoolId, dto))); }
+    @PostMapping public ResponseEntity<ApiResponse<List<AttendanceRecord>>> mark(@PathVariable String schoolId, @RequestBody AttendanceDto dto, Authentication auth) {
+        String role = auth.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .findFirst().map(a -> a.replaceFirst("^ROLE_", "")).orElse("");
+        if (!CAN_MARK_ROLES.contains(role)) {
+            throw new ForbiddenException("Your role does not have permission to mark attendance");
+        }
+        return ResponseEntity.ok(ApiResponse.ok(attendanceService.markAttendance(schoolId, dto)));
+    }
 }

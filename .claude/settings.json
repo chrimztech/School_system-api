@@ -162,7 +162,14 @@
       "Bash(wmic process *)",
       "PowerShell(Get-CimInstance Win32_Process -Filter \"ProcessId=1968 OR ProcessId=42640\")",
       "Bash(taskkill //PID 42640 //F)",
-      "Bash(taskkill //PID 1968 //F)"
+      "Bash(taskkill //PID 1968 //F)",
+      "Bash(taskkill //PID 16444 //F)",
+      "Bash(taskkill //PID 2316 //F)",
+      "Bash(PGPASSWORD=11111111 psql -h localhost -U postgres -d school_system -c \"\\\\d assessments\")",
+      "Bash(PGPASSWORD=11111111 psql -h localhost -U postgres -d school_system -c \"SELECT conname, pg_get_constraintdef\\(oid\\) FROM pg_constraint WHERE conrelid = 'assessments'::regclass AND contype='c';\")",
+      "Bash(PGPASSWORD=11111111 psql -h localhost -U postgres -d school_system -c \"\\\\dt published_term_grades\")",
+      "Bash(PGPASSWORD=11111111 psql -h localhost -U postgres -d school_system -c \"SELECT id, first_name, last_name, guardian_email, fee_balance FROM students WHERE id = '6b9972f7-3e18-477b-bae4-487168fe34ef';\")",
+      "Bash(taskkill //PID 40776 //F)"
     ],
     "additionalDirectories": [
       "\\tmp"

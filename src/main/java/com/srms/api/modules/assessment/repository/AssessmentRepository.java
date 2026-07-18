@@ -9,6 +9,7 @@ public interface AssessmentRepository extends JpaRepository<Assessment, String> 
     List<Assessment> findBySchoolIdOrderByDateDesc(String schoolId);
     Optional<Assessment> findByIdAndSchoolId(String id, String schoolId);
     List<Assessment> findBySchoolIdAndClassId(String schoolId, String classId);
+    List<Assessment> findBySchoolIdAndClassIdAndTermAndAcademicYear(String schoolId, String classId, String term, String academicYear);
     List<Assessment> findBySchoolIdAndTermAndAcademicYear(String schoolId, String term, String academicYear);
     List<Assessment> findBySchoolIdAndSubjectNameAndTermAndAcademicYear(String schoolId, String subjectName, String term, String academicYear);
 }

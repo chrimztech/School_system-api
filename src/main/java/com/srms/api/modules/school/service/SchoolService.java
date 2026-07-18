@@ -5,6 +5,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.srms.api.exception.ResourceNotFoundException;
 import com.srms.api.modules.academic.repository.SchoolClassRepository;
+import com.srms.api.modules.assessment.service.GradingScaleService;
 import com.srms.api.modules.school.dto.SchoolDto;
 import com.srms.api.modules.school.entity.School;
 import com.srms.api.modules.school.repository.SchoolRepository;
@@ -33,6 +34,7 @@ public class SchoolService {
     private final StudentRepository studentRepository;
     private final TeacherRepository teacherRepository;
     private final SchoolClassRepository schoolClassRepository;
+    private final GradingScaleService gradingScaleService;
     private final JdbcTemplate jdbcTemplate;
 
     @Transactional(readOnly = true)
@@ -148,6 +150,8 @@ public class SchoolService {
                 .yearFounded(school.getYearFounded())
                 .weekStart(school.getWeekStart())
                 .gradingScale(school.getGradingScale())
+                .resultPublicationMode(school.getResultPublicationMode())
+                .gradingBands(gradingScaleService.readBands(school.getGradingBandsJson()))
                 .passMark(school.getPassMark())
                 .currency(school.getCurrency())
                 .bankName(school.getBankName())
@@ -221,7 +225,20 @@ public class SchoolService {
         if (dto.getYearFounded() != null) school.setYearFounded(dto.getYearFounded());
         if (dto.getWeekStart() != null) school.setWeekStart(dto.getWeekStart());
         if (dto.getGradingScale() != null) school.setGradingScale(dto.getGradingScale());
-        if (dto.getPassMark() != null) school.setPassMark(dto.getPassMark());
+        if (dto.getResultPublicationMode() != null) {
+            String mode = dto.getResultPublicationMode().trim().toUpperCase();
+            if (!mode.equals("SEPARATE") && !mode.equals("COMBINED")) {
+                throw new IllegalArgumentException("Result publication mode must be SEPARATE or COMBINED");
+            }
+            school.setResultPublicationMode(mode);
+        }
+        if (dto.getGradingBands() != null) school.setGradingBandsJson(gradingScaleService.writeBands(dto.getGradingBands()));
+        if (dto.getPassMark() != null) {
+            if (dto.getPassMark() < 0 || dto.getPassMark() > 100) {
+                throw new IllegalArgumentException("Pass mark must be between 0 and 100");
+            }
+            school.setPassMark(dto.getPassMark());
+        }
         if (dto.getCurrency() != null) school.setCurrency(dto.getCurrency());
         if (dto.getBankName() != null) school.setBankName(dto.getBankName());
         if (dto.getBankAccount() != null) school.setBankAccount(dto.getBankAccount());
@@ -271,6 +288,18 @@ public class SchoolService {
         }
         if (school.getCurrentYear() <= 0) {
             school.setCurrentYear(Year.now().getValue());
+        }
+        if (school.getGradingScale() == null || school.getGradingScale().isBlank()) {
+            school.setGradingScale("ECZ");
+        }
+        if (school.getResultPublicationMode() == null || school.getResultPublicationMode().isBlank()) {
+            school.setResultPublicationMode("SEPARATE");
+        }
+        if (school.getGradingBandsJson() == null || school.getGradingBandsJson().isBlank()) {
+            school.setGradingBandsJson(gradingScaleService.writeBands(GradingScaleService.zambia2023Defaults()));
+        }
+        if (school.getPassMark() == null) {
+            school.setPassMark(40);
         }
         if (school.getCampusLimit() == null || school.getCampusLimit() <= 0) {
             school.setCampusLimit(defaultCampusLimit(planId));

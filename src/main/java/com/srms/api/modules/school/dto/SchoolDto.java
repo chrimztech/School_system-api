@@ -1,5 +1,6 @@
 package com.srms.api.modules.school.dto;
 
+import com.srms.api.modules.assessment.dto.GradingBandDto;
 import lombok.*;
 
 import java.util.List;
@@ -49,6 +50,8 @@ public class SchoolDto {
     private Integer yearFounded;
     private String weekStart;
     private String gradingScale;
+    private String resultPublicationMode;
+    private List<GradingBandDto> gradingBands;
     private Integer passMark;
     private String currency;
     private String bankName;
