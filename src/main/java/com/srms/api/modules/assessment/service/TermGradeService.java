@@ -222,14 +222,34 @@ public class TermGradeService {
     @Transactional(readOnly = true)
     public List<PublishedTermGrade> getPublishedHistory(String schoolId, String studentId, String academicYear,
                                                         Assessment.ReportingPeriod period) {
-        return publishedRepository.findBySchoolIdAndStudentIdAndAcademicYearAndReportingPeriod(
+        List<PublishedTermGrade> grades = publishedRepository.findBySchoolIdAndStudentIdAndAcademicYearAndReportingPeriod(
                 schoolId, studentId, academicYear, period);
+        // Records published before gradeDescription/gradePoints existed on this entity carry nulls;
+        // fill them in from the current grading scale so old report cards don't show a blank Remarks column.
+        if (grades.stream().anyMatch(g -> g.getGradeDescription() == null || g.getGradeDescription().isBlank())) {
+            List<GradingBandDto> bands = gradingScaleService.getBands(schoolId);
+            for (PublishedTermGrade grade : grades) {
+                if (grade.getGradeDescription() != null && !grade.getGradeDescription().isBlank()) continue;
+                GradingBandDto band = gradingScaleService.findByGrade(bands, grade.getLetterGrade());
+                if (band != null) { grade.setGradeDescription(band.getDescription()); grade.setGradePoints(band.getPoints()); }
+            }
+        }
+        return grades;
     }
 
     public List<TermGrade> getHistory(String schoolId, String studentId, String academicYear, boolean includeUnpublished) {
-        return includeUnpublished
+        List<TermGrade> grades = includeUnpublished
                 ? termGradeRepository.findBySchoolIdAndStudentIdAndAcademicYear(schoolId, studentId, academicYear)
                 : termGradeRepository.findBySchoolIdAndStudentIdAndAcademicYearAndPublishedTrue(schoolId, studentId, academicYear);
+        if (grades.stream().anyMatch(g -> g.getGradeDescription() == null || g.getGradeDescription().isBlank())) {
+            List<GradingBandDto> bands = gradingScaleService.getBands(schoolId);
+            for (TermGrade grade : grades) {
+                if (grade.getGradeDescription() != null && !grade.getGradeDescription().isBlank()) continue;
+                GradingBandDto band = gradingScaleService.findByGrade(bands, grade.getLetterGrade());
+                if (band != null) { grade.setGradeDescription(band.getDescription()); grade.setGradePoints(band.getPoints()); }
+            }
+        }
+        return grades;
     }
 
     @Transactional(readOnly = true)

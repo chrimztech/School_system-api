@@ -169,7 +169,27 @@
       "Bash(PGPASSWORD=11111111 psql -h localhost -U postgres -d school_system -c \"SELECT conname, pg_get_constraintdef\\(oid\\) FROM pg_constraint WHERE conrelid = 'assessments'::regclass AND contype='c';\")",
       "Bash(PGPASSWORD=11111111 psql -h localhost -U postgres -d school_system -c \"\\\\dt published_term_grades\")",
       "Bash(PGPASSWORD=11111111 psql -h localhost -U postgres -d school_system -c \"SELECT id, first_name, last_name, guardian_email, fee_balance FROM students WHERE id = '6b9972f7-3e18-477b-bae4-487168fe34ef';\")",
-      "Bash(taskkill //PID 40776 //F)"
+      "Bash(taskkill //PID 40776 //F)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:8090/actuator/health)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:8090/api/schools)",
+      "Bash(node -e \"console.log\\(require.resolve\\('playwright'\\)\\)\")",
+      "Bash(npx --yes -p playwright node -e \"const {chromium} = require\\('playwright'\\); console.log\\(typeof chromium\\);\")",
+      "Bash(npx --yes -p playwright node verify.js)",
+      "Bash(PGPASSWORD=11111111 psql -h localhost -U postgres -d school_system -c \"SELECT s.short_code, u.email, u.role FROM app_users u JOIN schools s ON s.id = u.school_id WHERE u.role IN \\('SCHOOL_ADMIN','PRINCIPAL'\\) LIMIT 5;\")",
+      "Bash(PGPASSWORD=11111111 psql -h localhost -U postgres -d school_system -c \"SELECT id, password FROM app_users WHERE email='testhead@namwianga.com';\")",
+      "Bash(PGPASSWORD=11111111 psql -h localhost -U postgres -d school_system -c \"\\\\d app_users\")",
+      "Bash(./node_modules/.bin/tsc --noEmit -p tsconfig.json)",
+      "Bash(npx --yes -p playwright node -e ' *)",
+      "Bash(mvn -q compile)",
+      "Bash(npx eslint *)",
+      "Bash(npx vite *)",
+      "PowerShell(Get-Process -Id 38256)",
+      "PowerShell(Stop-Process -Id 38256 -Force)",
+      "PowerShell(Get-Process -Id 38256 -ErrorAction SilentlyContinue)",
+      "PowerShell(try { Stop-Process -Id 38256 -Force -ErrorAction Stop; \"killed\" } catch { \"error: $\\($_.Exception.Message\\)\" })",
+      "PowerShell($conn = Get-NetTCPConnection -LocalPort 8090 -ErrorAction SilentlyContinue; if \\($conn\\) { \"listening, pid=$\\($conn[0].OwningProcess\\)\" } else { \"not listening\" })",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" \"http://localhost:8090/api/schools/e4e09083-d18e-4746-b682-a9b629b04fa6/gce-candidates\")",
+      "PowerShell(Get-NetTCPConnection -LocalPort 5173,3000,4173 -ErrorAction SilentlyContinue)"
     ],
     "additionalDirectories": [
       "\\tmp"

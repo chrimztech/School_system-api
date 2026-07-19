@@ -70,6 +70,11 @@ public class GradingScaleService {
         return evaluate(getBands(schoolId), percentage);
     }
 
+    public GradingBandDto findByGrade(List<GradingBandDto> bands, String grade) {
+        if (grade == null) return null;
+        return bands.stream().filter(band -> grade.equalsIgnoreCase(band.getGrade())).findFirst().orElse(null);
+    }
+
     public GradingBandDto evaluate(List<GradingBandDto> bands, double percentage) {
         double bounded = Math.max(0, Math.min(100, percentage));
         return bands.stream()
