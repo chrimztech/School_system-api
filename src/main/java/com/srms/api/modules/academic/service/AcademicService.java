@@ -36,7 +36,7 @@ public class AcademicService {
 
     /** Returns only the classes a teacher is assigned to (subject teacher or homeroom teacher). */
     public List<SchoolClass> findClassesByTeacherEmail(String schoolId, String email) {
-        return teacherRepository.findByEmailAndSchoolId(email, schoolId).map(teacher -> {
+        return teacherRepository.findByEmailIgnoreCaseAndSchoolId(email, schoolId).map(teacher -> {
             String tid = teacher.getId();
             Set<String> classIds = new HashSet<>();
             teacherSubjectRepository.findByTeacherIdAndSchoolId(tid, schoolId)
@@ -55,7 +55,7 @@ public class AcademicService {
     /** Every class+subject a teacher is actually assigned to teach — the scoping source of truth
      * for what a TEACHER can create/grade assessments for and which subjects they see. */
     public List<TeacherClassSubject> findAssignmentsByTeacherEmail(String schoolId, String email) {
-        return teacherRepository.findByEmailAndSchoolId(email, schoolId)
+        return teacherRepository.findByEmailIgnoreCaseAndSchoolId(email, schoolId)
                 .map(teacher -> teacherSubjectRepository.findByTeacherIdAndSchoolId(teacher.getId(), schoolId))
                 .orElse(List.of());
     }

@@ -242,7 +242,7 @@ public class AssessmentService {
         if (user == null || user.getEmail() == null) {
             throw new ForbiddenException("Could not resolve your staff record");
         }
-        Teacher teacher = teacherRepository.findByEmailAndSchoolId(user.getEmail(), schoolId).orElse(null);
+        Teacher teacher = teacherRepository.findByEmailIgnoreCaseAndSchoolId(user.getEmail(), schoolId).orElse(null);
         if (teacher == null) {
             throw new ForbiddenException("Could not resolve your staff record");
         }
@@ -446,7 +446,7 @@ public class AssessmentService {
     private Set<String> teacherAssignmentKeys(String schoolId, String userId) {
         AppUser user = userRepository.findById(userId).orElse(null);
         if (user == null || user.getEmail() == null) return Set.of();
-        Teacher teacher = teacherRepository.findByEmailAndSchoolId(user.getEmail(), schoolId).orElse(null);
+        Teacher teacher = teacherRepository.findByEmailIgnoreCaseAndSchoolId(user.getEmail(), schoolId).orElse(null);
         if (teacher == null) return Set.of();
         return teacherSubjectRepository.findByTeacherIdAndSchoolId(teacher.getId(), schoolId).stream()
                 .map(t -> assignmentKey(t.getClassName(), t.getSubjectName()))

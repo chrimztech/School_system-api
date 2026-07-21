@@ -1,40 +1,80 @@
 package com.srms.api.modules.auth.service;
 
 import com.srms.api.exception.BusinessException;
+import com.srms.api.modules.audit.entity.AuditEvent;
+import com.srms.api.modules.audit.repository.AuditEventRepository;
 import com.srms.api.modules.auth.dto.AuthResponse;
 import com.srms.api.modules.auth.dto.LoginRequest;
 import com.srms.api.modules.auth.dto.UserDto;
 import com.srms.api.modules.auth.entity.AppUser;
 import com.srms.api.modules.auth.repository.UserRepository;
+import com.srms.api.modules.teacher.entity.Teacher;
+import com.srms.api.modules.teacher.repository.TeacherRepository;
 import com.srms.api.security.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.Comparator;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
 public class AuthService {
     private final UserRepository userRepository;
+    private final TeacherRepository teacherRepository;
+    private final AuditEventRepository auditEventRepository;
     private final JwtTokenProvider jwtTokenProvider;
     private final PasswordEncoder passwordEncoder;
 
+    // Roles whose assessment/verification workflows resolve identity through the Teacher
+    // (HR staff) table by email — see AcademicService.findAssignmentsByTeacherEmail and
+    // AssessmentService's HOD department-verification checks. A login account for one of
+    // these roles is useless for those workflows without a matching Teacher row, so we
+    // keep the two in sync at creation time instead of relying on someone remembering to
+    // add the staff profile separately.
+    private static final Set<AppUser.UserRole> ROLES_REQUIRING_TEACHER_PROFILE =
+            EnumSet.of(AppUser.UserRole.TEACHER, AppUser.UserRole.HOD);
+
     public AuthResponse login(LoginRequest request) {
-        AppUser user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new BusinessException("Invalid email or password"));
-        if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
+        AppUser user = userRepository.findByEmail(request.getEmail()).orElse(null);
+        if (user == null || !passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
+            recordLoginAttempt(user, "warning", "Failed sign-in attempt");
             throw new BusinessException("Invalid email or password");
         }
-        if (!user.isActive()) throw new BusinessException("Account is deactivated");
+        if (!user.isActive()) {
+            recordLoginAttempt(user, "warning", "Sign-in blocked — account deactivated");
+            throw new BusinessException("Account is deactivated");
+        }
         String token = jwtTokenProvider.generateToken(
                 user.getId(), user.getEmail(), user.getRole().name(), user.getSchoolId());
+        recordLoginAttempt(user, "success", "Signed in");
         return AuthResponse.builder()
                 .token(token).id(user.getId()).name(user.getName())
                 .email(user.getEmail()).role(user.getRole().name())
                 .schoolId(user.getSchoolId()).initials(user.getInitials())
                 .build();
+    }
+
+    /**
+     * The AuditAspect can't see this call — there's no authenticated principal yet when a
+     * login is being attempted — so login attempts are logged explicitly here instead.
+     * Attempts against an unknown email, or a SUPER_ADMIN account (schoolId is always null
+     * for those), aren't recorded: AuditEvent.schoolId is NOT NULL and there is no tenant
+     * to attribute the event to.
+     */
+    private void recordLoginAttempt(AppUser user, String severity, String action) {
+        if (user == null || user.getSchoolId() == null || user.getSchoolId().isBlank()) return;
+        AuditEvent event = new AuditEvent();
+        event.setSchoolId(user.getSchoolId());
+        event.setActor(user.getName() + " <" + user.getEmail() + ">");
+        event.setRole(user.getRole().name());
+        event.setAction("AuthService.login");
+        event.setTarget(action);
+        event.setSeverity(severity);
+        auditEventRepository.save(event);
     }
 
     public UserDto getMe(String userId) {
@@ -88,7 +128,9 @@ public class AuthService {
         if (notifyEmail != null) user.setNotifyEmail(notifyEmail);
         if (notifySms != null) user.setNotifySms(notifySms);
 
-        return toDto(userRepository.save(user));
+        AppUser saved = userRepository.save(user);
+        ensureTeacherProfile(saved);
+        return toDto(saved);
     }
 
     public void changePassword(String userId, String currentPassword, String newPassword) {
@@ -165,7 +207,37 @@ public class AuthService {
                     ? String.valueOf(parts[0].charAt(0)) + parts[1].charAt(0)
                     : String.valueOf(parts[0].charAt(0)));
         }
-        return userRepository.save(user);
+        AppUser saved = userRepository.save(user);
+        ensureTeacherProfile(saved);
+        return saved;
+    }
+
+    /**
+     * Guarantees a login account with a teaching role has a matching Teacher (HR staff)
+     * row for the same email in the same school. Without this, class/subject assignment
+     * lookups and HOD department-verification (both keyed on Teacher.email) silently
+     * return nothing for an otherwise valid, active login — see AcademicService and
+     * AssessmentService's teacherRepository.findByEmailIgnoreCaseAndSchoolId usages.
+     */
+    private void ensureTeacherProfile(AppUser user) {
+        if (!ROLES_REQUIRING_TEACHER_PROFILE.contains(user.getRole())) return;
+        if (user.getSchoolId() == null || user.getSchoolId().isBlank()) return;
+        if (teacherRepository.findByEmailIgnoreCaseAndSchoolId(user.getEmail(), user.getSchoolId()).isPresent()) return;
+
+        String[] parts = user.getName().trim().split("\\s+", 2);
+        String firstName = parts[0];
+        String lastName = parts.length > 1 ? parts[1] : parts[0];
+        long count = teacherRepository.countBySchoolIdAndStatus(user.getSchoolId(), Teacher.TeacherStatus.active);
+
+        Teacher teacher = new Teacher();
+        teacher.setSchoolId(user.getSchoolId());
+        teacher.setStaffNumber("STF-" + user.getSchoolId().toUpperCase() + "-" + String.format("%03d", count + 1));
+        teacher.setFirstName(firstName);
+        teacher.setLastName(lastName);
+        teacher.setEmail(user.getEmail());
+        teacher.setPhone(user.getPhone());
+        teacher.setStatus(Teacher.TeacherStatus.active);
+        teacherRepository.save(teacher);
     }
 
     private AppUser findUserEntity(String userId) {

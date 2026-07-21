@@ -189,7 +189,17 @@
       "PowerShell(try { Stop-Process -Id 38256 -Force -ErrorAction Stop; \"killed\" } catch { \"error: $\\($_.Exception.Message\\)\" })",
       "PowerShell($conn = Get-NetTCPConnection -LocalPort 8090 -ErrorAction SilentlyContinue; if \\($conn\\) { \"listening, pid=$\\($conn[0].OwningProcess\\)\" } else { \"not listening\" })",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" \"http://localhost:8090/api/schools/e4e09083-d18e-4746-b682-a9b629b04fa6/gce-candidates\")",
-      "PowerShell(Get-NetTCPConnection -LocalPort 5173,3000,4173 -ErrorAction SilentlyContinue)"
+      "PowerShell(Get-NetTCPConnection -LocalPort 5173,3000,4173 -ErrorAction SilentlyContinue)",
+      "Bash(PGPASSWORD=11111111 psql -h localhost -U postgres -d school_system -c \"SELECT version\\(\\);\" -c \"\\\\d teachers\")",
+      "Bash(javap -p target/classes/com/srms/api/modules/auth/service/AuthService.class)",
+      "Bash(mvn -q clean compile)",
+      "Bash(curl -s -X POST http://localhost:8090/api/auth/login -H 'Content-Type: application/json' -d '{\"email\":\"testhead@namwianga.com\",\"password\":\"password123\"}')",
+      "Bash(curl -s -X POST http://localhost:8090/api/schools/e4e09083-d18e-4746-b682-a9b629b04fa6/backups -H 'Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJiZDUyZGNlZi0wZTRkLTRhOTQtYTAxNC1hYjEyOWViOTY3ZTIiLCJlbWFpbCI6InRlc3RoZWFkQG5hbXdpYW5nYS5jb20iLCJyb2xlIjoiU0NIT09MX0FETUlOIiwiaWF0IjoxNzg0NTMyMzExLCJleHAiOjE3ODQ2MTg3MTEsInNjaG9vbElkIjoiZTRlMDkwODMtZDE4ZS00NzQ2LWI2ODItYTliNjI5YjA0ZmE2In0.tBTJyh_qjRAcq_OyZ9mu6M74qCMt3ciPlyVfUZCLY_QpJTc7RfG38YZJ-VQaoLf0')",
+      "Bash(curl -s -w '\\\\nHTTP %{http_code}\\\\n' http://localhost:8090/api/schools/00000000-0000-0000-0000-000000000000/audit -H 'Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJiZDUyZGNlZi0wZTRkLTRhOTQtYTAxNC1hYjEyOWViOTY3ZTIiLCJlbWFpbCI6InRlc3RoZWFkQG5hbXdpYW5nYS5jb20iLCJyb2xlIjoiU0NIT09MX0FETUlOIiwiaWF0IjoxNzg0NTMyMzExLCJleHAiOjE3ODQ2MTg3MTEsInNjaG9vbElkIjoiZTRlMDkwODMtZDE4ZS00NzQ2LWI2ODItYTliNjI5YjA0ZmE2In0.tBTJyh_qjRAcq_OyZ9mu6M74qCMt3ciPlyVfUZCLY_QpJTc7RfG38YZJ-VQaoLf0')",
+      "Bash(curl -s -w '\\\\nHTTP %{http_code}\\\\n' http://localhost:8090/api/schools/00000000-0000-0000-0000-000000000000/backups -H 'Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJiZDUyZGNlZi0wZTRkLTRhOTQtYTAxNC1hYjEyOWViOTY3ZTIiLCJlbWFpbCI6InRlc3RoZWFkQG5hbXdpYW5nYS5jb20iLCJyb2xlIjoiU0NIT09MX0FETUlOIiwiaWF0IjoxNzg0NTMyMzExLCJleHAiOjE3ODQ2MTg3MTEsInNjaG9vbElkIjoiZTRlMDkwODMtZDE4ZS00NzQ2LWI2ODItYTliNjI5YjA0ZmE2In0.tBTJyh_qjRAcq_OyZ9mu6M74qCMt3ciPlyVfUZCLY_QpJTc7RfG38YZJ-VQaoLf0')",
+      "Bash(PGPASSWORD=11111111 psql -h localhost -U postgres -d school_system -c \"\\\\d alumni_records\")",
+      "Bash(curl -s -X POST http://localhost:8090/api/schools/e4e09083-d18e-4746-b682-a9b629b04fa6/backups/0b944bbb-8e06-4993-b4c2-bffc1bb96db8/restore -H 'Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJiZDUyZGNlZi0wZTRkLTRhOTQtYTAxNC1hYjEyOWViOTY3ZTIiLCJlbWFpbCI6InRlc3RoZWFkQG5hbXdpYW5nYS5jb20iLCJyb2xlIjoiU0NIT09MX0FETUlOIiwiaWF0IjoxNzg0NTMyMzExLCJleHAiOjE3ODQ2MTg3MTEsInNjaG9vbElkIjoiZTRlMDkwODMtZDE4ZS00NzQ2LWI2ODItYTliNjI5YjA0ZmE2In0.tBTJyh_qjRAcq_OyZ9mu6M74qCMt3ciPlyVfUZCLY_QpJTc7RfG38YZJ-VQaoLf0')",
+      "Bash(python3 -m json.tool)"
     ],
     "additionalDirectories": [
       "\\tmp"
