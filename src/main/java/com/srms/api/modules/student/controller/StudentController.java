@@ -43,8 +43,12 @@ public class StudentController {
     @GetMapping("/by-guardian")
     public ResponseEntity<ApiResponse<List<Student>>> getByGuardian(
             @PathVariable String schoolId,
-            @RequestParam String email) {
-        return ResponseEntity.ok(ApiResponse.ok(studentService.findByGuardianEmail(schoolId, email)));
+            @RequestParam(required = false) String email,
+            @RequestParam(required = false) String phone) {
+        List<Student> students = (email != null && !email.isBlank())
+                ? studentService.findByGuardianEmail(schoolId, email)
+                : studentService.findByGuardianPhone(schoolId, phone);
+        return ResponseEntity.ok(ApiResponse.ok(students));
     }
 
     @GetMapping("/{id}")

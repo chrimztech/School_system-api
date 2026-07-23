@@ -22,14 +22,15 @@ public class GradingScaleService {
 
     public static List<GradingBandDto> zambia2023Defaults() {
         return List.of(
-                band(80, 100, "A", "Excellent", 1),
-                band(70, 79, "B+", "Very Good", 2),
-                band(60, 69, "B", "Good", 3),
-                band(50, 59, "C+", "Credit", 4),
-                band(40, 49, "C", "Satisfactory", 5),
-                band(30, 39, "D+", "Elementary", 6),
-                band(20, 29, "D", "Limited Achievement", 7),
-                band(0, 19, "E", "Unsatisfactory", 8)
+                band(75, 100, "1", "DISTINCTION", 1),
+                band(70, 74, "2", "DISTINCTION", 2),
+                band(65, 69, "3", "MERIT", 3),
+                band(60, 64, "4", "MERIT", 4),
+                band(55, 59, "5", "CREDIT", 5),
+                band(50, 54, "6", "CREDIT", 6),
+                band(45, 49, "7", "SATISFACTORY", 7),
+                band(40, 44, "8", "SATISFACTORY", 8),
+                band(0, 39, "9", "UNSATISFACTORY", 9)
         );
     }
 

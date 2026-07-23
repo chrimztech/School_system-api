@@ -37,6 +37,25 @@ public class StudentService {
         return studentRepository.findBySchoolIdAndGuardianEmailIgnoreCase(schoolId, email);
     }
 
+    /**
+     * Guardian phone numbers are free-typed by school staff and not stored in one canonical
+     * format, so matching happens in-memory against a normalized (spaces/dashes stripped)
+     * form rather than an exact DB match. Lets phone-only parents (no email on file) still
+     * see their own children's report cards.
+     */
+    public List<Student> findByGuardianPhone(String schoolId, String phone) {
+        String normalized = normalizePhone(phone);
+        if (normalized.isEmpty()) return List.of();
+        return studentRepository.findBySchoolId(schoolId).stream()
+                .filter(s -> normalized.equals(normalizePhone(s.getGuardianPhone()))
+                        || normalized.equals(normalizePhone(s.getGuardianAltPhone())))
+                .toList();
+    }
+
+    private String normalizePhone(String phone) {
+        return phone == null ? "" : phone.replaceAll("[\\s-]", "");
+    }
+
     public Student findById(String id, String schoolId) {
         return studentRepository.findByIdAndSchoolId(id, schoolId)
                 .orElseThrow(() -> new ResourceNotFoundException("Student", id));

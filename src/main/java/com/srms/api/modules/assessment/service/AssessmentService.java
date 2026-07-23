@@ -324,8 +324,8 @@ public class AssessmentService {
     private void gradeResult(AssessmentResult result, Assessment assessment, List<GradingBandDto> gradingBands) {
         if (result.isAbsent()) {
             result.setScore(null);
-            result.setGrade("ABS");
-            result.setRemarks("Absent");
+            result.setGrade("X");
+            result.setRemarks("ABSENT");
             return;
         }
         if (result.getScore() == null) throw new BusinessException("A score or absent status is required");

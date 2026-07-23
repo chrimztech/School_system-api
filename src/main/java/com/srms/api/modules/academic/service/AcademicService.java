@@ -1,5 +1,6 @@
 package com.srms.api.modules.academic.service;
 
+import com.srms.api.exception.BusinessException;
 import com.srms.api.exception.ResourceNotFoundException;
 import com.srms.api.modules.academic.entity.*;
 import com.srms.api.modules.academic.repository.*;
@@ -201,16 +202,13 @@ public class AcademicService {
         if (departmentRepository.existsBySchoolIdAndName(schoolId, dto.getName())) {
             throw new IllegalArgumentException("Department '" + dto.getName() + "' already exists");
         }
-        String headTeacherId = dto.getHeadTeacherId();
         dto.setSchoolId(schoolId);
         dto.setActive(true);
+        // A department starts with no HOD by design: staff are added to it first, and a
+        // head is only ever promoted afterwards from among that department's own staff
+        // (see setDepartmentHead / updateDepartment).
         dto.setHeadTeacherId(null);
-        Department saved = departmentRepository.save(dto);
-        if (headTeacherId != null && !headTeacherId.isBlank()) {
-            setDepartmentHead(saved, schoolId, headTeacherId);
-            saved = departmentRepository.save(saved);
-        }
-        return saved;
+        return departmentRepository.save(dto);
     }
 
     public Department updateDepartment(String id, String schoolId, Department dto) {
@@ -244,6 +242,9 @@ public class AcademicService {
         if (newHeadTeacherId != null) {
             Teacher teacher = teacherRepository.findByIdAndSchoolId(newHeadTeacherId, schoolId)
                 .orElseThrow(() -> new ResourceNotFoundException("Teacher", newHeadTeacherId));
+            if (!d.getName().equalsIgnoreCase(teacher.getDepartment())) {
+                throw new BusinessException("Teacher must belong to the department before becoming HOD");
+            }
             promoteToHod(teacher);
         }
         d.setHeadTeacherId(newHeadTeacherId);

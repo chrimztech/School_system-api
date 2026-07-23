@@ -7,14 +7,15 @@ public final class GradeThresholds {
     private GradeThresholds() {}
 
     public static final List<GradingBand> DEFAULT_BANDS = List.of(
-            new GradingBand(80, 100, "A", "Excellent", 1),
-            new GradingBand(70, 79, "B+", "Very Good", 2),
-            new GradingBand(60, 69, "B", "Good", 3),
-            new GradingBand(50, 59, "C+", "Credit", 4),
-            new GradingBand(40, 49, "C", "Satisfactory", 5),
-            new GradingBand(30, 39, "D+", "Elementary", 6),
-            new GradingBand(20, 29, "D", "Limited Achievement", 7),
-            new GradingBand(0, 19, "E", "Unsatisfactory", 8)
+            new GradingBand(75, 100, "1", "DISTINCTION", 1),
+            new GradingBand(70, 74, "2", "DISTINCTION", 2),
+            new GradingBand(65, 69, "3", "MERIT", 3),
+            new GradingBand(60, 64, "4", "MERIT", 4),
+            new GradingBand(55, 59, "5", "CREDIT", 5),
+            new GradingBand(50, 54, "6", "CREDIT", 6),
+            new GradingBand(45, 49, "7", "SATISFACTORY", 7),
+            new GradingBand(40, 44, "8", "SATISFACTORY", 8),
+            new GradingBand(0, 39, "9", "UNSATISFACTORY", 9)
     );
 
     public static String letterGrade(double percentage, List<GradingBand> bands) {

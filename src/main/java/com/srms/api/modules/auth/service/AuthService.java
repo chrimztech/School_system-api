@@ -39,10 +39,10 @@ public class AuthService {
             EnumSet.of(AppUser.UserRole.TEACHER, AppUser.UserRole.HOD);
 
     public AuthResponse login(LoginRequest request) {
-        AppUser user = userRepository.findByEmail(request.getEmail()).orElse(null);
+        AppUser user = findUserByIdentifier(request.getIdentifier());
         if (user == null || !passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
             recordLoginAttempt(user, "warning", "Failed sign-in attempt");
-            throw new BusinessException("Invalid email or password");
+            throw new BusinessException("Invalid email/phone or password");
         }
         if (!user.isActive()) {
             recordLoginAttempt(user, "warning", "Sign-in blocked — account deactivated");
@@ -53,9 +53,26 @@ public class AuthService {
         recordLoginAttempt(user, "success", "Signed in");
         return AuthResponse.builder()
                 .token(token).id(user.getId()).name(user.getName())
-                .email(user.getEmail()).role(user.getRole().name())
+                .email(user.getEmail()).phone(user.getPhone()).role(user.getRole().name())
                 .schoolId(user.getSchoolId()).initials(user.getInitials())
                 .build();
+    }
+
+    /**
+     * Accepts either an email or a phone number — some accounts (e.g. parents without email)
+     * only have a phone on file. An "@" is treated as an email lookup; otherwise the identifier
+     * is normalized (spaces/dashes stripped) and matched against the stored phone.
+     */
+    private AppUser findUserByIdentifier(String identifier) {
+        String trimmed = identifier == null ? "" : identifier.trim();
+        if (trimmed.contains("@")) {
+            return userRepository.findByEmail(trimmed).orElse(null);
+        }
+        return userRepository.findByPhone(normalizePhone(trimmed)).orElse(null);
+    }
+
+    private String normalizePhone(String phone) {
+        return phone.replaceAll("[\\s-]", "");
     }
 
     /**
@@ -69,7 +86,8 @@ public class AuthService {
         if (user == null || user.getSchoolId() == null || user.getSchoolId().isBlank()) return;
         AuditEvent event = new AuditEvent();
         event.setSchoolId(user.getSchoolId());
-        event.setActor(user.getName() + " <" + user.getEmail() + ">");
+        String contact = user.getEmail() != null ? user.getEmail() : user.getPhone();
+        event.setActor(user.getName() + " <" + contact + ">");
         event.setRole(user.getRole().name());
         event.setAction("AuthService.login");
         event.setTarget(action);
@@ -120,7 +138,7 @@ public class AuthService {
 
         user.setRole(nextRole);
         user.setSchoolId(resolvedSchoolId);
-        if (phone != null) user.setPhone(phone);
+        if (phone != null) user.setPhone(phone.isBlank() ? null : normalizePhone(phone));
         if (active != null) user.setActive(active);
         if (rawPassword != null && !rawPassword.isBlank()) {
             user.setPasswordHash(passwordEncoder.encode(rawPassword));
@@ -181,14 +199,22 @@ public class AuthService {
     }
 
     private AppUser createUserEntity(AppUser user, String rawPassword) {
-        if (user.getEmail() == null || user.getEmail().isBlank()) {
-            throw new BusinessException("Email is required");
+        boolean hasEmail = user.getEmail() != null && !user.getEmail().isBlank();
+        boolean hasPhone = user.getPhone() != null && !user.getPhone().isBlank();
+        if (!hasEmail && !hasPhone) {
+            throw new BusinessException("Email or phone is required");
         }
         if (user.getName() == null || user.getName().isBlank()) {
             throw new BusinessException("Name is required");
         }
-        if (userRepository.findByEmail(user.getEmail()).isPresent()) {
+        if (hasEmail && userRepository.findByEmail(user.getEmail()).isPresent()) {
             throw new BusinessException("A user with this email already exists");
+        }
+        if (hasPhone) {
+            user.setPhone(normalizePhone(user.getPhone()));
+            if (userRepository.findByPhone(user.getPhone()).isPresent()) {
+                throw new BusinessException("A user with this phone number already exists");
+            }
         }
 
         AppUser.UserRole role = user.getRole() == null ? AppUser.UserRole.SCHOOL_ADMIN : user.getRole();

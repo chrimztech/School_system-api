@@ -1,13 +1,13 @@
 package com.srms.api.modules.auth.dto;
 
-import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 @Data
 public class LoginRequest {
-    @NotBlank @Email
-    private String email;
+    /** Either an email address or a phone number — some accounts (e.g. parents) have no email. */
+    @NotBlank
+    private String identifier;
     @NotBlank
     private String password;
 }

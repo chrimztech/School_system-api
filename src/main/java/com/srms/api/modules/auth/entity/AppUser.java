@@ -8,7 +8,7 @@ import lombok.*;
 @Table(name = "app_users", indexes = @Index(name = "idx_app_users_school_id", columnList = "school_id"))
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class AppUser extends BaseEntity {
-    @Column(nullable = false, unique = true)
+    @Column(unique = true)
     private String email;
     @Column(nullable = false)
     private String passwordHash;
@@ -19,6 +19,7 @@ public class AppUser extends BaseEntity {
     @Column(nullable = false)
     private UserRole role;
     private String schoolId; // null for SUPER_ADMIN
+    @Column(unique = true)
     private String phone;
     @Builder.Default private boolean active = true;
     @Builder.Default private boolean notifyEmail = true;
