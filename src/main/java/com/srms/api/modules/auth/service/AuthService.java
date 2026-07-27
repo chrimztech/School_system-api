@@ -68,7 +68,12 @@ public class AuthService {
         if (trimmed.contains("@")) {
             return userRepository.findByEmail(trimmed).orElse(null);
         }
-        return userRepository.findByPhone(normalizePhone(trimmed)).orElse(null);
+        List<AppUser> matches = userRepository.findByPhone(normalizePhone(trimmed));
+        if (matches.size() > 1) {
+            throw new BusinessException(
+                    "Multiple accounts are linked to this phone number. Please sign in with your email instead, or contact your school office.");
+        }
+        return matches.isEmpty() ? null : matches.get(0);
     }
 
     private String normalizePhone(String phone) {
@@ -212,7 +217,7 @@ public class AuthService {
         }
         if (hasPhone) {
             user.setPhone(normalizePhone(user.getPhone()));
-            if (userRepository.findByPhone(user.getPhone()).isPresent()) {
+            if (!userRepository.findByPhone(user.getPhone()).isEmpty()) {
                 throw new BusinessException("A user with this phone number already exists");
             }
         }

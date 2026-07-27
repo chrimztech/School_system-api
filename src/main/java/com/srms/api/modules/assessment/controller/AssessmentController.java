@@ -87,9 +87,16 @@ public class AssessmentController {
                 .orElseThrow(() -> new ForbiddenException("Authenticated parent was not found"));
         Student student = studentRepository.findByIdAndSchoolId(studentId, schoolId)
                 .orElseThrow(() -> new ForbiddenException("Learner is not available to this parent"));
-        if (user.getEmail() == null || student.getGuardianEmail() == null
-                || !user.getEmail().equalsIgnoreCase(student.getGuardianEmail())) {
+        boolean emailMatch = user.getEmail() != null && student.getGuardianEmail() != null
+                && user.getEmail().equalsIgnoreCase(student.getGuardianEmail());
+        boolean phoneMatch = user.getPhone() != null && student.getGuardianPhone() != null
+                && normalizePhone(user.getPhone()).equalsIgnoreCase(normalizePhone(student.getGuardianPhone()));
+        if (!emailMatch && !phoneMatch) {
             throw new ForbiddenException("Parents can only view results for their own children");
         }
+    }
+
+    private static String normalizePhone(String phone) {
+        return phone.replaceAll("[\\s-]", "");
     }
 }
