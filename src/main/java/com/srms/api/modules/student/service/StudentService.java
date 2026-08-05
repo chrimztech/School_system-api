@@ -1,6 +1,7 @@
 package com.srms.api.modules.student.service;
 
 import com.srms.api.common.BulkImportResult;
+import com.srms.api.common.PhoneUtils;
 import com.srms.api.exception.ResourceNotFoundException;
 import com.srms.api.modules.fee.service.FeeService;
 import com.srms.api.modules.school.entity.School;
@@ -53,7 +54,7 @@ public class StudentService {
     }
 
     private String normalizePhone(String phone) {
-        return phone == null ? "" : phone.replaceAll("[\\s-]", "");
+        return PhoneUtils.normalize(phone);
     }
 
     public Student findById(String id, String schoolId) {

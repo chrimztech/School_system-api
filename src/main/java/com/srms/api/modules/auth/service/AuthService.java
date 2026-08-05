@@ -1,5 +1,6 @@
 package com.srms.api.modules.auth.service;
 
+import com.srms.api.common.PhoneUtils;
 import com.srms.api.exception.BusinessException;
 import com.srms.api.modules.audit.entity.AuditEvent;
 import com.srms.api.modules.audit.repository.AuditEventRepository;
@@ -77,7 +78,7 @@ public class AuthService {
     }
 
     private String normalizePhone(String phone) {
-        return phone.replaceAll("[\\s-]", "");
+        return PhoneUtils.normalize(phone);
     }
 
     /**

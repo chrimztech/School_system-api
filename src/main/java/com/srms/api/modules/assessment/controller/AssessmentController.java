@@ -2,6 +2,7 @@ package com.srms.api.modules.assessment.controller;
 import com.srms.api.common.ApiResponse;
 import com.srms.api.common.PageRequestUtil;
 import com.srms.api.common.PageResponse;
+import com.srms.api.common.PhoneUtils;
 import com.srms.api.modules.assessment.entity.Assessment;
 import com.srms.api.modules.assessment.entity.AssessmentResult;
 import com.srms.api.modules.assessment.service.AssessmentService;
@@ -97,6 +98,6 @@ public class AssessmentController {
     }
 
     private static String normalizePhone(String phone) {
-        return phone.replaceAll("[\\s-]", "");
+        return PhoneUtils.normalize(phone);
     }
 }
