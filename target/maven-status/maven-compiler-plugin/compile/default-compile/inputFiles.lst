@@ -4,6 +4,7 @@ F:\school\School_system-api\src\main\java\com\srms\api\modules\development\repos
 F:\school\School_system-api\src\main\java\com\srms\api\modules\assessment\controller\GradeWeightConfigController.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\report\service\ReportCommentService.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\fee\entity\FeeBillingRule.java
+F:\school\School_system-api\src\main\java\com\srms\api\modules\assessment\dto\AnalysisResponse.java
 F:\school\School_system-api\src\main\java\com\srms\api\exception\ResourceNotFoundException.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\reporting\repository\SavedReportRepository.java
 F:\school\School_system-api\src\main\java\com\srms\api\security\JwtAuthenticationFilter.java
@@ -220,6 +221,7 @@ F:\school\School_system-api\src\main\java\com\srms\api\modules\lostfound\entity\
 F:\school\School_system-api\src\main\java\com\srms\api\config\SecurityConfig.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\audit\service\AuditService.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\compliance\service\ComplianceService.java
+F:\school\School_system-api\src\main\java\com\srms\api\modules\assessment\dto\SubjectBreakdown.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\backup\entity\Backup.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\activities\controller\ActivitiesController.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\hr\controller\HrController.java
@@ -254,6 +256,7 @@ F:\school\School_system-api\src\main\java\com\srms\api\modules\library\entity\Li
 F:\school\School_system-api\src\main\java\com\srms\api\modules\attendance\repository\AttendanceRepository.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\duty\repository\DutyRepository.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\vendor\service\VendorService.java
+F:\school\School_system-api\src\main\java\com\srms\api\modules\assessment\controller\AnalysisController.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\auth\controller\AuthController.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\fee\entity\FeeLevy.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\development\entity\StaffDevelopmentPlan.java
@@ -294,6 +297,7 @@ F:\school\School_system-api\src\main\java\com\srms\api\modules\report\controller
 F:\school\School_system-api\src\main\java\com\srms\api\modules\assessment\entity\AssessmentResult.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\admission\service\AdmissionService.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\lostfound\controller\LostFoundController.java
+F:\school\School_system-api\src\main\java\com\srms\api\modules\assessment\service\ResultsAnalysisService.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\development\controller\DevelopmentController.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\platform\controller\PlatformWorkspaceController.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\communication\repository\MessageRepository.java

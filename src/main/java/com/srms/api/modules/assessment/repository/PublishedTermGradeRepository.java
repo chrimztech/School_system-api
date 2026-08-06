@@ -18,4 +18,19 @@ public interface PublishedTermGradeRepository extends JpaRepository<PublishedTer
     Optional<PublishedTermGrade> findBySchoolIdAndStudentIdAndSubjectNameAndTermAndAcademicYearAndReportingPeriod(
             String schoolId, String studentId, String subjectName, String term, String academicYear,
             Assessment.ReportingPeriod reportingPeriod);
+
+    List<PublishedTermGrade> findBySchoolIdAndClassIdAndTermAndAcademicYearAndReportingPeriod(
+            String schoolId, String classId, String term, String academicYear,
+            Assessment.ReportingPeriod reportingPeriod);
+
+    List<PublishedTermGrade> findBySchoolIdAndClassIdInAndTermAndAcademicYearAndReportingPeriod(
+            String schoolId, List<String> classIds, String term, String academicYear,
+            Assessment.ReportingPeriod reportingPeriod);
+
+    List<PublishedTermGrade> findBySchoolIdAndSubjectNameAndTermAndAcademicYearAndReportingPeriod(
+            String schoolId, String subjectName, String term, String academicYear,
+            Assessment.ReportingPeriod reportingPeriod);
+
+    List<PublishedTermGrade> findBySchoolIdAndTermAndAcademicYearAndReportingPeriod(
+            String schoolId, String term, String academicYear, Assessment.ReportingPeriod reportingPeriod);
 }
