@@ -1,7 +1,9 @@
 package com.srms.api.config;
 
 import com.srms.api.security.JwtAuthenticationFilter;
+import com.srms.api.security.tenant.TenantAccessFilter;
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -23,6 +25,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtFilter;
+    private final TenantAccessFilter tenantAccessFilter;
     private final CorsConfigurationSource corsConfigurationSource;
 
     @Bean
@@ -37,8 +40,23 @@ public class SecurityConfig {
                 .requestMatchers("/api/auth/**", "/api/public/**", "/swagger-ui/**", "/v3/api-docs/**", "/actuator/**").permitAll()
                 .anyRequest().authenticated()
             )
-            .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+            .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
+            .addFilterAfter(tenantAccessFilter, JwtAuthenticationFilter.class);
         return http.build();
+    }
+
+    @Bean
+    public FilterRegistrationBean<JwtAuthenticationFilter> jwtFilterRegistration() {
+        FilterRegistrationBean<JwtAuthenticationFilter> registration = new FilterRegistrationBean<>(jwtFilter);
+        registration.setEnabled(false);
+        return registration;
+    }
+
+    @Bean
+    public FilterRegistrationBean<TenantAccessFilter> tenantFilterRegistration() {
+        FilterRegistrationBean<TenantAccessFilter> registration = new FilterRegistrationBean<>(tenantAccessFilter);
+        registration.setEnabled(false);
+        return registration;
     }
 
     /** Missing/invalid/expired tokens should be 401 (not authenticated), not 403 (forbidden) —

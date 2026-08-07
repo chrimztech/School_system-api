@@ -5,6 +5,8 @@ import com.srms.api.modules.auth.dto.AuthResponse;
 import com.srms.api.modules.auth.dto.LoginRequest;
 import com.srms.api.modules.auth.dto.UserDto;
 import com.srms.api.modules.auth.service.AuthService;
+import com.srms.api.security.tenant.TenantRequestAttributes;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -20,8 +22,11 @@ public class AuthController {
     private final AuthService authService;
 
     @PostMapping("/login")
-    public ResponseEntity<ApiResponse<AuthResponse>> login(@Valid @RequestBody LoginRequest request) {
-        return ResponseEntity.ok(ApiResponse.ok(authService.login(request)));
+    public ResponseEntity<ApiResponse<AuthResponse>> login(
+            @Valid @RequestBody LoginRequest request,
+            HttpServletRequest servletRequest) {
+        return ResponseEntity.ok(ApiResponse.ok(
+                authService.login(request, TenantRequestAttributes.resolution(servletRequest))));
     }
 
     @GetMapping("/me")

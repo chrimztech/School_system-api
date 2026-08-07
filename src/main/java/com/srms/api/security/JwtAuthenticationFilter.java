@@ -1,5 +1,6 @@
 package com.srms.api.security;
 
+import com.srms.api.modules.auth.repository.UserRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -20,6 +21,7 @@ import java.util.List;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider jwtTokenProvider;
+    private final UserRepository userRepository;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
@@ -27,12 +29,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String token = extractToken(request);
         if (StringUtils.hasText(token) && jwtTokenProvider.validateToken(token)) {
             String userId = jwtTokenProvider.getUserId(token);
-            String role = jwtTokenProvider.getRole(token);
-            String schoolId = jwtTokenProvider.getSchoolId(token);
-            List<SimpleGrantedAuthority> authorities = List.of(new SimpleGrantedAuthority("ROLE_" + role));
-            UsernamePasswordAuthenticationToken auth =
-                    new UsernamePasswordAuthenticationToken(userId, schoolId, authorities);
-            SecurityContextHolder.getContext().setAuthentication(auth);
+            userRepository.findById(userId).filter(user -> user.isActive()).ifPresent(user -> {
+                List<SimpleGrantedAuthority> authorities =
+                        List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()));
+                UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
+                        user.getId(), user.getSchoolId(), authorities);
+                SecurityContextHolder.getContext().setAuthentication(auth);
+            });
         }
         filterChain.doFilter(request, response);
     }

@@ -3,6 +3,7 @@ package com.srms.api.modules.school.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.srms.api.exception.BusinessException;
 import com.srms.api.exception.ResourceNotFoundException;
 import com.srms.api.modules.academic.repository.SchoolClassRepository;
 import com.srms.api.modules.assessment.service.GradingScaleService;
@@ -23,6 +24,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -270,7 +272,47 @@ public class SchoolService {
         if (dto.getLevels() != null) school.setLevelsJson(writeJson(dto.getLevels()));
         if (dto.getCampuses() != null) school.setCampusesJson(writeJson(dto.getCampuses()));
         if (dto.getFeatures() != null) school.setFeaturesJson(writeJson(dto.getFeatures()));
-        if (dto.getSlug() != null) school.setSlug(dto.getSlug().trim().toLowerCase().replaceAll("[^a-z0-9-]", "-").replaceAll("-+", "-").replaceAll("^-|-$", ""));
+        if (dto.getSlug() != null) {
+            String slug = slugify(dto.getSlug());
+            if (!slug.isBlank()) {
+                assertSlugAvailable(school, slug);
+            }
+            school.setSlug(slug);
+        }
+    }
+
+    /** Subdomains a real school could never claim — reserved for the platform apex/marketing
+     * surface and common infrastructure conventions (mail, api, admin panels, etc.). */
+    private static final Set<String> RESERVED_SLUGS = Set.of(
+            "www", "api", "admin", "app", "portal", "mail", "smtp", "support", "status", "school");
+
+    private static String slugify(String raw) {
+        return raw.trim().toLowerCase().replaceAll("[^a-z0-9-]", "-").replaceAll("-+", "-").replaceAll("^-|-$", "");
+    }
+
+    private void assertSlugAvailable(School school, String slug) {
+        if (RESERVED_SLUGS.contains(slug)) {
+            throw new BusinessException("\"" + slug + "\" is a reserved subdomain and can't be used as a school slug");
+        }
+        schoolRepository.findBySlugAndActiveTrue(slug)
+                .filter(existing -> !existing.getId().equals(school.getId()))
+                .ifPresent(existing -> {
+                    throw new BusinessException("That subdomain is already taken by another school");
+                });
+    }
+
+    /** Auto-generates a slug from the school's shortCode/name, used both for new schools
+     * (applyDefaults) and to backfill any pre-existing school that predates the slug field
+     * (see SlugBackfillRunner). Falls back to an id-suffixed variant on collision or if the
+     * base candidate happens to land on a reserved word. */
+    public String generateUniqueSlug(School school) {
+        String base = (school.getShortCode() == null ? school.getName() : school.getShortCode())
+                .toLowerCase().replaceAll("[^a-z0-9]", "-").replaceAll("-+", "-").replaceAll("^-|-$", "");
+        String candidate = base;
+        if (RESERVED_SLUGS.contains(candidate) || schoolRepository.findBySlugAndActiveTrue(candidate).isPresent()) {
+            candidate = base + "-" + (school.getId() != null ? school.getId().substring(0, 6) : String.valueOf(System.currentTimeMillis()).substring(8));
+        }
+        return candidate;
     }
 
     private void applyDefaults(School school) {
@@ -323,14 +365,7 @@ public class SchoolService {
             school.setOfflineMode(Boolean.FALSE);
         }
         if (school.getSlug() == null || school.getSlug().isBlank()) {
-            String base = (school.getShortCode() == null ? school.getName() : school.getShortCode())
-                    .toLowerCase().replaceAll("[^a-z0-9]", "-").replaceAll("-+", "-").replaceAll("^-|-$", "");
-            // Ensure uniqueness by appending id suffix if another school has the same slug
-            String candidate = base;
-            if (schoolRepository.findBySlugAndActiveTrue(candidate).isPresent()) {
-                candidate = base + "-" + (school.getId() != null ? school.getId().substring(0, 6) : String.valueOf(System.currentTimeMillis()).substring(8));
-            }
-            school.setSlug(candidate);
+            school.setSlug(this.generateUniqueSlug(school));
         }
         if (school.getLevelsJson() == null || school.getLevelsJson().isBlank()) {
             school.setLevelsJson(writeJson(defaultLevelsForType(school.getType())));

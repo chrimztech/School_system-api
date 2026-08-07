@@ -2,6 +2,7 @@ package com.srms.api.modules.auth.service;
 
 import com.srms.api.common.PhoneUtils;
 import com.srms.api.exception.BusinessException;
+import com.srms.api.exception.ForbiddenException;
 import com.srms.api.modules.audit.entity.AuditEvent;
 import com.srms.api.modules.audit.repository.AuditEventRepository;
 import com.srms.api.modules.auth.dto.AuthResponse;
@@ -12,6 +13,7 @@ import com.srms.api.modules.auth.repository.UserRepository;
 import com.srms.api.modules.teacher.entity.Teacher;
 import com.srms.api.modules.teacher.repository.TeacherRepository;
 import com.srms.api.security.JwtTokenProvider;
+import com.srms.api.security.tenant.TenantResolution;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -39,7 +41,7 @@ public class AuthService {
     private static final Set<AppUser.UserRole> ROLES_REQUIRING_TEACHER_PROFILE =
             EnumSet.of(AppUser.UserRole.TEACHER, AppUser.UserRole.HOD);
 
-    public AuthResponse login(LoginRequest request) {
+    public AuthResponse login(LoginRequest request, TenantResolution tenant) {
         AppUser user = findUserByIdentifier(request.getIdentifier());
         if (user == null || !passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
             recordLoginAttempt(user, "warning", "Failed sign-in attempt");
@@ -48,6 +50,16 @@ public class AuthService {
         if (!user.isActive()) {
             recordLoginAttempt(user, "warning", "Sign-in blocked — account deactivated");
             throw new BusinessException("Account is deactivated");
+        }
+        if (tenant.scope() == TenantResolution.Scope.PLATFORM
+                && user.getRole() != AppUser.UserRole.SUPER_ADMIN) {
+            recordLoginAttempt(user, "warning", "Sign-in blocked on platform domain");
+            throw new ForbiddenException("School accounts must use their school subdomain");
+        }
+        if (tenant.isTenant() && (user.getRole() == AppUser.UserRole.SUPER_ADMIN
+                || !tenant.schoolId().equals(user.getSchoolId()))) {
+            recordLoginAttempt(user, "warning", "Cross-school sign-in blocked");
+            throw new ForbiddenException("This account does not belong to this school");
         }
         String token = jwtTokenProvider.generateToken(
                 user.getId(), user.getEmail(), user.getRole().name(), user.getSchoolId());
