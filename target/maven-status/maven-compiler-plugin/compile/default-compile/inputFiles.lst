@@ -151,7 +151,6 @@ F:\school\School_system-api\src\main\java\com\srms\api\modules\alumni\controller
 F:\school\School_system-api\src\main\java\com\srms\api\modules\canteen\repository\MenuItemRepository.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\school\dto\SchoolDto.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\incident\service\IncidentService.java
-F:\school\School_system-api\src\main\java\com\srms\api\modules\auth\controller\PlatformUserController.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\academic\service\PromotionService.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\health\entity\HealthVisit.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\lostfound\service\LostFoundService.java

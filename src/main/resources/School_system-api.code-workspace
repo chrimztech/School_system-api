@@ -1,0 +1,17 @@
+{
+	"folders": [
+		{
+			"path": "../../.."
+		},
+		{
+			"path": "../../../../parent_app"
+		},
+		{
+			"path": "../../../../School_system"
+		},
+		{
+			"path": "../../../../School_system.worktrees"
+		}
+	],
+	"settings": {}
+}

@@ -33,7 +33,7 @@ public class HostelService {
         allocation.setSchoolId(schoolId);
         if (allocation.getCheckInDate() == null) allocation.setCheckInDate(LocalDate.now());
         allocation.setStatus("ACTIVE");
-        HostelRoom room = roomRepo.findById(allocation.getRoomId()).orElse(null);
+        HostelRoom room = roomRepo.findById(allocation.getRoomId()).filter(r -> r.getSchoolId().equals(schoolId)).orElse(null);
         if (room != null) { room.setOccupiedBeds(room.getOccupiedBeds() + 1); roomRepo.save(room); }
         return allocationRepo.save(allocation);
     }
@@ -41,7 +41,7 @@ public class HostelService {
 
         HostelAllocation allocation = allocationRepo.findById(id).filter(a -> a.getSchoolId().equals(schoolId)).orElseThrow();
         allocation.setStatus("VACATED"); allocation.setCheckOutDate(LocalDate.now());
-        HostelRoom room = roomRepo.findById(allocation.getRoomId()).orElse(null);
+        HostelRoom room = roomRepo.findById(allocation.getRoomId()).filter(r -> r.getSchoolId().equals(schoolId)).orElse(null);
         if (room != null) { room.setOccupiedBeds(Math.max(0, room.getOccupiedBeds() - 1)); roomRepo.save(room); }
         return allocationRepo.save(allocation);
     }

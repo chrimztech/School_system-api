@@ -71,7 +71,7 @@ public class LibraryService {
         }
         // Decrement available copies
         if (loan.getBookId() != null) {
-            bookRepository.findById(loan.getBookId()).ifPresent(book -> {
+            bookRepository.findById(loan.getBookId()).filter(b -> b.getSchoolId().equals(schoolId)).ifPresent(book -> {
                 int available = book.getAvailableCopies();
                 if (available <= 0) throw new RuntimeException("No copies available for borrowing");
                 book.setAvailableCopies(available - 1);
@@ -90,7 +90,7 @@ public class LibraryService {
         loan.setStatus(LibraryLoan.Status.RETURNED);
         // Increment available copies
         if (loan.getBookId() != null) {
-            bookRepository.findById(loan.getBookId()).ifPresent(book -> {
+            bookRepository.findById(loan.getBookId()).filter(b -> b.getSchoolId().equals(schoolId)).ifPresent(book -> {
                 book.setAvailableCopies(book.getAvailableCopies() + 1);
                 book.setStatus(LibraryBook.Status.AVAILABLE);
                 bookRepository.save(book);

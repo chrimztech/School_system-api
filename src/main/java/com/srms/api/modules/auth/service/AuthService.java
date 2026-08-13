@@ -68,6 +68,7 @@ public class AuthService {
                 .token(token).id(user.getId()).name(user.getName())
                 .email(user.getEmail()).phone(user.getPhone()).role(user.getRole().name())
                 .schoolId(user.getSchoolId()).initials(user.getInitials())
+                .mustChangePassword(user.isMustChangePassword())
                 .build();
     }
 
@@ -160,6 +161,7 @@ public class AuthService {
         if (active != null) user.setActive(active);
         if (rawPassword != null && !rawPassword.isBlank()) {
             user.setPasswordHash(passwordEncoder.encode(rawPassword));
+            user.setMustChangePassword(true);
         }
         if (notifyEmail != null) user.setNotifyEmail(notifyEmail);
         if (notifySms != null) user.setNotifySms(notifySms);
@@ -178,6 +180,7 @@ public class AuthService {
             throw new BusinessException("New password must be at least 8 characters");
         }
         user.setPasswordHash(passwordEncoder.encode(newPassword));
+        user.setMustChangePassword(false);
         userRepository.save(user);
     }
 
@@ -213,6 +216,7 @@ public class AuthService {
                 .active(user.isActive())
                 .notifyEmail(user.isNotifyEmail())
                 .notifySms(user.isNotifySms())
+                .mustChangePassword(user.isMustChangePassword())
                 .build();
     }
 
@@ -245,6 +249,10 @@ public class AuthService {
         }
 
         user.setPasswordHash(passwordEncoder.encode(rawPassword == null || rawPassword.isBlank() ? "password123" : rawPassword));
+        // A newly provisioned account's password is always known to whoever created it
+        // (the admin, or the "password123" default from onboarding) — force a change on
+        // first sign-in so that knowledge doesn't stay a standing credential.
+        user.setMustChangePassword(true);
         if (user.getInitials() == null && user.getName() != null) {
             String[] parts = user.getName().trim().split("\\s+");
             user.setInitials(parts.length >= 2

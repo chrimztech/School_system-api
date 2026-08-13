@@ -323,7 +323,7 @@ Authorization today is largely **implicit**: route namespacing (`/api/admin/**`,
 All school-scoped endpoints are rooted at `/api/schools/{schoolId}/...` unless noted otherwise. This is a reference of base paths and endpoints per module — for exact request/response schemas use the live Swagger UI (`/swagger-ui.html`), which is generated from the actual DTOs and is the source of truth.
 
 ### Auth & Users
-`/api/auth`, `/api/admin/users`, `/api/users`, `/api/schools/{schoolId}/users`, `/api/schools/{schoolId}/roles`
+`/api/auth`, `/api/admin/users`, `/api/schools/{schoolId}/users`, `/api/schools/{schoolId}/roles`
 
 | Method | Path | Purpose |
 |---|---|---|
@@ -332,8 +332,6 @@ All school-scoped endpoints are rooted at `/api/schools/{schoolId}/...` unless n
 | POST | `/api/auth/change-password` | Change own password |
 | GET/POST | `/api/admin/users` | List/create platform users (SUPER_ADMIN) |
 | PATCH/DELETE | `/api/admin/users/{userId}` | Update/deactivate user |
-| GET/POST | `/api/users` | List/create users (optional schoolId filter) |
-| PATCH/DELETE | `/api/users/{userId}` | Update/deactivate user |
 | GET/POST | `/api/schools/{schoolId}/users` | List/create users in a school |
 | PATCH/DELETE | `/api/schools/{schoolId}/users/{userId}` | Update/deactivate school user |
 | GET/POST/PUT/DELETE | `/api/schools/{schoolId}/roles` | Manage custom roles |

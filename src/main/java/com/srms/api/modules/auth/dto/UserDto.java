@@ -17,4 +17,5 @@ public class UserDto {
     private boolean active;
     private boolean notifyEmail;
     private boolean notifySms;
+    private boolean mustChangePassword;
 }

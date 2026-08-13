@@ -24,5 +24,11 @@ public class AppUser extends BaseEntity {
     @Builder.Default private boolean active = true;
     @Builder.Default private boolean notifyEmail = true;
     @Builder.Default private boolean notifySms = false;
+    // Set whenever an admin (or onboarding) provisions/resets this account's password, since
+    // that password is known to someone other than the account owner. Cleared once the user
+    // successfully calls changePassword themselves. See AuthService.
+    @Builder.Default
+    @Column(nullable = false, columnDefinition = "boolean default false")
+    private boolean mustChangePassword = false;
     public enum UserRole { SUPER_ADMIN, SCHOOL_ADMIN, TEACHER, HOD, FINANCE, PARENT, PRINCIPAL, DEPUTY_HEAD, CAREER_GUIDANCE }
 }

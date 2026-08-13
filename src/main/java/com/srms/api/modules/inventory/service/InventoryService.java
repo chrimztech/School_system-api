@@ -59,7 +59,9 @@ public class InventoryService {
     public StockMovement recordMovement(String schoolId, StockMovement movement) {
         movement.setSchoolId(schoolId);
         if (movement.getMovementDate() == null) movement.setMovementDate(LocalDate.now());
-        InventoryItem item = itemRepository.findById(movement.getItemId()).orElse(null);
+        InventoryItem item = itemRepository.findById(movement.getItemId())
+                .filter(i -> i.getSchoolId().equals(schoolId))
+                .orElse(null);
         if (item != null) {
             if ("IN".equals(movement.getMovementType())) {
                 item.setQuantityInStock(item.getQuantityInStock() + movement.getQuantity());
