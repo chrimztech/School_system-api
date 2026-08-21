@@ -23,4 +23,20 @@ public class ReportingService {
         if (report.getStatus() == null) report.setStatus("Draft");
         return savedReportRepository.save(report);
     }
+
+    public SavedReport update(String schoolId, String id, SavedReport updated) {
+        SavedReport report = savedReportRepository.findById(id)
+                .filter(r -> r.getSchoolId().equals(schoolId))
+                .orElseThrow();
+        if (updated.getStatus() != null) report.setStatus(updated.getStatus());
+        if (updated.getSchedule() != null) report.setSchedule(updated.getSchedule());
+        if (updated.getOwner() != null) report.setOwner(updated.getOwner());
+        return savedReportRepository.save(report);
+    }
+
+    public void delete(String schoolId, String id) {
+        savedReportRepository.findById(id)
+                .filter(r -> r.getSchoolId().equals(schoolId))
+                .ifPresent(savedReportRepository::delete);
+    }
 }

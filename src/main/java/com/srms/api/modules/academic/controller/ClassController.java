@@ -3,9 +3,13 @@ package com.srms.api.modules.academic.controller;
 import com.srms.api.common.ApiResponse;
 import com.srms.api.modules.academic.entity.*;
 import com.srms.api.modules.academic.service.AcademicService;
+import com.srms.api.modules.auth.entity.AppUser;
+import com.srms.api.modules.auth.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -15,14 +19,31 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ClassController {
     private final AcademicService academicService;
+    private final UserRepository userRepository;
+
+    private static String roleOf(Authentication auth) {
+        return auth.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .findFirst().map(a -> a.replaceFirst("^ROLE_", "")).orElse("");
+    }
 
     // ── Classes ──────────────────────────────────────────────────
     @GetMapping
     public ResponseEntity<ApiResponse<List<SchoolClass>>> getAll(
             @PathVariable String schoolId,
-            @RequestParam(required = false) String teacherEmail) {
-        List<SchoolClass> result = (teacherEmail != null && !teacherEmail.isBlank())
-            ? academicService.findClassesByTeacherEmail(schoolId, teacherEmail)
+            @RequestParam(required = false) String teacherEmail,
+            Authentication auth) {
+        // Same reasoning as StudentController: a teacher's own identity is the only trustworthy
+        // source for their scoping — a client-supplied teacherEmail (or its absence) must never
+        // be able to widen what a TEACHER-role caller sees.
+        String effectiveTeacherEmail = teacherEmail;
+        if ("TEACHER".equals(roleOf(auth))) {
+            effectiveTeacherEmail = userRepository.findById(auth.getName())
+                    .map(AppUser::getEmail)
+                    .orElse(teacherEmail);
+        }
+        List<SchoolClass> result = (effectiveTeacherEmail != null && !effectiveTeacherEmail.isBlank())
+            ? academicService.findClassesByTeacherEmail(schoolId, effectiveTeacherEmail)
             : academicService.findAllClasses(schoolId);
         return ResponseEntity.ok(ApiResponse.ok(result));
     }
@@ -63,8 +84,15 @@ public class ClassController {
     @GetMapping("/assignments")
     public ResponseEntity<ApiResponse<List<TeacherClassSubject>>> getAssignmentsByTeacherEmail(
             @PathVariable String schoolId,
-            @RequestParam String teacherEmail) {
-        return ResponseEntity.ok(ApiResponse.ok(academicService.findAssignmentsByTeacherEmail(schoolId, teacherEmail)));
+            @RequestParam String teacherEmail,
+            Authentication auth) {
+        String effectiveTeacherEmail = teacherEmail;
+        if ("TEACHER".equals(roleOf(auth))) {
+            effectiveTeacherEmail = userRepository.findById(auth.getName())
+                    .map(AppUser::getEmail)
+                    .orElse(teacherEmail);
+        }
+        return ResponseEntity.ok(ApiResponse.ok(academicService.findAssignmentsByTeacherEmail(schoolId, effectiveTeacherEmail)));
     }
     @GetMapping("/{classId}/teachers")
     public ResponseEntity<ApiResponse<List<TeacherClassSubject>>> getTeachers(@PathVariable String schoolId, @PathVariable String classId) {

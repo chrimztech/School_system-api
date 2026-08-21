@@ -69,13 +69,30 @@ public class AssessmentService {
     public List<Assessment> findAllForActor(String schoolId, String term, String academicYear,
                                             String userId, String role) {
         assertActorSchool(schoolId, userId, role);
+        String normalRole = role == null ? "" : role.toUpperCase();
+        if (!FULL_ACCESS_ROLES.contains(normalRole)
+                && !"CAREER_GUIDANCE".equals(normalRole)
+                && !"TEACHER".equals(normalRole)
+                && !"HOD".equals(normalRole)) {
+            throw new ForbiddenException("Your role cannot access assessment operations");
+        }
         List<Assessment> all = findAll(schoolId, term, academicYear);
-        if (!"TEACHER".equalsIgnoreCase(role)) return all;
-        Set<String> assignments = teacherAssignmentKeys(schoolId, userId);
-        return all.stream()
-                .filter(a -> assignments.contains(assignmentKey(a.getClassName(), a.getSubjectName()))
-                        || assignments.contains(assignmentKey(a.getClassId(), a.getSubjectName())))
-                .toList();
+        if (FULL_ACCESS_ROLES.contains(normalRole) || "CAREER_GUIDANCE".equals(normalRole)) return all;
+        if ("TEACHER".equals(normalRole)) {
+            Set<String> assignments = teacherAssignmentKeys(schoolId, userId);
+            return all.stream()
+                    .filter(a -> assignments.contains(assignmentKey(a.getClassName(), a.getSubjectName()))
+                            || assignments.contains(assignmentKey(a.getClassId(), a.getSubjectName())))
+                    .toList();
+        }
+        if ("HOD".equals(normalRole)) {
+            Set<String> subjects = hodSubjectNames(schoolId, userId, role);
+            return all.stream()
+                    .filter(a -> a.getSubjectName() != null
+                            && subjects.contains(a.getSubjectName().trim().toLowerCase()))
+                    .toList();
+        }
+        return List.of();
     }
 
     public Assessment findById(String id, String schoolId) {
@@ -85,7 +102,31 @@ public class AssessmentService {
 
     public Assessment findByIdForActor(String id, String schoolId, String userId, String role) {
         assertActorSchool(schoolId, userId, role);
-        return findById(id, schoolId);
+        String normalRole = role == null ? "" : role.toUpperCase();
+        if (!FULL_ACCESS_ROLES.contains(normalRole)
+                && !"CAREER_GUIDANCE".equals(normalRole)
+                && !"TEACHER".equals(normalRole)
+                && !"HOD".equals(normalRole)) {
+            throw new ForbiddenException("Your role cannot access assessment operations");
+        }
+        Assessment assessment = findById(id, schoolId);
+        if (FULL_ACCESS_ROLES.contains(normalRole) || "CAREER_GUIDANCE".equals(normalRole)) {
+            return assessment;
+        }
+        if ("TEACHER".equals(normalRole)) {
+            Set<String> assignments = teacherAssignmentKeys(schoolId, userId);
+            boolean assigned = assignments.contains(
+                    assignmentKey(assessment.getClassName(), assessment.getSubjectName()))
+                    || assignments.contains(
+                    assignmentKey(assessment.getClassId(), assessment.getSubjectName()));
+            if (!assigned) throw new ForbiddenException("You are not assigned to this class/subject");
+            return assessment;
+        }
+        if ("HOD".equals(normalRole)) {
+            requireHodOverDepartment(schoolId, userId, role, assessment.getSubjectName());
+            return assessment;
+        }
+        throw new ForbiddenException("Your role cannot access this assessment");
     }
 
     public Assessment create(String schoolId, Assessment dto, String userId, String role) {
@@ -238,6 +279,17 @@ public class AssessmentService {
         if (!"HOD".equals(normalRole)) {
             throw new ForbiddenException("Only a Head of Department can verify or return results");
         }
+        Set<String> subjects = hodSubjectNames(schoolId, userId, role);
+        if (subjectName == null || !subjects.contains(subjectName.trim().toLowerCase())) {
+            throw new ForbiddenException("This subject is not in your department");
+        }
+    }
+
+    private Set<String> hodSubjectNames(String schoolId, String userId, String role) {
+        assertActorSchool(schoolId, userId, role);
+        if (!"HOD".equalsIgnoreCase(role)) {
+            throw new ForbiddenException("Only a Head of Department can access this review queue");
+        }
         AppUser user = userRepository.findById(userId).orElse(null);
         if (user == null || user.getEmail() == null) {
             throw new ForbiddenException("Could not resolve your staff record");
@@ -252,12 +304,12 @@ public class AssessmentService {
         if (department == null) {
             throw new ForbiddenException("You are not the head of a department");
         }
-        boolean inDepartment = subjectRepository.findBySchoolIdAndActiveTrue(schoolId).stream()
-                .anyMatch(s -> subjectName != null && subjectName.equalsIgnoreCase(s.getName())
-                        && department.getName() != null && department.getName().equalsIgnoreCase(s.getDepartment()));
-        if (!inDepartment) {
-            throw new ForbiddenException("This subject is not in your department");
-        }
+        return subjectRepository.findBySchoolIdAndActiveTrue(schoolId).stream()
+                .filter(s -> department.getName() != null
+                        && department.getName().equalsIgnoreCase(s.getDepartment()))
+                .map(s -> s.getName() == null ? "" : s.getName().trim().toLowerCase())
+                .filter(name -> !name.isBlank())
+                .collect(Collectors.toSet());
     }
 
     public Map<String, Object> publishCycle(String assessmentId, String schoolId, String userId, String role) {

@@ -25,4 +25,15 @@ public class ReportingController {
     public ResponseEntity<ApiResponse<SavedReport>> create(@PathVariable String schoolId, @RequestBody SavedReport report) {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(reportingService.create(schoolId, report)));
     }
+
+    @PutMapping("/reports/{id}")
+    public ResponseEntity<ApiResponse<SavedReport>> update(@PathVariable String schoolId, @PathVariable String id, @RequestBody SavedReport report) {
+        return ResponseEntity.ok(ApiResponse.ok(reportingService.update(schoolId, id, report)));
+    }
+
+    @DeleteMapping("/reports/{id}")
+    public ResponseEntity<ApiResponse<Void>> delete(@PathVariable String schoolId, @PathVariable String id) {
+        reportingService.delete(schoolId, id);
+        return ResponseEntity.ok(ApiResponse.ok("Report deleted", null));
+    }
 }

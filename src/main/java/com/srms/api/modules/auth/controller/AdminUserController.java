@@ -4,9 +4,11 @@ import com.srms.api.common.ApiResponse;
 import com.srms.api.modules.auth.dto.UserDto;
 import com.srms.api.modules.auth.entity.AppUser;
 import com.srms.api.modules.auth.service.AuthService;
+import com.srms.api.security.RoleGuard;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,12 +21,15 @@ public class AdminUserController {
     private final AuthService authService;
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<UserDto>>> listAll() {
+    public ResponseEntity<ApiResponse<List<UserDto>>> listAll(Authentication auth) {
+        RoleGuard.requireSuperAdmin(auth);
         return ResponseEntity.ok(ApiResponse.ok(authService.getAllUsers()));
     }
 
     @PostMapping
-    public ResponseEntity<ApiResponse<UserDto>> createGlobal(@RequestBody Map<String, String> body) {
+    public ResponseEntity<ApiResponse<UserDto>> createGlobal(
+            @RequestBody Map<String, String> body, Authentication auth) {
+        RoleGuard.requireSuperAdmin(auth);
         AppUser user = new AppUser();
         user.setEmail(body.get("email"));
         user.setName(body.get("name"));
@@ -39,7 +44,9 @@ public class AdminUserController {
     @PatchMapping("/{userId}")
     public ResponseEntity<ApiResponse<UserDto>> update(
             @PathVariable String userId,
-            @RequestBody Map<String, String> body) {
+            @RequestBody Map<String, String> body,
+            Authentication auth) {
+        RoleGuard.requireSuperAdmin(auth);
         UserDto updated = authService.updateUser(
                 userId,
                 body.get("role"),
@@ -54,7 +61,8 @@ public class AdminUserController {
     }
 
     @DeleteMapping("/{userId}")
-    public ResponseEntity<ApiResponse<Void>> delete(@PathVariable String userId) {
+    public ResponseEntity<ApiResponse<Void>> delete(@PathVariable String userId, Authentication auth) {
+        RoleGuard.requireSuperAdmin(auth);
         authService.deactivateUser(userId);
         return ResponseEntity.ok(ApiResponse.ok("User deactivated", null));
     }

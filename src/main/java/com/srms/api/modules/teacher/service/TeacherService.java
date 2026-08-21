@@ -1,5 +1,6 @@
 package com.srms.api.modules.teacher.service;
 import com.srms.api.common.BulkImportResult;
+import com.srms.api.exception.BusinessException;
 import com.srms.api.exception.ResourceNotFoundException;
 import com.srms.api.modules.teacher.dto.TeacherDto;
 import com.srms.api.modules.teacher.entity.Teacher;
@@ -18,6 +19,7 @@ public class TeacherService {
                 .orElseThrow(() -> new ResourceNotFoundException("Teacher", id));
     }
     public Teacher create(String schoolId, TeacherDto dto) {
+        assertEmailNotTaken(schoolId, dto.getEmail(), null);
         Teacher t = new Teacher();
         t.setSchoolId(schoolId);
         long count = teacherRepository.countBySchoolIdAndStatus(schoolId, Teacher.TeacherStatus.active);
@@ -25,6 +27,22 @@ public class TeacherService {
         t.setStatus(Teacher.TeacherStatus.active);
         mapDto(t, dto);
         return teacherRepository.save(t);
+    }
+
+    /**
+     * Class/subject assignment and HOD department-verification are keyed on a single Teacher
+     * row per email (Teacher.email, via findByEmailIgnoreCaseAndSchoolId — see AuthService's
+     * ensureTeacherProfile) — a second row sharing that email doesn't just show wrong data,
+     * it makes those single-result lookups ambiguous. Enforced here so it applies uniformly to
+     * the create form, edits, and bulk import, not just the login-account auto-provisioning path.
+     */
+    private void assertEmailNotTaken(String schoolId, String email, String excludingTeacherId) {
+        if (email == null || email.isBlank()) return;
+        teacherRepository.findByEmailIgnoreCaseAndSchoolId(email, schoolId).ifPresent(existing -> {
+            if (!existing.getId().equals(excludingTeacherId)) {
+                throw new BusinessException("A teacher with this email already exists: " + existing.getFirstName() + " " + existing.getLastName());
+            }
+        });
     }
     public BulkImportResult bulkCreate(String schoolId, List<TeacherDto> dtos) {
         int imported = 0;
@@ -41,7 +59,10 @@ public class TeacherService {
     }
 
     public Teacher update(String id, String schoolId, TeacherDto dto) {
-        Teacher t = findById(id, schoolId); mapDto(t, dto); return teacherRepository.save(t);
+        Teacher t = findById(id, schoolId);
+        assertEmailNotTaken(schoolId, dto.getEmail(), id);
+        mapDto(t, dto);
+        return teacherRepository.save(t);
     }
     public void delete(String id, String schoolId) {
         Teacher t = findById(id, schoolId); t.setStatus(Teacher.TeacherStatus.inactive); teacherRepository.save(t);
