@@ -1,5 +1,6 @@
 package com.srms.api.modules.communication.service;
 
+import com.srms.api.common.PhoneUtils;
 import com.srms.api.modules.alumni.entity.AlumniRecord;
 import com.srms.api.modules.alumni.repository.AlumniRepository;
 import com.srms.api.modules.communication.entity.Announcement;
@@ -12,16 +13,10 @@ import com.srms.api.modules.teacher.repository.TeacherRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
-import org.springframework.web.client.RestTemplate;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -39,26 +34,19 @@ public class NotificationService {
     private final SchoolRepository schoolRepository;
     private final AlumniRepository alumniRepository;
     private final JavaMailSender mailSender;
+    private final ZamtelSmsClient smsClient;
 
     private static final Pattern FORM_OR_GRADE = Pattern.compile("(?:form|grade)\\s*(\\d{1,2})");
+    /** Every contact is a literal URL path segment (see ZamtelSmsClient.send), not a request
+     *  body field, so this is deliberately small to stay well under common server/proxy URL
+     *  length limits even with a long message and a long sender id. */
+    private static final int SMS_BATCH_SIZE = 50;
 
     /** Who an announcement's audience string actually resolves to. */
     private record AudienceTarget(boolean staff, boolean parents, boolean students, boolean alumni, Integer gradeFilter, String levelFilter) {}
 
     @Value("${spring.mail.from:noreply@srms.zm}")
     private String fromEmail;
-
-    @Value("${africastalking.username:sandbox}")
-    private String atUsername;
-
-    @Value("${africastalking.apiKey:}")
-    private String atApiKey;
-
-    @Value("${africastalking.smsUrl:https://api.africastalking.com/version1/messaging}")
-    private String atSmsUrl;
-
-    @Value("${africastalking.defaultCountryCode:+260}")
-    private String defaultCountryCode;
 
     @Async
     public void dispatch(Announcement ann) {
@@ -79,7 +67,7 @@ public class NotificationService {
             List<Teacher> teachers = teacherRepository.findBySchoolIdAndStatus(schoolId, Teacher.TeacherStatus.active);
             for (Teacher t : teachers) {
                 if (t.getEmail() != null && !t.getEmail().isBlank()) emails.add(t.getEmail());
-                if (t.getPhone() != null && !t.getPhone().isBlank()) phones.add(normalizePhone(t.getPhone()));
+                if (t.getPhone() != null && !t.getPhone().isBlank()) phones.add(PhoneUtils.normalize(t.getPhone()));
             }
         }
 
@@ -93,9 +81,9 @@ public class NotificationService {
                     if (s.getGuardianEmail() != null && !s.getGuardianEmail().isBlank())
                         emails.add(s.getGuardianEmail());
                     if (s.getGuardianPhone() != null && !s.getGuardianPhone().isBlank())
-                        phones.add(normalizePhone(s.getGuardianPhone()));
+                        phones.add(PhoneUtils.normalize(s.getGuardianPhone()));
                     if (s.getGuardianAltPhone() != null && !s.getGuardianAltPhone().isBlank())
-                        phones.add(normalizePhone(s.getGuardianAltPhone()));
+                        phones.add(PhoneUtils.normalize(s.getGuardianAltPhone()));
                 }
                 if (target.students() && s.getStudentEmail() != null && !s.getStudentEmail().isBlank()) {
                     emails.add(s.getStudentEmail());
@@ -108,7 +96,7 @@ public class NotificationService {
             for (AlumniRecord al : alumni) {
                 if (!"ACTIVE".equalsIgnoreCase(al.getStatus())) continue;
                 if (al.getEmail() != null && !al.getEmail().isBlank()) emails.add(al.getEmail());
-                if (al.getPhone() != null && !al.getPhone().isBlank()) phones.add(normalizePhone(al.getPhone()));
+                if (al.getPhone() != null && !al.getPhone().isBlank()) phones.add(PhoneUtils.normalize(al.getPhone()));
             }
         }
 
@@ -120,7 +108,10 @@ public class NotificationService {
         for (String channel : channels) {
             switch (channel.toLowerCase()) {
                 case "email" -> sendEmails(emails, subject, body);
-                case "sms" -> sendSms(phones, body);
+                case "sms" -> {
+                    String senderId = school != null ? school.getSmsSenderId() : null;
+                    sendSms(phones, prefixSchoolIfSharedSender(body, school, senderId), senderId);
+                }
                 case "whatsapp" -> log.info("WhatsApp channel not yet active (requires Meta Business approval) — {} recipients", phones.size());
                 case "ussd" -> log.info("USSD is pull-based — no push dispatch for announcement {}", ann.getId());
                 default -> log.warn("Unknown channel '{}' on announcement {}", channel, ann.getId());
@@ -165,7 +156,7 @@ public class NotificationService {
     }
 
     /** Best-effort payment confirmation — reuses the same email/SMS senders as announcements. */
-    public void sendPaymentReceipt(String guardianEmail, String guardianPhone, String studentName, double amount, String referenceNumber) {
+    public void sendPaymentReceipt(String schoolId, String guardianEmail, String guardianPhone, String studentName, double amount, String referenceNumber) {
         String subject = "Payment received — " + studentName;
         String body = String.format(
                 "We've received a payment of ZMW %.2f for %s (ref: %s). Thank you.",
@@ -174,13 +165,27 @@ public class NotificationService {
             sendEmails(List.of(guardianEmail), subject, body);
         }
         if (guardianPhone != null && !guardianPhone.isBlank()) {
-            sendSms(List.of(normalizePhone(guardianPhone)), body);
+            School school = schoolRepository.findById(schoolId).orElse(null);
+            String senderId = school != null ? school.getSmsSenderId() : null;
+            sendSms(List.of(PhoneUtils.normalize(guardianPhone)), prefixSchoolIfSharedSender(body, school, senderId), senderId);
         }
+    }
+
+    /**
+     * Every school currently shares the one Zamtel-approved sender ID ("DCL") until each school's
+     * own short code gets individually registered and approved — so the sender line alone can't
+     * tell a recipient which school messaged them. Prefix the school name in that case; skip it
+     * once a school has its own approved sender ID, since the sender line already identifies it.
+     */
+    private String prefixSchoolIfSharedSender(String body, School school, String senderId) {
+        if (senderId != null && !senderId.isBlank()) return body;
+        if (school == null || school.getName() == null || school.getName().isBlank()) return body;
+        return "[" + school.getName() + "] " + body;
     }
 
     private void sendEmails(List<String> recipients, String subject, String body) {
         if (recipients.isEmpty()) return;
-        if (atApiKey.isBlank() && fromEmail.equals("noreply@srms.zm")) {
+        if (fromEmail.equals("noreply@srms.zm")) {
             log.warn("Email channel selected but MAIL_USERNAME / MAIL_PASSWORD not configured — skipping {} emails", recipients.size());
             return;
         }
@@ -201,51 +206,24 @@ public class NotificationService {
         log.info("Email dispatch complete: {}/{} sent", sent, recipients.size());
     }
 
-    private void sendSms(List<String> recipients, String message) {
+    private void sendSms(List<String> recipients, String message, String senderId) {
         if (recipients.isEmpty()) return;
-        if (atApiKey.isBlank()) {
-            log.warn("SMS channel selected but AT_API_KEY not configured — skipping {} SMS", recipients.size());
+        if (!smsClient.isConfigured()) {
+            log.warn("SMS channel selected but zamtel.bulksms.api-key not configured — skipping {} SMS", recipients.size());
             return;
         }
 
-        // Africa's Talking accepts max 400 numbers per request; batch if needed
-        int batchSize = 400;
         int sent = 0;
-        for (int i = 0; i < recipients.size(); i += batchSize) {
-            List<String> batch = recipients.subList(i, Math.min(i + batchSize, recipients.size()));
-            String to = String.join(",", batch);
-            try {
-                RestTemplate rest = new RestTemplate();
-                HttpHeaders headers = new HttpHeaders();
-                headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-                headers.set("apiKey", atApiKey);
-                headers.set("Accept", "application/json");
-
-                MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
-                params.add("username", atUsername);
-                params.add("to", to);
-                params.add("message", message);
-
-                HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(params, headers);
-                rest.postForObject(atSmsUrl, request, String.class);
-                sent += batch.size();
-            } catch (Exception e) {
-                log.error("SMS batch dispatch failed (batch starting at {}): {}", i, e.getMessage());
-            }
+        for (int i = 0; i < recipients.size(); i += SMS_BATCH_SIZE) {
+            List<String> batch = recipients.subList(i, Math.min(i + SMS_BATCH_SIZE, recipients.size()));
+            if (smsClient.send(batch, message, senderId)) sent += batch.size();
         }
-        log.info("SMS dispatch complete: {}/{} queued", sent, recipients.size());
+        log.info("SMS dispatch complete: {}/{} queued via Zamtel BulkSMS", sent, recipients.size());
     }
 
-    private String normalizePhone(String phone) {
-        if (phone == null) return "";
-        phone = phone.replaceAll("[\\s\\-()]", "");
-        if (phone.startsWith("0") && phone.length() >= 9) {
-            return defaultCountryCode + phone.substring(1);
-        }
-        if (!phone.startsWith("+")) {
-            return defaultCountryCode + phone;
-        }
-        return phone;
+    /** Remaining Zamtel SMS credit — surfaced to admins before a bulk broadcast. -1 if unreachable/not configured. */
+    public long getSmsBalance() {
+        return smsClient.getBalance();
     }
 
     private List<String> parseChannels(String channels) {

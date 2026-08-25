@@ -39,7 +39,7 @@ The API is consumed by the companion frontend (see the sibling repo `School_syst
 | API docs | springdoc-openapi 2.3.0 (Swagger UI) |
 | Password hashing | BCrypt |
 | Email | Spring Boot Mail (SMTP) |
-| SMS/WhatsApp | Africa's Talking API |
+| SMS | Zamtel BulkSMS API |
 | Build | Maven |
 
 ---
@@ -237,11 +237,10 @@ spring.mail.username=${MAIL_USERNAME:}
 spring.mail.password=${MAIL_PASSWORD:}
 spring.mail.from=${MAIL_FROM:noreply@srms.zm}
 
-# Africa's Talking (SMS / WhatsApp)
-africastalking.username=${AT_USERNAME:sandbox}
-africastalking.apiKey=${AT_API_KEY:}
-africastalking.smsUrl=https://api.africastalking.com/version1/messaging
-africastalking.defaultCountryCode=+260
+# Zamtel BulkSMS
+zamtel.bulksms.base-url=${ZAMTEL_BULKSMS_BASE_URL:https://bulksms.zamtel.co.zm/api}
+zamtel.bulksms.api-key=${ZAMTEL_BULKSMS_API_KEY:}
+zamtel.bulksms.sender-id=${ZAMTEL_BULKSMS_SENDER_ID:DCL}
 ```
 
 ### Environment variables to override in any real deployment
@@ -249,7 +248,7 @@ africastalking.defaultCountryCode=+260
 | Variable | Purpose | Default |
 |---|---|---|
 | `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_FROM` | SMTP for the email notification channel | Gmail SMTP, blank creds |
-| `AT_USERNAME`, `AT_API_KEY` | Africa's Talking SMS/WhatsApp channel | `sandbox`, blank |
+| `ZAMTEL_BULKSMS_API_KEY`, `ZAMTEL_BULKSMS_SENDER_ID` | Zamtel BulkSMS channel | blank (SMS disabled) |
 | `APP_ADMIN_EMAIL`, `APP_ADMIN_PASSWORD` | Bootstrap super-admin account created on first boot if missing | `admin@srms.zm` / `Admin@SRMS2024!` |
 
 **⚠️ Security note:** `application.properties` currently hardcodes a database password, a JWT signing secret, and a default super-admin password directly in the committed file. Before any shared/production deployment, move these to environment variables (Spring already supports `${VAR:default}` — extend that pattern to `spring.datasource.password` and `jwt.secret`) and rotate the default admin password immediately after first login.

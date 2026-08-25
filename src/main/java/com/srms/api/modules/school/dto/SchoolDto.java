@@ -50,6 +50,7 @@ public class SchoolDto {
     private Integer yearFounded;
     private String weekStart;
     private String gradingScale;
+    private String smsSenderId;
     private String resultPublicationMode;
     private List<GradingBandDto> gradingBands;
     private Integer passMark;

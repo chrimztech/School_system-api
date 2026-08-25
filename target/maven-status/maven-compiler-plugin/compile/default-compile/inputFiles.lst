@@ -148,6 +148,7 @@ F:\school\School_system-api\src\main\java\com\srms\api\modules\exam\controller\E
 F:\school\School_system-api\src\main\java\com\srms\api\modules\transport\service\TransportService.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\teacher\entity\Teacher.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\development\entity\TrainingRecord.java
+F:\school\School_system-api\src\main\java\com\srms\api\modules\communication\service\ZamtelSmsClient.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\academic\dto\PromotionRequest.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\bursary\entity\BursaryApplication.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\teacher\dto\TeacherDto.java

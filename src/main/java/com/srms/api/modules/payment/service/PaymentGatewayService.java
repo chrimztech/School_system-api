@@ -240,7 +240,7 @@ public class PaymentGatewayService {
     private void sendReceiptBestEffort(FeePayment payment) {
         try {
             studentRepository.findByIdAndSchoolId(payment.getStudentId(), payment.getSchoolId()).ifPresent(student ->
-                    notificationService.sendPaymentReceipt(student.getGuardianEmail(), student.getGuardianPhone(),
+                    notificationService.sendPaymentReceipt(payment.getSchoolId(), student.getGuardianEmail(), student.getGuardianPhone(),
                             payment.getStudentName(), payment.getAmount(), payment.getReferenceNumber()));
         } catch (Exception e) {
             log.warn("Failed to send payment receipt for {}: {}", payment.getId(), e.getMessage());

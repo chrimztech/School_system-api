@@ -3,6 +3,7 @@ package com.srms.api.modules.communication.controller;
 import com.srms.api.common.ApiResponse;
 import com.srms.api.common.PageRequestUtil;
 import com.srms.api.common.PageResponse;
+import com.srms.api.exception.ForbiddenException;
 import com.srms.api.modules.communication.dto.AnnouncementDto;
 import com.srms.api.modules.communication.dto.MessageDto;
 import com.srms.api.modules.communication.entity.Announcement;
@@ -12,6 +13,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -54,6 +57,21 @@ public class CommunicationController {
             @PathVariable String id) {
         communicationService.deleteAnnouncement(schoolId, id);
         return ResponseEntity.ok(ApiResponse.ok("Announcement deleted", null));
+    }
+
+    /**
+     * Remaining Zamtel SMS credit. Super-admin only — the API key/credit pool is one platform-
+     * wide account shared across every school, not a per-school resource, so surfacing it to a
+     * single school's admins would misleadingly read as "your school's balance" and give them
+     * no way to act on it anyway.
+     */
+    @GetMapping("/sms-balance")
+    public ResponseEntity<ApiResponse<Long>> getSmsBalance(@PathVariable String schoolId, Authentication auth) {
+        boolean isSuperAdmin = auth.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch("ROLE_SUPER_ADMIN"::equals);
+        if (!isSuperAdmin) throw new ForbiddenException("Only the platform administrator can view the SMS balance");
+        return ResponseEntity.ok(ApiResponse.ok(communicationService.getSmsBalance()));
     }
 
     // ── Messages ───────────────────────────────────────────────────────────────

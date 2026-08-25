@@ -85,6 +85,11 @@ public class CommunicationService {
         announcementRepository.delete(ann);
     }
 
+    @Transactional(readOnly = true)
+    public long getSmsBalance() {
+        return notificationService.getSmsBalance();
+    }
+
     // ── Messages ───────────────────────────────────────────────────────────────
 
     @Transactional(readOnly = true)

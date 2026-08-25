@@ -56,6 +56,16 @@ public class School extends BaseEntity {
     private Integer yearFounded;
     private String weekStart;
     private String gradingScale;
+
+    /**
+     * The Zamtel sender ID SMS from this school should appear to come from (so a parent sees
+     * the school's own name/short code, not a generic platform-wide one). Null/blank falls back
+     * to zamtel.bulksms.sender-id — Zamtel requires each sender ID to be individually
+     * registered and approved before it can be used, so this can't just default to the school's
+     * actual name; it has to be whatever short id (typically the school's short code) has
+     * actually been approved for them.
+     */
+    private String smsSenderId;
     private Integer passMark;
     private String resultPublicationMode; // "SEPARATE" | "COMBINED"
 

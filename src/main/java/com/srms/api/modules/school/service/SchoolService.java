@@ -152,6 +152,7 @@ public class SchoolService {
                 .yearFounded(school.getYearFounded())
                 .weekStart(school.getWeekStart())
                 .gradingScale(school.getGradingScale())
+                .smsSenderId(school.getSmsSenderId())
                 .resultPublicationMode(school.getResultPublicationMode())
                 .gradingBands(gradingScaleService.readBands(school.getGradingBandsJson()))
                 .passMark(school.getPassMark())
@@ -227,6 +228,13 @@ public class SchoolService {
         if (dto.getYearFounded() != null) school.setYearFounded(dto.getYearFounded());
         if (dto.getWeekStart() != null) school.setWeekStart(dto.getWeekStart());
         if (dto.getGradingScale() != null) school.setGradingScale(dto.getGradingScale());
+        if (dto.getSmsSenderId() != null) {
+            String senderId = dto.getSmsSenderId().trim();
+            if (!senderId.isEmpty() && !senderId.matches("[A-Za-z0-9]{3,11}")) {
+                throw new IllegalArgumentException("SMS sender ID must be 3-11 alphanumeric characters (no spaces), matching what's approved on your Zamtel account");
+            }
+            school.setSmsSenderId(senderId.isEmpty() ? null : senderId);
+        }
         if (dto.getResultPublicationMode() != null) {
             String mode = dto.getResultPublicationMode().trim().toUpperCase();
             if (!mode.equals("SEPARATE") && !mode.equals("COMBINED")) {
