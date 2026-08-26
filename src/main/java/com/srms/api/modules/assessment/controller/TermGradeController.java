@@ -67,7 +67,8 @@ public class TermGradeController {
     @GetMapping("/published")
     public ResponseEntity<ApiResponse<List<PublishedTermGrade>>> publishedHistory(
             @PathVariable String schoolId, @RequestParam String studentId,
-            @RequestParam String academicYear, @RequestParam Assessment.ReportingPeriod reportingPeriod,
+            @RequestParam(required = false) String academicYear,
+            @RequestParam(required = false) Assessment.ReportingPeriod reportingPeriod,
             Authentication auth) {
         assertActorSchool(schoolId, auth);
         assertParentOwnsStudent(schoolId, studentId, auth);

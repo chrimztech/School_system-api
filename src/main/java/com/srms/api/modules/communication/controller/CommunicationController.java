@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/schools/{schoolId}")
@@ -26,6 +27,24 @@ import java.util.Map;
 public class CommunicationController {
 
     private final CommunicationService communicationService;
+
+    /** Mirrors the frontend's SCHOOL_LEADERSHIP_ROLES — the only roles allowed to mass-broadcast
+     *  or manage announcements, so a parent/teacher/HOD/finance/career-guidance account can't
+     *  reach the same result by calling the API directly once the UI button is hidden from them. */
+    private static final Set<String> ANNOUNCEMENT_MANAGER_ROLES =
+            Set.of("SUPER_ADMIN", "SCHOOL_ADMIN", "PRINCIPAL", "DEPUTY_HEAD");
+
+    private static String roleOf(Authentication auth) {
+        return auth.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .findFirst().map(a -> a.replaceFirst("^ROLE_", "")).orElse("");
+    }
+
+    private static void requireAnnouncementManager(Authentication auth) {
+        if (!ANNOUNCEMENT_MANAGER_ROLES.contains(roleOf(auth))) {
+            throw new ForbiddenException("Only school leadership can manage announcements");
+        }
+    }
 
     // ── Announcements ──────────────────────────────────────────────────────────
 
@@ -38,7 +57,9 @@ public class CommunicationController {
     @PostMapping("/announcements")
     public ResponseEntity<ApiResponse<Announcement>> createAnnouncement(
             @PathVariable String schoolId,
-            @RequestBody AnnouncementDto dto) {
+            @RequestBody AnnouncementDto dto,
+            Authentication auth) {
+        requireAnnouncementManager(auth);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.created(communicationService.createAnnouncement(schoolId, dto)));
     }
@@ -47,14 +68,18 @@ public class CommunicationController {
     public ResponseEntity<ApiResponse<Announcement>> updateAnnouncement(
             @PathVariable String schoolId,
             @PathVariable String id,
-            @RequestBody AnnouncementDto dto) {
+            @RequestBody AnnouncementDto dto,
+            Authentication auth) {
+        requireAnnouncementManager(auth);
         return ResponseEntity.ok(ApiResponse.ok(communicationService.updateAnnouncement(schoolId, id, dto)));
     }
 
     @DeleteMapping("/announcements/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteAnnouncement(
             @PathVariable String schoolId,
-            @PathVariable String id) {
+            @PathVariable String id,
+            Authentication auth) {
+        requireAnnouncementManager(auth);
         communicationService.deleteAnnouncement(schoolId, id);
         return ResponseEntity.ok(ApiResponse.ok("Announcement deleted", null));
     }

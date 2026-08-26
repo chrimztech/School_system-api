@@ -11,6 +11,11 @@ public interface PublishedTermGradeRepository extends JpaRepository<PublishedTer
     List<PublishedTermGrade> findBySchoolIdAndStudentIdAndAcademicYearAndReportingPeriod(
             String schoolId, String studentId, String academicYear, Assessment.ReportingPeriod reportingPeriod);
 
+    /** Full published history for a student, unfiltered by year/period — used when a caller (the
+     *  parent app's dashboard/report-card views) wants every published result to sort or group
+     *  client-side, rather than one specific term. */
+    List<PublishedTermGrade> findBySchoolIdAndStudentId(String schoolId, String studentId);
+
     List<PublishedTermGrade> findBySchoolIdAndClassIdAndSubjectNameAndTermAndAcademicYearAndReportingPeriod(
             String schoolId, String classId, String subjectName, String term, String academicYear,
             Assessment.ReportingPeriod reportingPeriod);

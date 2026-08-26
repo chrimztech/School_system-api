@@ -222,8 +222,10 @@ public class TermGradeService {
     @Transactional(readOnly = true)
     public List<PublishedTermGrade> getPublishedHistory(String schoolId, String studentId, String academicYear,
                                                         Assessment.ReportingPeriod period) {
-        List<PublishedTermGrade> grades = publishedRepository.findBySchoolIdAndStudentIdAndAcademicYearAndReportingPeriod(
-                schoolId, studentId, academicYear, period);
+        List<PublishedTermGrade> grades = (academicYear == null || period == null)
+                ? publishedRepository.findBySchoolIdAndStudentId(schoolId, studentId)
+                : publishedRepository.findBySchoolIdAndStudentIdAndAcademicYearAndReportingPeriod(
+                        schoolId, studentId, academicYear, period);
         // Records published before gradeDescription/gradePoints existed on this entity carry nulls;
         // fill them in from the current grading scale so old report cards don't show a blank Remarks column.
         if (grades.stream().anyMatch(g -> g.getGradeDescription() == null || g.getGradeDescription().isBlank())) {
