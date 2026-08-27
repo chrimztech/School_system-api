@@ -104,6 +104,16 @@ public class TermGradeService {
         Map<String, List<AssessmentResult>> resultsByStudent = allResults.stream()
                 .collect(Collectors.groupingBy(AssessmentResult::getStudentId));
 
+        // recomputeProvisional (AssessmentService) re-runs this on every single result save,
+        // so a teacher entering one class's marks one student at a time used to cost 2 DB
+        // round trips per remaining student, per keystroke — an O(class size) tax repeated
+        // O(class size) times. One batched fetch + one batched save turns the whole thing
+        // into a fixed, small number of round trips regardless of class size.
+        Map<String, TermGrade> existingByStudent = termGradeRepository
+                .findBySchoolIdAndClassIdAndSubjectNameAndTermAndAcademicYear(schoolId, classId, subjectName, term, academicYear)
+                .stream()
+                .collect(Collectors.toMap(TermGrade::getStudentId, Function.identity(), (a, b) -> a));
+
         List<TermGrade> saved = new ArrayList<>();
         for (ClassEnrolment enrolment : enrolments) {
             List<AssessmentResult> studentResults = resultsByStudent.getOrDefault(enrolment.getStudentId(), List.of());
@@ -123,10 +133,8 @@ public class TermGradeService {
             double weightedTotal = weightSum > 0 ? weightedSum / weightSum : 0;
             GradingBandDto band = gradingScaleService.evaluate(gradingBands, weightedTotal);
 
-            TermGrade grade = termGradeRepository
-                    .findBySchoolIdAndStudentIdAndSubjectNameAndTermAndAcademicYear(
-                            schoolId, enrolment.getStudentId(), subjectName, term, academicYear)
-                    .orElse(TermGrade.builder()
+            TermGrade grade = existingByStudent.getOrDefault(enrolment.getStudentId(),
+                    TermGrade.builder()
                             .schoolId(schoolId).studentId(enrolment.getStudentId())
                             .subjectName(subjectName).term(term).academicYear(academicYear)
                             .build());
@@ -140,9 +148,9 @@ public class TermGradeService {
             grade.setGradeDescription(band.getDescription());
             grade.setGradePoints(band.getPoints());
             grade.setComplete(publicationReadyOnly || (caPercent != null && midtermPercent != null && examPercent != null));
-            saved.add(termGradeRepository.save(grade));
+            saved.add(grade);
         }
-        return saved;
+        return termGradeRepository.saveAll(saved);
     }
 
     private boolean classMatches(Assessment assessment, SchoolClass schoolClass, String requested) {
@@ -190,15 +198,23 @@ public class TermGradeService {
     public List<PublishedTermGrade> publishSnapshots(String schoolId, String classIdOrName, String term,
                                                      String academicYear, Assessment.ReportingPeriod period,
                                                      Set<String> subjects, String publishedBy) {
-        List<PublishedTermGrade> published = new ArrayList<>();
+        // One batched fetch of every subject's existing snapshot for this class/term/period,
+        // instead of a query per (subject, student) pair — a 10-subject, 40-pupil publish used
+        // to cost 400 round trips; this brings it down to one lookup query plus one batched save.
+        String resolvedClassId = resolveClass(schoolId, classIdOrName).getId();
+        Map<String, PublishedTermGrade> existingByKey = publishedRepository
+                .findBySchoolIdAndClassIdAndTermAndAcademicYearAndReportingPeriod(schoolId, resolvedClassId, term, academicYear, period)
+                .stream()
+                .collect(Collectors.toMap(g -> g.getStudentId() + "|" + g.getSubjectName(), Function.identity(), (a, b) -> a));
+
+        List<PublishedTermGrade> toSave = new ArrayList<>();
         for (String subject : subjects) {
             List<TermGrade> grades = computeForPublication(
                     schoolId, classIdOrName, subject, term, academicYear, period);
             for (TermGrade grade : grades) {
-                PublishedTermGrade snapshot = publishedRepository
-                        .findBySchoolIdAndStudentIdAndSubjectNameAndTermAndAcademicYearAndReportingPeriod(
-                                schoolId, grade.getStudentId(), grade.getSubjectName(), term, academicYear, period)
-                        .orElse(PublishedTermGrade.builder()
+                PublishedTermGrade snapshot = existingByKey.getOrDefault(
+                        grade.getStudentId() + "|" + grade.getSubjectName(),
+                        PublishedTermGrade.builder()
                                 .schoolId(schoolId).studentId(grade.getStudentId())
                                 .subjectName(grade.getSubjectName()).term(term).academicYear(academicYear)
                                 .reportingPeriod(period).build());
@@ -213,10 +229,10 @@ public class TermGradeService {
                 snapshot.setGradePoints(grade.getGradePoints());
                 snapshot.setPublishedBy(publishedBy);
                 snapshot.setPublishedAt(LocalDateTime.now());
-                published.add(publishedRepository.save(snapshot));
+                toSave.add(snapshot);
             }
         }
-        return published;
+        return publishedRepository.saveAll(toSave);
     }
 
     @Transactional(readOnly = true)

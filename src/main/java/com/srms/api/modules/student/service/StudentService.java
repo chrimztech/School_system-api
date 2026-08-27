@@ -122,7 +122,7 @@ public class StudentService {
     private double billInitialTermFee(String schoolId, Student student) {
         School school = schoolRepository.findById(schoolId).orElse(null);
         if (school == null) return 0;
-        return feeService.computeInitialBalance(schoolId, student.getGrade(), school.getCurrentTerm(), school.getCurrentYear());
+        return feeService.computeInitialBalance(schoolId, student.getGrade(), school.getCurrentTerm(), school.getCurrentYear(), school.getType(), student.getBoardingStatus());
     }
 
     private void mapDto(Student s, StudentDto dto) {
@@ -159,5 +159,7 @@ public class StudentService {
         if (dto.getEmergencyContactRelationship() != null) s.setEmergencyContactRelationship(dto.getEmergencyContactRelationship());
         if (dto.getEmergencyContactPhone() != null) s.setEmergencyContactPhone(dto.getEmergencyContactPhone());
         if (dto.getStatus() != null && !dto.getStatus().isBlank()) s.setStatus(Student.StudentStatus.valueOf(dto.getStatus()));
+        if (dto.getBoardingStatus() != null) s.setBoardingStatus(dto.getBoardingStatus());
+        if (dto.getNeedsTransport() != null) s.setNeedsTransport(dto.getNeedsTransport());
     }
 }

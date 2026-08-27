@@ -50,13 +50,25 @@ public class FeeController {
         }
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(feeService.recordPayment(schoolId, payment)));
     }
+    @PatchMapping("/payments/{id}")
+    public ResponseEntity<ApiResponse<FeePayment>> updatePayment(@PathVariable String schoolId, @PathVariable String id, @RequestBody FeePayment patch, Authentication auth) {
+        requireCanManage(auth);
+        return ResponseEntity.ok(ApiResponse.ok(feeService.updatePayment(schoolId, id, patch)));
+    }
+    @DeleteMapping("/payments/{id}")
+    public ResponseEntity<ApiResponse<FeePayment>> reversePayment(@PathVariable String schoolId, @PathVariable String id, Authentication auth) {
+        requireCanManage(auth);
+        return ResponseEntity.ok(ApiResponse.ok(feeService.reversePayment(schoolId, id)));
+    }
     @GetMapping("/collected") public ResponseEntity<ApiResponse<Double>> getCollected(@PathVariable String schoolId) { return ResponseEntity.ok(ApiResponse.ok(feeService.getTotalCollected(schoolId))); }
     @GetMapping("/structures") public ResponseEntity<ApiResponse<List<FeeStructure>>> getStructures(@PathVariable String schoolId) { return ResponseEntity.ok(ApiResponse.ok(feeService.getFeeStructures(schoolId))); }
     @PostMapping("/structures") public ResponseEntity<ApiResponse<FeeStructure>> createStructure(@PathVariable String schoolId, @RequestBody FeeStructure fs, Authentication auth) { requireCanManage(auth); return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(feeService.createFeeStructure(schoolId, fs))); }
     @PatchMapping("/structures/{id}") public ResponseEntity<ApiResponse<FeeStructure>> updateStructure(@PathVariable String schoolId, @PathVariable String id, @RequestBody FeeStructure patch, Authentication auth) { requireCanManage(auth); return ResponseEntity.ok(ApiResponse.ok(feeService.updateFeeStructure(schoolId, id, patch))); }
+    @DeleteMapping("/structures/{id}") public ResponseEntity<ApiResponse<Void>> deleteStructure(@PathVariable String schoolId, @PathVariable String id, Authentication auth) { requireCanManage(auth); feeService.deleteFeeStructure(schoolId, id); return ResponseEntity.ok(ApiResponse.ok(null)); }
 
     @GetMapping("/levies") public ResponseEntity<ApiResponse<List<FeeLevy>>> getLevies(@PathVariable String schoolId) { return ResponseEntity.ok(ApiResponse.ok(feeService.getLevies(schoolId))); }
     @PostMapping("/levies") public ResponseEntity<ApiResponse<FeeLevy>> createLevy(@PathVariable String schoolId, @RequestBody FeeLevy levy, Authentication auth) { requireCanManage(auth); return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(feeService.createLevy(schoolId, levy))); }
+    @PatchMapping("/levies/{id}") public ResponseEntity<ApiResponse<FeeLevy>> updateLevy(@PathVariable String schoolId, @PathVariable String id, @RequestBody FeeLevy patch, Authentication auth) { requireCanManage(auth); return ResponseEntity.ok(ApiResponse.ok(feeService.updateLevy(schoolId, id, patch))); }
     @DeleteMapping("/levies/{id}") public ResponseEntity<ApiResponse<Void>> deleteLevy(@PathVariable String schoolId, @PathVariable String id, Authentication auth) { requireCanManage(auth); feeService.deleteLevy(schoolId, id); return ResponseEntity.ok(ApiResponse.ok(null)); }
 
     @GetMapping("/discounts") public ResponseEntity<ApiResponse<List<FeeDiscountRule>>> getDiscountRules(@PathVariable String schoolId) { return ResponseEntity.ok(ApiResponse.ok(feeService.getDiscountRules(schoolId))); }

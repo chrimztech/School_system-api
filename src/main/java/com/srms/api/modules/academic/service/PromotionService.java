@@ -82,12 +82,20 @@ public class PromotionService {
 
         int promoted = 0;
         int graduated = 0;
+        List<Student> studentsToSave = new ArrayList<>();
+        List<ClassEnrolment> enrolmentsToSave = new ArrayList<>();
+        List<AlumniRecord> alumniToSave = new ArrayList<>();
+        // A whole grade's worth of students (100-500+) promoting from/to the same handful of
+        // classes used to re-save each of those class rows once per student purely to bump a
+        // counter. Accumulate the net delta per class instead and write it once at the end.
+        java.util.Map<String, Integer> enrolmentDelta = new java.util.HashMap<>();
+
         for (Resolved r : resolved) {
             if (r.item().isGraduate()) {
                 r.student().setStatus(Student.StudentStatus.graduated);
-                studentRepository.save(r.student());
+                studentsToSave.add(r.student());
 
-                AlumniRecord alumni = AlumniRecord.builder()
+                alumniToSave.add(AlumniRecord.builder()
                     .schoolId(schoolId)
                     .firstName(r.student().getFirstName())
                     .lastName(r.student().getLastName())
@@ -95,16 +103,15 @@ public class PromotionService {
                     .graduationYear(parseYear(sourceClass.getAcademicYear(), request.getTargetAcademicYear()))
                     .lastGrade(sourceClass.getGrade())
                     .status("ACTIVE")
-                    .build();
-                alumniRepository.save(alumni);
+                    .build());
 
                 r.enrolment().setStatus("COMPLETED");
-                enrolmentRepository.save(r.enrolment());
-                decrementEnrolment(sourceClass);
+                enrolmentsToSave.add(r.enrolment());
+                enrolmentDelta.merge(sourceClass.getId(), -1, Integer::sum);
                 graduated++;
             } else {
                 SchoolClass dest = r.destinationClass();
-                ClassEnrolment newEnrolment = ClassEnrolment.builder()
+                enrolmentsToSave.add(ClassEnrolment.builder()
                     .schoolId(schoolId)
                     .classId(dest.getId())
                     .studentId(r.student().getId())
@@ -112,32 +119,38 @@ public class PromotionService {
                     .grade(String.valueOf(dest.getGrade()))
                     .academicYear(dest.getAcademicYear())
                     .status("ACTIVE")
-                    .build();
-                enrolmentRepository.save(newEnrolment);
-                incrementEnrolment(dest);
+                    .build());
+                enrolmentDelta.merge(dest.getId(), 1, Integer::sum);
 
                 r.student().setGrade(dest.getGrade());
                 r.student().setSection(dest.getSection());
-                studentRepository.save(r.student());
+                studentsToSave.add(r.student());
 
                 r.enrolment().setStatus("PROMOTED");
-                enrolmentRepository.save(r.enrolment());
-                decrementEnrolment(sourceClass);
+                enrolmentsToSave.add(r.enrolment());
+                enrolmentDelta.merge(sourceClass.getId(), -1, Integer::sum);
                 promoted++;
             }
         }
 
+        studentRepository.saveAll(studentsToSave);
+        enrolmentRepository.saveAll(enrolmentsToSave);
+        alumniRepository.saveAll(alumniToSave);
+        applyEnrolmentDeltas(schoolId, enrolmentDelta);
+
         return new PromotionResult(promoted, graduated);
     }
 
-    private void incrementEnrolment(SchoolClass schoolClass) {
-        schoolClass.setCurrentEnrolment(schoolClass.getCurrentEnrolment() + 1);
-        classRepository.save(schoolClass);
-    }
-
-    private void decrementEnrolment(SchoolClass schoolClass) {
-        schoolClass.setCurrentEnrolment(Math.max(0, schoolClass.getCurrentEnrolment() - 1));
-        classRepository.save(schoolClass);
+    private void applyEnrolmentDeltas(String schoolId, java.util.Map<String, Integer> deltaByClassId) {
+        if (deltaByClassId.isEmpty()) return;
+        List<SchoolClass> classes = classRepository.findAllById(deltaByClassId.keySet()).stream()
+                .filter(c -> c.getSchoolId().equals(schoolId))
+                .toList();
+        for (SchoolClass c : classes) {
+            int delta = deltaByClassId.getOrDefault(c.getId(), 0);
+            c.setCurrentEnrolment(Math.max(0, c.getCurrentEnrolment() + delta));
+        }
+        classRepository.saveAll(classes);
     }
 
     private int parseYear(String primary, String fallback) {

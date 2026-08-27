@@ -19,4 +19,9 @@ public class FeeStructure extends BaseEntity {
     private Double latePenaltyAmount;
     private Integer penaltyGraceDays;
     private String notes;
+
+    /** "DAY", "BOARDING", or null/blank for "applies to every student regardless of
+     *  boarding status" — a Boarding-category item left null would otherwise get billed
+     *  to day scholars too. */
+    private String boardingStatus;
 }

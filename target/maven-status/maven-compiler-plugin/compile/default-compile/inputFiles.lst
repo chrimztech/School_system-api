@@ -7,6 +7,7 @@ F:\school\School_system-api\src\main\java\com\srms\api\modules\report\service\Re
 F:\school\School_system-api\src\main\java\com\srms\api\modules\fee\entity\FeeBillingRule.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\assessment\dto\AnalysisResponse.java
 F:\school\School_system-api\src\main\java\com\srms\api\exception\ResourceNotFoundException.java
+F:\school\School_system-api\src\main\java\com\srms\api\modules\academic\entity\AcademicTerm.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\reporting\repository\SavedReportRepository.java
 F:\school\School_system-api\src\main\java\com\srms\api\security\JwtAuthenticationFilter.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\testimonial\controller\PlatformTestimonialController.java
@@ -109,6 +110,7 @@ F:\school\School_system-api\src\main\java\com\srms\api\modules\incident\reposito
 F:\school\School_system-api\src\main\java\com\srms\api\modules\reporting\controller\ReportingController.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\payment\entity\PaymentCallbackLog.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\testimonial\controller\TestimonialController.java
+F:\school\School_system-api\src\main\java\com\srms\api\modules\academic\controller\AcademicTermController.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\risk\entity\RiskEntry.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\accounting\service\AccountingService.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\timetable\repository\TimetableRepository.java
@@ -130,6 +132,7 @@ F:\school\School_system-api\src\main\java\com\srms\api\modules\canteen\entity\Ca
 F:\school\School_system-api\src\main\java\com\srms\api\modules\payment\repository\PaymentCallbackLogRepository.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\exam\service\GceCandidateService.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\welfare\service\WelfareService.java
+F:\school\School_system-api\src\main\java\com\srms\api\modules\academic\repository\AcademicTermRepository.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\welfare\repository\CounselingSessionRepository.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\accounting\entity\Expense.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\policy\repository\PolicyDocumentRepository.java

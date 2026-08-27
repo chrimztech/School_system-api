@@ -70,5 +70,10 @@ public class Student extends BaseEntity {
     @Column(columnDefinition = "TEXT")
     private String photoUrl;
 
+    /** "DAY" or "BOARDING" — plain string like the rest of this entity's loosely-typed
+     *  fields, not an enum, since it's display/filter data rather than something validated. */
+    private String boardingStatus;
+    private boolean needsTransport;
+
     public enum StudentStatus { active, inactive, transferred, graduated }
 }

@@ -14,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -31,6 +32,7 @@ public class AcademicService {
     private final TeacherRepository teacherRepository;
     private final StudentRepository studentRepository;
     private final UserRepository userRepository;
+    private final AcademicTermRepository academicTermRepository;
 
     // ── Classes ──────────────────────────────────────────────────
     public List<SchoolClass> findAllClasses(String schoolId) { return classRepository.findBySchoolIdAndActiveTrue(schoolId); }
@@ -279,5 +281,49 @@ public class AcademicService {
                 }
             });
         });
+    }
+
+    // ── Academic terms (when each term starts/ends) ─────────────────────────
+    public List<AcademicTerm> findAllTerms(String schoolId) {
+        return academicTermRepository.findBySchoolIdOrderByAcademicYearDescTermAsc(schoolId);
+    }
+
+    public AcademicTerm createTerm(String schoolId, AcademicTerm dto) {
+        if (dto.getTerm() < 1 || dto.getTerm() > 3) {
+            throw new BusinessException("Term must be 1, 2, or 3");
+        }
+        if (dto.getStartDate() == null || dto.getEndDate() == null) {
+            throw new BusinessException("Start date and end date are required");
+        }
+        if (!dto.getEndDate().isAfter(dto.getStartDate())) {
+            throw new BusinessException("End date must be after the start date");
+        }
+        if (academicTermRepository.findBySchoolIdAndAcademicYearAndTerm(schoolId, dto.getAcademicYear(), dto.getTerm()).isPresent()) {
+            throw new BusinessException("Term " + dto.getTerm() + " for " + dto.getAcademicYear() + " is already defined — edit it instead");
+        }
+        dto.setSchoolId(schoolId);
+        return academicTermRepository.save(dto);
+    }
+
+    public AcademicTerm updateTerm(String id, String schoolId, AcademicTerm patch) {
+        AcademicTerm term = academicTermRepository.findById(id)
+            .filter(t -> t.getSchoolId().equals(schoolId))
+            .orElseThrow(() -> new ResourceNotFoundException("AcademicTerm", id));
+        LocalDate nextStart = patch.getStartDate() != null ? patch.getStartDate() : term.getStartDate();
+        LocalDate nextEnd = patch.getEndDate() != null ? patch.getEndDate() : term.getEndDate();
+        if (!nextEnd.isAfter(nextStart)) {
+            throw new BusinessException("End date must be after the start date");
+        }
+        term.setStartDate(nextStart);
+        term.setEndDate(nextEnd);
+        if (patch.getName() != null) term.setName(patch.getName());
+        return academicTermRepository.save(term);
+    }
+
+    public void deleteTerm(String id, String schoolId) {
+        AcademicTerm term = academicTermRepository.findById(id)
+            .filter(t -> t.getSchoolId().equals(schoolId))
+            .orElseThrow(() -> new ResourceNotFoundException("AcademicTerm", id));
+        academicTermRepository.delete(term);
     }
 }

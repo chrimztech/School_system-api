@@ -37,4 +37,6 @@ public class StudentDto {
     private String emergencyContactRelationship;
     private String emergencyContactPhone;
     private String status;
+    private String boardingStatus;
+    private Boolean needsTransport;
 }
