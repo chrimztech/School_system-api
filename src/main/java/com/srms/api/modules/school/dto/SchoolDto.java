@@ -51,6 +51,8 @@ public class SchoolDto {
     private String weekStart;
     private String gradingScale;
     private String smsSenderId;
+    private String communicationsEmail;
+    private String whatsappNumber;
     private String resultPublicationMode;
     private List<GradingBandDto> gradingBands;
     private Integer passMark;

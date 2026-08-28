@@ -66,6 +66,25 @@ public class School extends BaseEntity {
      * actually been approved for them.
      */
     private String smsSenderId;
+
+    /**
+     * Where a parent/staff member should reply if they respond to an announcement or payment
+     * receipt email. Every school's mail still goes out through the one platform SMTP account
+     * (spring.mail.from) — most providers reject or rewrite a "From" that doesn't match the
+     * authenticated account — so this is set as the Reply-To header instead, which needs no
+     * SMTP-provider change and gets a reply routed to the school's own inbox either way.
+     */
+    private String communicationsEmail;
+
+    /**
+     * The WhatsApp Business number this school's announcements/receipts should appear to come
+     * from. Config only, for now — actually sending through it needs the WhatsApp Business Cloud
+     * API: Meta Business verification, a Phone Number ID/WABA ID issued for this number, and
+     * every outbound message using a pre-approved message template, none of which can happen
+     * from this app alone. See NotificationService's "whatsapp" dispatch case, which stays a
+     * no-op until that integration exists — this field just records the number ahead of it.
+     */
+    private String whatsappNumber;
     private Integer passMark;
     private String resultPublicationMode; // "SEPARATE" | "COMBINED"
 

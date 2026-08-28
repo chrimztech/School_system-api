@@ -1,6 +1,7 @@
 package com.srms.api.modules.backup.controller;
 
 import com.srms.api.common.ApiResponse;
+import com.srms.api.exception.BusinessException;
 import com.srms.api.exception.ForbiddenException;
 import com.srms.api.modules.auth.entity.AppUser;
 import com.srms.api.modules.auth.repository.UserRepository;
@@ -19,8 +20,11 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 
@@ -64,6 +68,22 @@ public class BackupController {
     public ResponseEntity<ApiResponse<Void>> restore(@PathVariable String schoolId, @PathVariable String id, Authentication auth) {
         assertAdmin(schoolId, auth);
         backupService.restore(schoolId, id);
+        return ResponseEntity.ok(ApiResponse.ok("Restore complete", null));
+    }
+
+    @PostMapping("/import")
+    public ResponseEntity<ApiResponse<Void>> importBackup(@PathVariable String schoolId,
+                                                            @RequestParam("file") MultipartFile file,
+                                                            Authentication auth) {
+        assertAdmin(schoolId, auth);
+        if (file.isEmpty()) {
+            throw new BusinessException("Please choose a backup file to upload");
+        }
+        try {
+            backupService.importAndRestore(schoolId, file.getInputStream());
+        } catch (IOException e) {
+            throw new BusinessException("Could not read the uploaded file: " + e.getMessage());
+        }
         return ResponseEntity.ok(ApiResponse.ok("Restore complete", null));
     }
 

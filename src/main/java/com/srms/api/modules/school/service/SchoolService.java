@@ -153,6 +153,8 @@ public class SchoolService {
                 .weekStart(school.getWeekStart())
                 .gradingScale(school.getGradingScale())
                 .smsSenderId(school.getSmsSenderId())
+                .communicationsEmail(school.getCommunicationsEmail())
+                .whatsappNumber(school.getWhatsappNumber())
                 .resultPublicationMode(school.getResultPublicationMode())
                 .gradingBands(gradingScaleService.readBands(school.getGradingBandsJson()))
                 .passMark(school.getPassMark())
@@ -234,6 +236,20 @@ public class SchoolService {
                 throw new IllegalArgumentException("SMS sender ID must be 3-11 alphanumeric characters (no spaces), matching what's approved on your Zamtel account");
             }
             school.setSmsSenderId(senderId.isEmpty() ? null : senderId);
+        }
+        if (dto.getCommunicationsEmail() != null) {
+            String email = dto.getCommunicationsEmail().trim();
+            if (!email.isEmpty() && !email.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")) {
+                throw new IllegalArgumentException("Communications email must be a valid email address");
+            }
+            school.setCommunicationsEmail(email.isEmpty() ? null : email);
+        }
+        if (dto.getWhatsappNumber() != null) {
+            String number = dto.getWhatsappNumber().trim();
+            if (!number.isEmpty() && !number.matches("^\\+?[0-9\\s-]{7,20}$")) {
+                throw new IllegalArgumentException("WhatsApp number must be a valid phone number, e.g. +260971234567");
+            }
+            school.setWhatsappNumber(number.isEmpty() ? null : number);
         }
         if (dto.getResultPublicationMode() != null) {
             String mode = dto.getResultPublicationMode().trim().toUpperCase();

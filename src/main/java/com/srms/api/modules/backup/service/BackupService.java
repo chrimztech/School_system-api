@@ -55,7 +55,15 @@ public class BackupService {
     // historical log (restoring it would rewrite history), and backups is this module's own
     // bookkeeping — including it in its own tenant-data walk means restoring any backup would
     // delete-then-reinsert the backups table itself, destroying every other snapshot's record.
+    // payment_callback_logs is the same story (an immutable trail of raw payment-gateway
+    // callbacks) but never needs listing here — it has no school_id column at all, so the
+    // information_schema walk below never finds it in the first place.
     private static final Set<String> EXCLUDED_TABLES = Set.of("backups", "audit_events");
+
+    // The school's own row (name, logo/favicon, branding, banking, subscription/plan, settings —
+    // School.java) is keyed by its own "id", not "school_id", so it never surfaces from the
+    // school_id-column walk below and has to be captured/restored separately.
+    private static final String SCHOOL_TABLE = "schools";
 
     private final BackupRepository backupRepository;
     private final SchoolRepository schoolRepository;
@@ -98,6 +106,10 @@ public class BackupService {
                 dump.put(table, rows);
                 rowCount += rows.size();
             }
+            List<Map<String, Object>> schoolRow = jdbcTemplate.queryForList(
+                    "SELECT * FROM \"" + SCHOOL_TABLE + "\" WHERE id = ?", school.getId());
+            dump.put(SCHOOL_TABLE, schoolRow);
+            rowCount += schoolRow.size();
 
             Path dir = Paths.get(storageDir, school.getId());
             Files.createDirectories(dir);
@@ -110,7 +122,7 @@ public class BackupService {
             backup.setFileName(fileName);
             backup.setFilePath(file.toAbsolutePath().toString());
             backup.setSizeBytes(Files.size(file));
-            backup.setTableCount(tables.size());
+            backup.setTableCount(tables.size() + 1);
             backup.setRowCount(rowCount);
             backup.setStatus(Backup.Status.COMPLETED);
             backup.setCompletedAt(LocalDateTime.now());
@@ -160,10 +172,43 @@ public class BackupService {
         } catch (IOException e) {
             throw new BusinessException("Could not read backup file: " + e.getMessage());
         }
+        applyDump(schoolId, dump);
+    }
+
+    /**
+     * Restores from a backup file the caller uploads, rather than one already tracked in this
+     * server's own {@code backups} table/disk — the path an admin needs after downloading a
+     * snapshot to move it between environments, or restoring from an off-site copy kept after
+     * the original row was pruned by retention.
+     */
+    @Transactional
+    public void importAndRestore(String schoolId, InputStream uploadStream) {
+        Map<String, List<Map<String, Object>>> dump;
+        try (GZIPInputStream gzip = new GZIPInputStream(uploadStream)) {
+            dump = objectMapper.readValue(gzip, new TypeReference<>() {});
+        } catch (Exception e) {
+            throw new BusinessException("This doesn't look like a valid backup file — expected a .json.gz export produced by this system.");
+        }
+        if (dump == null || dump.isEmpty()) {
+            throw new BusinessException("This backup file has no data to restore.");
+        }
+        List<String> currentTenantTables = tenantTableNames();
+        if (dump.keySet().stream().noneMatch(currentTenantTables::contains)) {
+            throw new BusinessException("This file doesn't match any known table in this system — it may not be a backup export.");
+        }
+        applyDump(schoolId, dump);
+    }
+
+    private void applyDump(String schoolId, Map<String, List<Map<String, Object>>> dump) {
+        List<Map<String, Object>> schoolRow = dump.get(SCHOOL_TABLE);
+        if (schoolRow != null && !schoolRow.isEmpty()) {
+            restoreSchoolRow(schoolId, schoolRow.get(0));
+        }
 
         List<String> currentTenantTables = tenantTableNames();
         for (Map.Entry<String, List<Map<String, Object>>> entry : dump.entrySet()) {
             String table = entry.getKey();
+            if (SCHOOL_TABLE.equals(table)) continue; // handled above — keyed by "id", not "school_id"
             if (!currentTenantTables.contains(table)) continue; // table renamed/dropped since this backup was taken
             List<Map<String, Object>> rows = entry.getValue();
 
@@ -178,7 +223,11 @@ public class BackupService {
                     Integer sqlType = currentColumns.get(col.getKey());
                     if (sqlType == null) continue; // column dropped since backup
                     columns.add(col.getKey());
-                    values.add(coerceForColumn(col.getValue(), sqlType));
+                    // Force to the target tenant rather than trusting the file's own value — an
+                    // uploaded import (unlike a same-tenant restore-by-id) isn't guaranteed to
+                    // have been exported from this same schoolId, and inserting rows under a
+                    // different tenant's id would leak data across schools.
+                    values.add("school_id".equals(col.getKey()) ? schoolId : coerceForColumn(col.getValue(), sqlType));
                 }
                 if (columns.isEmpty()) continue;
                 String placeholders = String.join(",", columns.stream().map(c -> "?").toList());
@@ -188,6 +237,25 @@ public class BackupService {
                         values.toArray());
             }
         }
+    }
+
+    /** Applies a backed-up {@code schools} row via UPDATE rather than the generic delete/insert
+     * used for every other table — that row is found by primary key ("id"), not "school_id",
+     * and deleting it would cascade-break every other table's foreign key back to it. */
+    private void restoreSchoolRow(String schoolId, Map<String, Object> row) {
+        Map<String, Integer> currentColumns = tableColumnTypes(SCHOOL_TABLE);
+        List<String> setClauses = new ArrayList<>();
+        List<Object> values = new ArrayList<>();
+        for (Map.Entry<String, Object> col : row.entrySet()) {
+            if ("id".equals(col.getKey())) continue; // never move this row under a different primary key
+            Integer sqlType = currentColumns.get(col.getKey());
+            if (sqlType == null) continue; // column dropped since backup
+            setClauses.add("\"" + col.getKey() + "\" = ?");
+            values.add(coerceForColumn(col.getValue(), sqlType));
+        }
+        if (setClauses.isEmpty()) return;
+        values.add(schoolId);
+        jdbcTemplate.update("UPDATE \"" + SCHOOL_TABLE + "\" SET " + String.join(",", setClauses) + " WHERE id = ?", values.toArray());
     }
 
     public void delete(String schoolId, String backupId) {
