@@ -19,6 +19,11 @@ public class PaymentGatewayController {
 
     private final PaymentGatewayService paymentGatewayService;
 
+    @GetMapping("/gateway-status")
+    public ResponseEntity<ApiResponse<Map<String, Boolean>>> gatewayStatus() {
+        return ResponseEntity.ok(ApiResponse.ok(Map.of("available", paymentGatewayService.isGatewayAvailable())));
+    }
+
     @PostMapping("/card/initiate")
     public ResponseEntity<ApiResponse<Map<String, Object>>> initiateCard(@PathVariable String schoolId, @RequestBody CardPaymentRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)

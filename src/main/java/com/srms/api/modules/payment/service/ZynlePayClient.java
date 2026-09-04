@@ -37,6 +37,18 @@ public class ZynlePayClient {
 
     private final RestTemplate restTemplate = new RestTemplate();
 
+    /** No school has ever configured real ZynlePay merchant credentials yet — every deposit,
+     * balance, and status call would hit the sandbox with blank auth and fail. Callers check
+     * this first so a parent trying to pay fees gets an honest "not available yet" message
+     * instead of ZynlePay's raw "Wrong API credentials" response. */
+    public boolean isConfigured() {
+        return notBlank(merchantId) && notBlank(apiId) && notBlank(apiKey);
+    }
+
+    private static boolean notBlank(String s) {
+        return s != null && !s.isBlank();
+    }
+
     @SuppressWarnings("unchecked")
     public Map<String, Object> postToGateway(String channel, Map<String, Object> data) {
         Map<String, Object> auth = new LinkedHashMap<>();

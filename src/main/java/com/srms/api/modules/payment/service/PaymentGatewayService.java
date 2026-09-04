@@ -43,7 +43,18 @@ public class PaymentGatewayService {
     private final NotificationService notificationService;
     private final ObjectMapper objectMapper;
 
+    public boolean isGatewayAvailable() {
+        return zynlePayClient.isConfigured();
+    }
+
+    private void assertGatewayAvailable() {
+        if (!zynlePayClient.isConfigured()) {
+            throw new BusinessException("Online payment isn't connected for this school yet — please pay at the school office or ask them for other payment options.");
+        }
+    }
+
     public Map<String, Object> initiateCardPayment(String schoolId, CardPaymentRequest req) {
+        assertGatewayAvailable();
         if (req.getAmount() <= 0) {
             throw new BusinessException("Payment amount must be greater than zero");
         }
@@ -80,6 +91,7 @@ public class PaymentGatewayService {
     }
 
     public Map<String, Object> initiateMomoPayment(String schoolId, MomoPaymentRequest req) {
+        assertGatewayAvailable();
         if (req.getAmount() <= 0) {
             throw new BusinessException("Payment amount must be greater than zero");
         }
@@ -269,6 +281,7 @@ public class PaymentGatewayService {
     }
 
     public MerchantBalanceView getMerchantBalance() {
+        assertGatewayAvailable();
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("method", "checkBalance");
         Map<String, Object> response = zynlePayClient.postToGateway(null, data);
