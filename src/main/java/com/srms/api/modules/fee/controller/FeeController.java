@@ -9,6 +9,7 @@ import com.srms.api.modules.fee.entity.FeeLevy;
 import com.srms.api.modules.fee.entity.FeePayment;
 import com.srms.api.modules.fee.entity.FeeStructure;
 import com.srms.api.modules.fee.service.FeeService;
+import com.srms.api.security.ModuleAccessService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -21,6 +22,7 @@ import java.util.Set;
 @RestController @RequestMapping("/api/schools/{schoolId}/fees") @RequiredArgsConstructor
 public class FeeController {
     private final FeeService feeService;
+    private final ModuleAccessService moduleAccessService;
 
     /** Roles with "full" (not "read"/none) access to fees/fee-structure — everyone else,
      * including PARENT, only ever pays through the gateway-backed self-service flow. */
@@ -45,42 +47,42 @@ public class FeeController {
     @GetMapping("/payments/student/{studentId}") public ResponseEntity<ApiResponse<List<FeePayment>>> getStudentPayments(@PathVariable String schoolId, @PathVariable String studentId) { return ResponseEntity.ok(ApiResponse.ok(feeService.getStudentPayments(schoolId, studentId))); }
     @PostMapping("/payments")
     public ResponseEntity<ApiResponse<FeePayment>> recordPayment(@PathVariable String schoolId, @RequestBody FeePayment payment, Authentication auth) {
-        if (!CAN_MANAGE_FEES_ROLES.contains(roleOf(auth))) {
+        if (!moduleAccessService.isAllowed(schoolId, auth, "fees", "full", CAN_MANAGE_FEES_ROLES.contains(roleOf(auth)))) {
             throw new ForbiddenException("Your role does not have permission to record payments manually — use the online payment option instead");
         }
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(feeService.recordPayment(schoolId, payment)));
     }
     @PatchMapping("/payments/{id}")
     public ResponseEntity<ApiResponse<FeePayment>> updatePayment(@PathVariable String schoolId, @PathVariable String id, @RequestBody FeePayment patch, Authentication auth) {
-        requireCanManage(auth);
+        requireCanManage(schoolId, auth, "fees");
         return ResponseEntity.ok(ApiResponse.ok(feeService.updatePayment(schoolId, id, patch)));
     }
     @DeleteMapping("/payments/{id}")
     public ResponseEntity<ApiResponse<FeePayment>> reversePayment(@PathVariable String schoolId, @PathVariable String id, Authentication auth) {
-        requireCanManage(auth);
+        requireCanManage(schoolId, auth, "fees");
         return ResponseEntity.ok(ApiResponse.ok(feeService.reversePayment(schoolId, id)));
     }
     @GetMapping("/collected") public ResponseEntity<ApiResponse<Double>> getCollected(@PathVariable String schoolId) { return ResponseEntity.ok(ApiResponse.ok(feeService.getTotalCollected(schoolId))); }
     @GetMapping("/structures") public ResponseEntity<ApiResponse<List<FeeStructure>>> getStructures(@PathVariable String schoolId) { return ResponseEntity.ok(ApiResponse.ok(feeService.getFeeStructures(schoolId))); }
-    @PostMapping("/structures") public ResponseEntity<ApiResponse<FeeStructure>> createStructure(@PathVariable String schoolId, @RequestBody FeeStructure fs, Authentication auth) { requireCanManage(auth); return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(feeService.createFeeStructure(schoolId, fs))); }
-    @PatchMapping("/structures/{id}") public ResponseEntity<ApiResponse<FeeStructure>> updateStructure(@PathVariable String schoolId, @PathVariable String id, @RequestBody FeeStructure patch, Authentication auth) { requireCanManage(auth); return ResponseEntity.ok(ApiResponse.ok(feeService.updateFeeStructure(schoolId, id, patch))); }
-    @DeleteMapping("/structures/{id}") public ResponseEntity<ApiResponse<Void>> deleteStructure(@PathVariable String schoolId, @PathVariable String id, Authentication auth) { requireCanManage(auth); feeService.deleteFeeStructure(schoolId, id); return ResponseEntity.ok(ApiResponse.ok(null)); }
+    @PostMapping("/structures") public ResponseEntity<ApiResponse<FeeStructure>> createStructure(@PathVariable String schoolId, @RequestBody FeeStructure fs, Authentication auth) { requireCanManage(schoolId, auth, "fee-structure"); return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(feeService.createFeeStructure(schoolId, fs))); }
+    @PatchMapping("/structures/{id}") public ResponseEntity<ApiResponse<FeeStructure>> updateStructure(@PathVariable String schoolId, @PathVariable String id, @RequestBody FeeStructure patch, Authentication auth) { requireCanManage(schoolId, auth, "fee-structure"); return ResponseEntity.ok(ApiResponse.ok(feeService.updateFeeStructure(schoolId, id, patch))); }
+    @DeleteMapping("/structures/{id}") public ResponseEntity<ApiResponse<Void>> deleteStructure(@PathVariable String schoolId, @PathVariable String id, Authentication auth) { requireCanManage(schoolId, auth, "fee-structure"); feeService.deleteFeeStructure(schoolId, id); return ResponseEntity.ok(ApiResponse.ok(null)); }
 
     @GetMapping("/levies") public ResponseEntity<ApiResponse<List<FeeLevy>>> getLevies(@PathVariable String schoolId) { return ResponseEntity.ok(ApiResponse.ok(feeService.getLevies(schoolId))); }
-    @PostMapping("/levies") public ResponseEntity<ApiResponse<FeeLevy>> createLevy(@PathVariable String schoolId, @RequestBody FeeLevy levy, Authentication auth) { requireCanManage(auth); return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(feeService.createLevy(schoolId, levy))); }
-    @PatchMapping("/levies/{id}") public ResponseEntity<ApiResponse<FeeLevy>> updateLevy(@PathVariable String schoolId, @PathVariable String id, @RequestBody FeeLevy patch, Authentication auth) { requireCanManage(auth); return ResponseEntity.ok(ApiResponse.ok(feeService.updateLevy(schoolId, id, patch))); }
-    @DeleteMapping("/levies/{id}") public ResponseEntity<ApiResponse<Void>> deleteLevy(@PathVariable String schoolId, @PathVariable String id, Authentication auth) { requireCanManage(auth); feeService.deleteLevy(schoolId, id); return ResponseEntity.ok(ApiResponse.ok(null)); }
+    @PostMapping("/levies") public ResponseEntity<ApiResponse<FeeLevy>> createLevy(@PathVariable String schoolId, @RequestBody FeeLevy levy, Authentication auth) { requireCanManage(schoolId, auth, "fee-structure"); return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(feeService.createLevy(schoolId, levy))); }
+    @PatchMapping("/levies/{id}") public ResponseEntity<ApiResponse<FeeLevy>> updateLevy(@PathVariable String schoolId, @PathVariable String id, @RequestBody FeeLevy patch, Authentication auth) { requireCanManage(schoolId, auth, "fee-structure"); return ResponseEntity.ok(ApiResponse.ok(feeService.updateLevy(schoolId, id, patch))); }
+    @DeleteMapping("/levies/{id}") public ResponseEntity<ApiResponse<Void>> deleteLevy(@PathVariable String schoolId, @PathVariable String id, Authentication auth) { requireCanManage(schoolId, auth, "fee-structure"); feeService.deleteLevy(schoolId, id); return ResponseEntity.ok(ApiResponse.ok(null)); }
 
     @GetMapping("/discounts") public ResponseEntity<ApiResponse<List<FeeDiscountRule>>> getDiscountRules(@PathVariable String schoolId) { return ResponseEntity.ok(ApiResponse.ok(feeService.getDiscountRules(schoolId))); }
-    @PostMapping("/discounts") public ResponseEntity<ApiResponse<FeeDiscountRule>> createDiscountRule(@PathVariable String schoolId, @RequestBody FeeDiscountRule rule, Authentication auth) { requireCanManage(auth); return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(feeService.createDiscountRule(schoolId, rule))); }
-    @PatchMapping("/discounts/{id}") public ResponseEntity<ApiResponse<FeeDiscountRule>> updateDiscountRule(@PathVariable String schoolId, @PathVariable String id, @RequestBody FeeDiscountRule patch, Authentication auth) { requireCanManage(auth); return ResponseEntity.ok(ApiResponse.ok(feeService.updateDiscountRule(schoolId, id, patch))); }
+    @PostMapping("/discounts") public ResponseEntity<ApiResponse<FeeDiscountRule>> createDiscountRule(@PathVariable String schoolId, @RequestBody FeeDiscountRule rule, Authentication auth) { requireCanManage(schoolId, auth, "fee-structure"); return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(feeService.createDiscountRule(schoolId, rule))); }
+    @PatchMapping("/discounts/{id}") public ResponseEntity<ApiResponse<FeeDiscountRule>> updateDiscountRule(@PathVariable String schoolId, @PathVariable String id, @RequestBody FeeDiscountRule patch, Authentication auth) { requireCanManage(schoolId, auth, "fee-structure"); return ResponseEntity.ok(ApiResponse.ok(feeService.updateDiscountRule(schoolId, id, patch))); }
 
     @GetMapping("/billing-rules") public ResponseEntity<ApiResponse<List<FeeBillingRule>>> getBillingRules(@PathVariable String schoolId) { return ResponseEntity.ok(ApiResponse.ok(feeService.getBillingRules(schoolId))); }
-    @PostMapping("/billing-rules") public ResponseEntity<ApiResponse<FeeBillingRule>> createBillingRule(@PathVariable String schoolId, @RequestBody FeeBillingRule rule, Authentication auth) { requireCanManage(auth); return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(feeService.createBillingRule(schoolId, rule))); }
-    @PatchMapping("/billing-rules/{id}") public ResponseEntity<ApiResponse<FeeBillingRule>> updateBillingRule(@PathVariable String schoolId, @PathVariable String id, @RequestBody FeeBillingRule patch, Authentication auth) { requireCanManage(auth); return ResponseEntity.ok(ApiResponse.ok(feeService.updateBillingRule(schoolId, id, patch))); }
+    @PostMapping("/billing-rules") public ResponseEntity<ApiResponse<FeeBillingRule>> createBillingRule(@PathVariable String schoolId, @RequestBody FeeBillingRule rule, Authentication auth) { requireCanManage(schoolId, auth, "fee-structure"); return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(feeService.createBillingRule(schoolId, rule))); }
+    @PatchMapping("/billing-rules/{id}") public ResponseEntity<ApiResponse<FeeBillingRule>> updateBillingRule(@PathVariable String schoolId, @PathVariable String id, @RequestBody FeeBillingRule patch, Authentication auth) { requireCanManage(schoolId, auth, "fee-structure"); return ResponseEntity.ok(ApiResponse.ok(feeService.updateBillingRule(schoolId, id, patch))); }
 
-    private void requireCanManage(Authentication auth) {
-        if (!CAN_MANAGE_FEES_ROLES.contains(roleOf(auth))) {
+    private void requireCanManage(String schoolId, Authentication auth, String module) {
+        if (!moduleAccessService.isAllowed(schoolId, auth, module, "full", CAN_MANAGE_FEES_ROLES.contains(roleOf(auth)))) {
             throw new ForbiddenException("Your role does not have permission to manage fee structures");
         }
     }

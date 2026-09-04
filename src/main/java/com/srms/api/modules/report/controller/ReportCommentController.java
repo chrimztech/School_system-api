@@ -8,6 +8,7 @@ import com.srms.api.modules.auth.entity.AppUser;
 import com.srms.api.modules.auth.repository.UserRepository;
 import com.srms.api.modules.student.entity.Student;
 import com.srms.api.modules.student.repository.StudentRepository;
+import com.srms.api.security.ModuleAccessService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -24,6 +25,7 @@ public class ReportCommentController {
     private final ReportCommentService service;
     private final UserRepository userRepository;
     private final StudentRepository studentRepository;
+    private final ModuleAccessService moduleAccessService;
 
     /** Anyone who can edit either the teacher or head comment on the report-card page. */
     private static final Set<String> CAN_WRITE_ROLES = Set.of(
@@ -52,7 +54,7 @@ public class ReportCommentController {
             Authentication auth) {
         assertSchoolAndParentAccess(schoolId, studentId, auth);
         String role = roleOf(auth);
-        if (!CAN_WRITE_ROLES.contains(role)) {
+        if (!moduleAccessService.isAllowed(schoolId, auth, "report-card", "full", CAN_WRITE_ROLES.contains(role))) {
             throw new ForbiddenException("Your role does not have permission to edit report card comments");
         }
         ReportComment rc = service.upsert(schoolId, studentId, term, academicYear,

@@ -12,6 +12,7 @@ import com.srms.api.modules.auth.repository.UserRepository;
 import com.srms.api.modules.student.dto.StudentDto;
 import com.srms.api.modules.student.entity.Student;
 import com.srms.api.modules.student.service.StudentService;
+import com.srms.api.security.ModuleAccessService;
 import com.srms.api.security.RoleGuard;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -21,6 +22,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/schools/{schoolId}/students")
@@ -29,11 +31,22 @@ public class StudentController {
     private final StudentService studentService;
     private final AcademicService academicService;
     private final UserRepository userRepository;
+    private final ModuleAccessService moduleAccessService;
+
+    // Mirrors RoleGuard's own (private) SCHOOL_ACCOUNT_MANAGERS set.
+    private static final Set<String> SCHOOL_ACCOUNT_MANAGERS = Set.of(
+            "SUPER_ADMIN", "SCHOOL_ADMIN", "PRINCIPAL", "DEPUTY_HEAD");
 
     private static String roleOf(Authentication auth) {
         return auth.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .findFirst().map(a -> a.replaceFirst("^ROLE_", "")).orElse("");
+    }
+
+    private void requireManage(String schoolId, Authentication auth) {
+        if (!moduleAccessService.isAllowed(schoolId, auth, "students", "full", SCHOOL_ACCOUNT_MANAGERS.contains(RoleGuard.roleOf(auth)))) {
+            throw new ForbiddenException("Your role cannot manage school accounts or permissions");
+        }
     }
 
     @GetMapping
@@ -92,25 +105,25 @@ public class StudentController {
 
     @PostMapping
     public ResponseEntity<ApiResponse<Student>> create(@PathVariable String schoolId, @RequestBody StudentDto dto, Authentication auth) {
-        RoleGuard.requireSchoolAccountManager(auth);
+        requireManage(schoolId, auth);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(studentService.create(schoolId, dto)));
     }
 
     @PostMapping("/bulk")
     public ResponseEntity<ApiResponse<BulkImportResult>> bulkCreate(@PathVariable String schoolId, @RequestBody List<StudentDto> dtos, Authentication auth) {
-        RoleGuard.requireSchoolAccountManager(auth);
+        requireManage(schoolId, auth);
         return ResponseEntity.ok(ApiResponse.ok(studentService.bulkCreate(schoolId, dtos)));
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<Student>> update(@PathVariable String schoolId, @PathVariable String id, @RequestBody StudentDto dto, Authentication auth) {
-        RoleGuard.requireSchoolAccountManager(auth);
+        requireManage(schoolId, auth);
         return ResponseEntity.ok(ApiResponse.ok(studentService.update(id, schoolId, dto)));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable String schoolId, @PathVariable String id, Authentication auth) {
-        RoleGuard.requireSchoolAccountManager(auth);
+        requireManage(schoolId, auth);
         studentService.delete(id, schoolId);
         return ResponseEntity.ok(ApiResponse.ok("Student deactivated", null));
     }

@@ -9,6 +9,7 @@ import com.srms.api.modules.communication.dto.MessageDto;
 import com.srms.api.modules.communication.entity.Announcement;
 import com.srms.api.modules.communication.entity.Message;
 import com.srms.api.modules.communication.service.CommunicationService;
+import com.srms.api.security.ModuleAccessService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -27,6 +28,7 @@ import java.util.Set;
 public class CommunicationController {
 
     private final CommunicationService communicationService;
+    private final ModuleAccessService moduleAccessService;
 
     /** Mirrors the frontend's SCHOOL_LEADERSHIP_ROLES — the only roles allowed to mass-broadcast
      *  or manage announcements, so a parent/teacher/HOD/finance/career-guidance account can't
@@ -40,8 +42,8 @@ public class CommunicationController {
                 .findFirst().map(a -> a.replaceFirst("^ROLE_", "")).orElse("");
     }
 
-    private static void requireAnnouncementManager(Authentication auth) {
-        if (!ANNOUNCEMENT_MANAGER_ROLES.contains(roleOf(auth))) {
+    private void requireAnnouncementManager(String schoolId, Authentication auth) {
+        if (!moduleAccessService.isAllowed(schoolId, auth, "communication", "full", ANNOUNCEMENT_MANAGER_ROLES.contains(roleOf(auth)))) {
             throw new ForbiddenException("Only school leadership can manage announcements");
         }
     }
@@ -59,7 +61,7 @@ public class CommunicationController {
             @PathVariable String schoolId,
             @RequestBody AnnouncementDto dto,
             Authentication auth) {
-        requireAnnouncementManager(auth);
+        requireAnnouncementManager(schoolId, auth);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.created(communicationService.createAnnouncement(schoolId, dto)));
     }
@@ -70,7 +72,7 @@ public class CommunicationController {
             @PathVariable String id,
             @RequestBody AnnouncementDto dto,
             Authentication auth) {
-        requireAnnouncementManager(auth);
+        requireAnnouncementManager(schoolId, auth);
         return ResponseEntity.ok(ApiResponse.ok(communicationService.updateAnnouncement(schoolId, id, dto)));
     }
 
@@ -79,7 +81,7 @@ public class CommunicationController {
             @PathVariable String schoolId,
             @PathVariable String id,
             Authentication auth) {
-        requireAnnouncementManager(auth);
+        requireAnnouncementManager(schoolId, auth);
         communicationService.deleteAnnouncement(schoolId, id);
         return ResponseEntity.ok(ApiResponse.ok("Announcement deleted", null));
     }

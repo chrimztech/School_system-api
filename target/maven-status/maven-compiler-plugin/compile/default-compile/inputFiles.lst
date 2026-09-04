@@ -31,6 +31,7 @@ F:\school\School_system-api\src\main\java\com\srms\api\modules\payroll\entity\Pa
 F:\school\School_system-api\src\main\java\com\srms\api\exception\ForbiddenException.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\assessment\repository\ResultRepository.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\payroll\service\PayrollService.java
+F:\school\School_system-api\src\main\java\com\srms\api\modules\integration\dto\IntegrationConnectionView.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\platform\entity\PlatformWorkspace.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\hostel\repository\HostelRoomRepository.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\timetable\controller\TimetableController.java
@@ -99,6 +100,7 @@ F:\school\School_system-api\src\main\java\com\srms\api\modules\health\entity\Hea
 F:\school\School_system-api\src\main\java\com\srms\api\modules\calendar\entity\CalendarEvent.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\assessment\entity\Assessment.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\policy\service\PolicyDocumentService.java
+F:\school\School_system-api\src\main\java\com\srms\api\common\EncryptedStringConverter.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\academic\dto\PromotionResult.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\visitor\controller\VisitorController.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\auth\entity\CustomRole.java
@@ -176,6 +178,7 @@ F:\school\School_system-api\src\main\java\com\srms\api\modules\development\repos
 F:\school\School_system-api\src\main\java\com\srms\api\modules\communication\service\CommunicationService.java
 F:\school\School_system-api\src\main\java\com\srms\api\security\JwtTokenProvider.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\hr\repository\StaffRepository.java
+F:\school\School_system-api\src\main\java\com\srms\api\modules\auth\controller\SystemRolePermissionController.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\risk\repository\RiskRepository.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\exam\dto\GceCandidateDto.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\accounting\entity\JournalEntry.java
@@ -282,6 +285,7 @@ F:\school\School_system-api\src\main\java\com\srms\api\modules\academic\reposito
 F:\school\School_system-api\src\main\java\com\srms\api\security\tenant\TenantRequestBodyAdvice.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\academic\entity\Subject.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\health\repository\HealthVisitRepository.java
+F:\school\School_system-api\src\main\java\com\srms\api\security\ModuleAccessService.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\platform\dto\PlatformWorkspaceDto.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\discipline\dto\DisciplineCaseDto.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\timetable\entity\TimetableSlot.java

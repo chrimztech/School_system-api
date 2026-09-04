@@ -11,6 +11,7 @@ import com.srms.api.modules.auth.entity.AppUser;
 import com.srms.api.modules.auth.repository.UserRepository;
 import com.srms.api.modules.student.entity.Student;
 import com.srms.api.modules.student.repository.StudentRepository;
+import com.srms.api.security.ModuleAccessService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -25,6 +26,7 @@ public class AssessmentController {
     private final AssessmentService assessmentService;
     private final UserRepository userRepository;
     private final StudentRepository studentRepository;
+    private final ModuleAccessService moduleAccessService;
 
     private static String roleOf(Authentication auth) {
         return auth.getAuthorities().stream()
@@ -37,7 +39,7 @@ public class AssessmentController {
     @PostMapping public ResponseEntity<ApiResponse<Assessment>> create(@PathVariable String schoolId, @RequestBody Assessment dto, Authentication auth) { return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(assessmentService.create(schoolId, dto, auth.getName(), roleOf(auth)))); }
     @PutMapping("/{id}") public ResponseEntity<ApiResponse<Assessment>> update(@PathVariable String schoolId, @PathVariable String id, @RequestBody Assessment dto, Authentication auth) { return ResponseEntity.ok(ApiResponse.ok(assessmentService.update(id, schoolId, dto, auth.getName(), roleOf(auth)))); }
     @GetMapping("/{id}/results") public ResponseEntity<ApiResponse<List<AssessmentResult>>> getResults(@PathVariable String schoolId, @PathVariable String id, Authentication auth) {
-        if ("PARENT".equalsIgnoreCase(roleOf(auth))) throw new ForbiddenException("Parents can only view their child's published report card");
+        if (!moduleAccessService.isAllowed(schoolId, auth, "assessments", "read", !"PARENT".equalsIgnoreCase(roleOf(auth)))) throw new ForbiddenException("Parents can only view their child's published report card");
         return ResponseEntity.ok(ApiResponse.ok(assessmentService.getResults(id, schoolId, auth.getName(), roleOf(auth))));
     }
     @PostMapping("/{id}/results") public ResponseEntity<ApiResponse<AssessmentResult>> saveResult(@PathVariable String schoolId, @PathVariable String id, @RequestBody AssessmentResult result, Authentication auth) { result.setSchoolId(schoolId); result.setAssessmentId(id); return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(assessmentService.saveResult(result, auth.getName(), roleOf(auth)))); }

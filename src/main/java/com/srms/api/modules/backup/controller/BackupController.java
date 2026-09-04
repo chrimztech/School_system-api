@@ -7,6 +7,7 @@ import com.srms.api.modules.auth.entity.AppUser;
 import com.srms.api.modules.auth.repository.UserRepository;
 import com.srms.api.modules.backup.entity.Backup;
 import com.srms.api.modules.backup.service.BackupService;
+import com.srms.api.security.ModuleAccessService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
@@ -34,6 +35,7 @@ import java.util.Set;
 public class BackupController {
     private final BackupService backupService;
     private final UserRepository userRepository;
+    private final ModuleAccessService moduleAccessService;
 
     // Backups contain every field of every table for a school — same trust level as raw DB
     // access, so only the roles that could already see this data through the app get it.
@@ -41,20 +43,20 @@ public class BackupController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<Backup>>> list(@PathVariable String schoolId, Authentication auth) {
-        assertAdmin(schoolId, auth);
+        assertAdmin(schoolId, auth, "read");
         return ResponseEntity.ok(ApiResponse.ok(backupService.list(schoolId)));
     }
 
     @PostMapping
     public ResponseEntity<ApiResponse<Backup>> create(@PathVariable String schoolId, Authentication auth) {
-        assertAdmin(schoolId, auth);
+        assertAdmin(schoolId, auth, "full");
         Backup backup = backupService.createBackup(schoolId, actorName(auth), Backup.TriggeredBy.MANUAL);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(backup));
     }
 
     @GetMapping("/{id}/download")
     public ResponseEntity<byte[]> download(@PathVariable String schoolId, @PathVariable String id, Authentication auth) {
-        assertAdmin(schoolId, auth);
+        assertAdmin(schoolId, auth, "read");
         Backup backup = backupService.get(schoolId, id);
         byte[] file = backupService.readFile(schoolId, id);
         return ResponseEntity.ok()
@@ -66,7 +68,7 @@ public class BackupController {
 
     @PostMapping("/{id}/restore")
     public ResponseEntity<ApiResponse<Void>> restore(@PathVariable String schoolId, @PathVariable String id, Authentication auth) {
-        assertAdmin(schoolId, auth);
+        assertAdmin(schoolId, auth, "full");
         backupService.restore(schoolId, id);
         return ResponseEntity.ok(ApiResponse.ok("Restore complete", null));
     }
@@ -75,7 +77,7 @@ public class BackupController {
     public ResponseEntity<ApiResponse<Void>> importBackup(@PathVariable String schoolId,
                                                             @RequestParam("file") MultipartFile file,
                                                             Authentication auth) {
-        assertAdmin(schoolId, auth);
+        assertAdmin(schoolId, auth, "full");
         if (file.isEmpty()) {
             throw new BusinessException("Please choose a backup file to upload");
         }
@@ -89,7 +91,7 @@ public class BackupController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable String schoolId, @PathVariable String id, Authentication auth) {
-        assertAdmin(schoolId, auth);
+        assertAdmin(schoolId, auth, "full");
         backupService.delete(schoolId, id);
         return ResponseEntity.ok(ApiResponse.ok("Backup deleted", null));
     }
@@ -105,9 +107,11 @@ public class BackupController {
                 .map(authority -> authority.replaceFirst("^ROLE_", "")).orElse("");
     }
 
-    private void assertAdmin(String schoolId, Authentication auth) {
+    // The role-set gate below is the module-level check (wrapped so a super admin override can
+    // supersede it); the tenant-ownership check that follows is left completely untouched.
+    private void assertAdmin(String schoolId, Authentication auth, String minLevel) {
         String role = roleOf(auth);
-        if (!ADMIN_ROLES.contains(role.toUpperCase())) {
+        if (!moduleAccessService.isAllowed(schoolId, auth, "settings", minLevel, ADMIN_ROLES.contains(role.toUpperCase()))) {
             throw new ForbiddenException("Only school administrators can manage backups");
         }
         if ("SUPER_ADMIN".equalsIgnoreCase(role)) return;

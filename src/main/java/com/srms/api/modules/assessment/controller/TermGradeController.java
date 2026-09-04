@@ -11,6 +11,7 @@ import com.srms.api.modules.auth.entity.AppUser;
 import com.srms.api.modules.auth.repository.UserRepository;
 import com.srms.api.modules.student.entity.Student;
 import com.srms.api.modules.student.repository.StudentRepository;
+import com.srms.api.security.ModuleAccessService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -33,6 +34,7 @@ public class TermGradeController {
     private final TermGradeService termGradeService;
     private final UserRepository userRepository;
     private final StudentRepository studentRepository;
+    private final ModuleAccessService moduleAccessService;
 
     private static String roleOf(Authentication auth) {
         return auth.getAuthorities().stream().map(GrantedAuthority::getAuthority).findFirst()
@@ -44,7 +46,7 @@ public class TermGradeController {
                                                                  @RequestBody Map<String, String> body,
                                                                  Authentication auth) {
         assertActorSchool(schoolId, auth);
-        if ("PARENT".equalsIgnoreCase(roleOf(auth))) {
+        if (!moduleAccessService.isAllowed(schoolId, auth, "assessments", "full", !"PARENT".equalsIgnoreCase(roleOf(auth)))) {
             throw new ForbiddenException("Parents can only view published report cards");
         }
         List<TermGrade> result = termGradeService.compute(schoolId, body.get("classId"), body.get("subjectName"),
@@ -57,7 +59,7 @@ public class TermGradeController {
             @PathVariable String schoolId, @RequestParam String studentId,
             @RequestParam String academicYear, Authentication auth) {
         assertActorSchool(schoolId, auth);
-        if ("PARENT".equalsIgnoreCase(roleOf(auth))) {
+        if (!moduleAccessService.isAllowed(schoolId, auth, "assessments", "read", !"PARENT".equalsIgnoreCase(roleOf(auth)))) {
             throw new ForbiddenException("Parents can only view published report cards");
         }
         return ResponseEntity.ok(ApiResponse.ok(

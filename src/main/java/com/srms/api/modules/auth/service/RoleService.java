@@ -66,6 +66,24 @@ public class RoleService {
         return permissionRepository.findBySchoolIdAndRoleName(schoolId, roleName);
     }
 
+    /** System roles (TEACHER, HOD, FINANCE, ...) share the exact same override storage as
+     * custom roles — a school_id + role_name + module + access row is all either concept needs.
+     * The "sysrole:" prefix keeps them in a disjoint namespace from user-typed custom role names
+     * (so a school naming a custom role e.g. "Teacher" can never collide with a system override),
+     * and keeps them out of the custom-roles list/CRUD endpoints, which only ever deal with rows
+     * in {@link com.srms.api.modules.auth.entity.CustomRole}. */
+    private static final String SYSTEM_ROLE_PREFIX = "sysrole:";
+
+    public List<CustomRolePermission> getSystemRolePermissions(String schoolId, String systemRole) {
+        return permissionRepository.findBySchoolIdAndRoleName(schoolId, SYSTEM_ROLE_PREFIX + systemRole.toLowerCase());
+    }
+
+    @Transactional
+    public List<CustomRolePermission> saveSystemRolePermissions(
+            String schoolId, String systemRole, List<Map<String, String>> permissions) {
+        return savePermissions(schoolId, SYSTEM_ROLE_PREFIX + systemRole.toLowerCase(), permissions);
+    }
+
     @Transactional
     public List<CustomRolePermission> savePermissions(
             String schoolId, String roleName, List<Map<String, String>> permissions) {

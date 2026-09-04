@@ -1,9 +1,11 @@
 package com.srms.api.modules.auth.controller;
 
 import com.srms.api.common.ApiResponse;
+import com.srms.api.exception.ForbiddenException;
 import com.srms.api.modules.auth.entity.CustomRole;
 import com.srms.api.modules.auth.entity.CustomRolePermission;
 import com.srms.api.modules.auth.service.RoleService;
+import com.srms.api.security.ModuleAccessService;
 import com.srms.api.security.RoleGuard;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -13,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/schools/{schoolId}/roles")
@@ -20,11 +23,18 @@ import java.util.Map;
 public class CustomRoleController {
 
     private final RoleService roleService;
+    private final ModuleAccessService moduleAccessService;
+
+    // Mirrors RoleGuard's own (private) SCHOOL_ACCOUNT_MANAGERS set — reconstructed here so the
+    // original hardcoded default can be passed through as the isAllowed() defaultAllowed
+    // argument without modifying RoleGuard itself.
+    private static final Set<String> SCHOOL_ACCOUNT_MANAGERS = Set.of(
+            "SUPER_ADMIN", "SCHOOL_ADMIN", "PRINCIPAL", "DEPUTY_HEAD");
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<CustomRole>>> list(
             @PathVariable String schoolId, Authentication auth) {
-        RoleGuard.requireSchoolAccountManager(auth);
+        requireManage(schoolId, auth);
         return ResponseEntity.ok(ApiResponse.ok(roleService.listCustomRoles(schoolId)));
     }
 
@@ -33,7 +43,7 @@ public class CustomRoleController {
             @PathVariable String schoolId,
             @RequestBody CustomRole dto,
             Authentication auth) {
-        RoleGuard.requireSchoolAccountManager(auth);
+        requireManage(schoolId, auth);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.created(roleService.createCustomRole(schoolId, dto)));
     }
@@ -44,7 +54,7 @@ public class CustomRoleController {
             @PathVariable String id,
             @RequestBody CustomRole dto,
             Authentication auth) {
-        RoleGuard.requireSchoolAccountManager(auth);
+        requireManage(schoolId, auth);
         return ResponseEntity.ok(ApiResponse.ok(roleService.updateCustomRole(id, schoolId, dto)));
     }
 
@@ -53,7 +63,7 @@ public class CustomRoleController {
             @PathVariable String schoolId,
             @PathVariable String id,
             Authentication auth) {
-        RoleGuard.requireSchoolAccountManager(auth);
+        requireManage(schoolId, auth);
         roleService.deleteCustomRole(id, schoolId);
         return ResponseEntity.ok(ApiResponse.ok(null));
     }
@@ -63,7 +73,7 @@ public class CustomRoleController {
             @PathVariable String schoolId,
             @PathVariable String roleName,
             Authentication auth) {
-        RoleGuard.requireSchoolAccountManager(auth);
+        requireManage(schoolId, auth);
         return ResponseEntity.ok(ApiResponse.ok(roleService.getPermissions(schoolId, roleName)));
     }
 
@@ -73,7 +83,13 @@ public class CustomRoleController {
             @PathVariable String roleName,
             @RequestBody List<Map<String, String>> permissions,
             Authentication auth) {
-        RoleGuard.requireSchoolAccountManager(auth);
+        requireManage(schoolId, auth);
         return ResponseEntity.ok(ApiResponse.ok(roleService.savePermissions(schoolId, roleName, permissions)));
+    }
+
+    private void requireManage(String schoolId, Authentication auth) {
+        if (!moduleAccessService.isAllowed(schoolId, auth, "access", "full", SCHOOL_ACCOUNT_MANAGERS.contains(RoleGuard.roleOf(auth)))) {
+            throw new ForbiddenException("Your role cannot manage school accounts or permissions");
+        }
     }
 }

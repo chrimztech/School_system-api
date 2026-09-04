@@ -14,6 +14,7 @@ import com.srms.api.modules.auth.entity.AppUser;
 import com.srms.api.modules.auth.repository.UserRepository;
 import com.srms.api.modules.student.entity.Student;
 import com.srms.api.modules.student.repository.StudentRepository;
+import com.srms.api.security.ModuleAccessService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -31,6 +32,7 @@ public class AttendanceController {
     private final AcademicService academicService;
     private final UserRepository userRepository;
     private final StudentRepository studentRepository;
+    private final ModuleAccessService moduleAccessService;
 
     /** Roles with "full" (not "read") access to the attendance module. */
     private static final Set<String> CAN_MARK_ROLES = Set.of(
@@ -84,7 +86,7 @@ public class AttendanceController {
     }
     @PostMapping public ResponseEntity<ApiResponse<List<AttendanceRecord>>> mark(@PathVariable String schoolId, @RequestBody AttendanceDto dto, Authentication auth) {
         String role = roleOf(auth);
-        if (!CAN_MARK_ROLES.contains(role)) {
+        if (!moduleAccessService.isAllowed(schoolId, auth, "attendance", "full", CAN_MARK_ROLES.contains(role))) {
             throw new ForbiddenException("Your role does not have permission to mark attendance");
         }
         if ("TEACHER".equals(role) && dto.getClassId() != null) {

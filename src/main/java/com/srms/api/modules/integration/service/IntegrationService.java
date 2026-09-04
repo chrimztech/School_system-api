@@ -46,5 +46,13 @@ public class IntegrationService {
         if (patch.getStatus() != null) target.setStatus(patch.getStatus());
         if (patch.getOwner() != null) target.setOwner(patch.getOwner());
         if (patch.getWebhook() != null) target.setWebhook(patch.getWebhook());
+        if (patch.getAccountId() != null) target.setAccountId(patch.getAccountId());
+        if (patch.getBaseUrl() != null) target.setBaseUrl(patch.getBaseUrl());
+        if (patch.getEnvironment() != null) target.setEnvironment(patch.getEnvironment());
+        // Left blank on the form (and therefore omitted from the request body) means "don't
+        // change the saved credential" — exactly the null-safe behavior every other field here
+        // already has. There's no separate "clear the key" affordance yet.
+        if (patch.getApiKey() != null) target.setApiKey(patch.getApiKey());
+        if (patch.getApiSecret() != null) target.setApiSecret(patch.getApiSecret());
     }
 }
