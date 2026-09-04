@@ -37,7 +37,7 @@ public class AdminUserController {
         user.setActive(true);
         user.setRole(authService.parseRole(body.getOrDefault("role", "SCHOOL_ADMIN")));
         if (body.containsKey("phone")) user.setPhone(body.get("phone"));
-        UserDto created = authService.createUser(user, body.getOrDefault("password", "password123"));
+        UserDto created = authService.createUser(user, body.get("password"));
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(created));
     }
 

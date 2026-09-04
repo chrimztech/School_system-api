@@ -18,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.security.SecureRandom;
 import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.List;
@@ -132,8 +133,30 @@ public class AuthService {
                 .toList();
     }
 
+    private static final SecureRandom TEMP_PASSWORD_RANDOM = new SecureRandom();
+    // Excludes visually ambiguous characters (0/O, 1/l/I) — this password is usually read aloud
+    // or retyped from a phone screen by whoever the admin shares it with.
+    private static final String TEMP_PASSWORD_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
+
+    private String generateTemporaryPassword() {
+        StringBuilder sb = new StringBuilder(10);
+        for (int i = 0; i < 10; i++) {
+            sb.append(TEMP_PASSWORD_ALPHABET.charAt(TEMP_PASSWORD_RANDOM.nextInt(TEMP_PASSWORD_ALPHABET.length())));
+        }
+        return sb.toString();
+    }
+
     public UserDto createUser(AppUser user, String rawPassword) {
-        return toDto(createUserEntity(user, rawPassword));
+        // A blank password used to silently fall back to the literal string "password123" for
+        // every admin-created account — a guessable standing credential for anyone who knows the
+        // new user's email, and the admin had no idea it had happened. Generating a random one
+        // per account and handing it back here (once, in this response only) closes that hole
+        // without losing the "leave it blank" convenience.
+        boolean generated = rawPassword == null || rawPassword.isBlank();
+        String effectivePassword = generated ? generateTemporaryPassword() : rawPassword;
+        UserDto dto = toDto(createUserEntity(user, effectivePassword));
+        if (generated) dto.setTemporaryPassword(effectivePassword);
+        return dto;
     }
 
     public UserDto updateUser(String userId, String roleValue, String schoolId, String phone, Boolean active) {
@@ -269,10 +292,12 @@ public class AuthService {
             throw new BusinessException("A school is required for non-system users");
         }
 
-        user.setPasswordHash(passwordEncoder.encode(rawPassword == null || rawPassword.isBlank() ? "password123" : rawPassword));
-        // A newly provisioned account's password is always known to whoever created it
-        // (the admin, or the "password123" default from onboarding) — force a change on
-        // first sign-in so that knowledge doesn't stay a standing credential.
+        // rawPassword is always concrete here — createUser() above resolves a blank/omitted
+        // password to a freshly generated one before calling this.
+        user.setPasswordHash(passwordEncoder.encode(rawPassword));
+        // A newly provisioned account's password is always known to whoever created it (the
+        // admin) — force a change on first sign-in so that knowledge doesn't stay a standing
+        // credential.
         user.setMustChangePassword(true);
         if (user.getInitials() == null && user.getName() != null) {
             String[] parts = user.getName().trim().split("\\s+");
