@@ -80,8 +80,8 @@ public class UserController {
             @PathVariable String schoolId, @PathVariable String userId, Authentication auth) {
         RoleGuard.requireSchoolAccountManager(auth);
         assertTargetBelongsToSchool(schoolId, userId, auth);
-        authService.deactivateUser(userId);
-        return ResponseEntity.ok(ApiResponse.ok("User deactivated", null));
+        authService.deleteUserPermanently(auth.getName(), userId);
+        return ResponseEntity.ok(ApiResponse.ok("User deleted", null));
     }
 
     private void assertTargetBelongsToSchool(String schoolId, String userId, Authentication auth) {

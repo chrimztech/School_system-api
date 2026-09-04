@@ -190,9 +190,26 @@ public class AuthService {
         userRepository.save(user);
     }
 
+    /**
+     * A real, permanent delete — distinct from deactivateUser(), which only flips the active
+     * flag. No other table has a real foreign key onto app_users (every cross-reference in this
+     * app, e.g. audit_events.actor, is a loose string column, not an FK constraint), so this is
+     * safe at the database level; any historical record naming this user simply keeps showing
+     * their old name/id rather than resolving to a live account.
+     */
+    public void deleteUserPermanently(String requestingUserId, String userId) {
+        if (requestingUserId != null && requestingUserId.equals(userId)) {
+            throw new BusinessException("You cannot delete your own account");
+        }
+        AppUser user = findUserEntity(userId);
+        userRepository.delete(user);
+    }
+
     public AppUser.UserRole parseRole(String value) {
-        return switch ((value == null ? "" : value).trim().toUpperCase().replace(" ", "_")) {
+        String normalized = (value == null ? "" : value).trim().toUpperCase().replace(" ", "_");
+        return switch (normalized) {
             case "SUPER_ADMIN" -> AppUser.UserRole.SUPER_ADMIN;
+            case "SCHOOL_ADMIN" -> AppUser.UserRole.SCHOOL_ADMIN;
             case "TEACHER" -> AppUser.UserRole.TEACHER;
             case "HOD", "HEAD_OF_DEPARTMENT" -> AppUser.UserRole.HOD;
             case "FINANCE", "FINANCE_OFFICER" -> AppUser.UserRole.FINANCE;
@@ -200,7 +217,11 @@ public class AuthService {
             case "PRINCIPAL", "HEAD_MASTER", "HEADMASTER" -> AppUser.UserRole.PRINCIPAL;
             case "DEPUTY_HEAD", "DEPUTY_HEADTEACHER" -> AppUser.UserRole.DEPUTY_HEAD;
             case "CAREER_GUIDANCE", "CAREER_GUIDANCE_TEACHER" -> AppUser.UserRole.CAREER_GUIDANCE;
-            default -> AppUser.UserRole.SCHOOL_ADMIN;
+            // An unrecognized role must never silently become SCHOOL_ADMIN — one of the most
+            // privileged roles in the system. A typo, a new frontend role added without a
+            // matching case here, or a malformed direct API call should reject the request, not
+            // quietly grant elevated access.
+            default -> throw new BusinessException("Unrecognized role: \"" + value + "\"");
         };
     }
 

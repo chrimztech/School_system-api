@@ -40,6 +40,9 @@ public class HrService {
 
     public StaffRecord updateStaff(String schoolId, String id, StaffRecord updated) {
         StaffRecord record = getStaff(schoolId, id);
+        record.setName(updated.getName());
+        record.setGender(updated.getGender());
+        record.setNationalId(updated.getNationalId());
         record.setDepartment(updated.getDepartment());
         record.setPosition(updated.getPosition());
         record.setQualifications(updated.getQualifications());

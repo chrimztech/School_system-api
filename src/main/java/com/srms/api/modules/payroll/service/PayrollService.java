@@ -21,6 +21,35 @@ public class PayrollService {
     private final PayslipEntryRepository slipRepo;
     private final StaffRepository staffRepository;
 
+    // Zambian PAYE brackets (2024+, monthly, ZMW) and NAPSA's statutory monthly cap — must match
+    // the frontend's own PAYE_BANDS/NAPSA_CAP in payroll.tsx exactly, since that page's "Payslip
+    // preview" tab shows a client-side estimate using this same math before a run is processed;
+    // if these drift apart, the preview a school sees stops matching what actually gets withheld.
+    private record PayeBand(BigDecimal upTo, BigDecimal rate) {}
+    private static final List<PayeBand> PAYE_BANDS = List.of(
+            new PayeBand(new BigDecimal("5100"), BigDecimal.ZERO),
+            new PayeBand(new BigDecimal("7100"), new BigDecimal("0.20")),
+            new PayeBand(new BigDecimal("9200"), new BigDecimal("0.30")),
+            new PayeBand(null, new BigDecimal("0.37")) // null upTo = no ceiling
+    );
+    private static final BigDecimal NAPSA_RATE = new BigDecimal("0.05");
+    private static final BigDecimal NAPSA_CAP = new BigDecimal("1342.40");
+    private static final BigDecimal NHIMA_RATE = new BigDecimal("0.01");
+
+    private static BigDecimal calcPaye(BigDecimal taxable) {
+        BigDecimal tax = BigDecimal.ZERO;
+        BigDecimal prev = BigDecimal.ZERO;
+        for (PayeBand band : PAYE_BANDS) {
+            if (taxable.compareTo(prev) <= 0) break;
+            BigDecimal ceiling = band.upTo() == null ? taxable : band.upTo();
+            BigDecimal top = taxable.min(ceiling);
+            BigDecimal slice = top.subtract(prev);
+            if (slice.signum() > 0) tax = tax.add(slice.multiply(band.rate()));
+            prev = ceiling;
+        }
+        return tax.setScale(2, RoundingMode.HALF_UP);
+    }
+
     public List<PayrollRun> getRuns(String schoolId) { return runRepo.findBySchoolIdOrderByYearDescMonthDesc(schoolId); }
 
     public PayrollRun createRun(String schoolId, PayrollRun run) {
@@ -42,12 +71,13 @@ public class PayrollService {
 
         for (StaffRecord s : staff) {
             BigDecimal gross = s.getSalary() != null ? s.getSalary() : BigDecimal.ZERO;
-            BigDecimal napsa = gross.multiply(new BigDecimal("0.05")).setScale(2, RoundingMode.HALF_UP);
-            BigDecimal paye = gross.multiply(new BigDecimal("0.25")).setScale(2, RoundingMode.HALF_UP);
-            BigDecimal nhima = gross.multiply(new BigDecimal("0.01")).setScale(2, RoundingMode.HALF_UP);
+            BigDecimal napsa = gross.multiply(NAPSA_RATE).min(NAPSA_CAP).setScale(2, RoundingMode.HALF_UP);
+            BigDecimal nhima = gross.multiply(NHIMA_RATE).setScale(2, RoundingMode.HALF_UP);
+            BigDecimal taxable = gross.subtract(napsa); // NAPSA is pre-tax deductible
+            BigDecimal paye = calcPaye(taxable);
             BigDecimal net = gross.subtract(napsa).subtract(paye).subtract(nhima);
             PayslipEntry slip = new PayslipEntry();
-            slip.setSchoolId(schoolId); slip.setPayrollRunId(runId); slip.setStaffId(s.getId()); slip.setStaffName(s.getUserId()); slip.setPosition(s.getPosition()); slip.setGrossSalary(gross); slip.setNapsa(napsa); slip.setPaye(paye); slip.setNhima(nhima); slip.setOtherDeductions(BigDecimal.ZERO); slip.setNetSalary(net);
+            slip.setSchoolId(schoolId); slip.setPayrollRunId(runId); slip.setStaffId(s.getId()); slip.setStaffName(s.getName()); slip.setPosition(s.getPosition()); slip.setGrossSalary(gross); slip.setNapsa(napsa); slip.setPaye(paye); slip.setNhima(nhima); slip.setOtherDeductions(BigDecimal.ZERO); slip.setNetSalary(net);
             slipRepo.save(slip);
             totalGross = totalGross.add(gross);
             totalNet = totalNet.add(net);

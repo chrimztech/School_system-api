@@ -4,12 +4,15 @@ import com.srms.api.common.ApiResponse;
 import com.srms.api.common.BulkImportResult;
 import com.srms.api.common.PageRequestUtil;
 import com.srms.api.common.PageResponse;
+import com.srms.api.common.PhoneUtils;
+import com.srms.api.exception.ForbiddenException;
 import com.srms.api.modules.academic.service.AcademicService;
 import com.srms.api.modules.auth.entity.AppUser;
 import com.srms.api.modules.auth.repository.UserRepository;
 import com.srms.api.modules.student.dto.StudentDto;
 import com.srms.api.modules.student.entity.Student;
 import com.srms.api.modules.student.service.StudentService;
+import com.srms.api.security.RoleGuard;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -81,28 +84,48 @@ public class StudentController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<Student>> getById(@PathVariable String schoolId, @PathVariable String id) {
-        return ResponseEntity.ok(ApiResponse.ok(studentService.findById(id, schoolId)));
+    public ResponseEntity<ApiResponse<Student>> getById(@PathVariable String schoolId, @PathVariable String id, Authentication auth) {
+        Student student = studentService.findById(id, schoolId);
+        if ("PARENT".equals(roleOf(auth))) assertParentOwnsStudent(student, auth);
+        return ResponseEntity.ok(ApiResponse.ok(student));
     }
 
     @PostMapping
-    public ResponseEntity<ApiResponse<Student>> create(@PathVariable String schoolId, @RequestBody StudentDto dto) {
+    public ResponseEntity<ApiResponse<Student>> create(@PathVariable String schoolId, @RequestBody StudentDto dto, Authentication auth) {
+        RoleGuard.requireSchoolAccountManager(auth);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(studentService.create(schoolId, dto)));
     }
 
     @PostMapping("/bulk")
-    public ResponseEntity<ApiResponse<BulkImportResult>> bulkCreate(@PathVariable String schoolId, @RequestBody List<StudentDto> dtos) {
+    public ResponseEntity<ApiResponse<BulkImportResult>> bulkCreate(@PathVariable String schoolId, @RequestBody List<StudentDto> dtos, Authentication auth) {
+        RoleGuard.requireSchoolAccountManager(auth);
         return ResponseEntity.ok(ApiResponse.ok(studentService.bulkCreate(schoolId, dtos)));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ApiResponse<Student>> update(@PathVariable String schoolId, @PathVariable String id, @RequestBody StudentDto dto) {
+    public ResponseEntity<ApiResponse<Student>> update(@PathVariable String schoolId, @PathVariable String id, @RequestBody StudentDto dto, Authentication auth) {
+        RoleGuard.requireSchoolAccountManager(auth);
         return ResponseEntity.ok(ApiResponse.ok(studentService.update(id, schoolId, dto)));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse<Void>> delete(@PathVariable String schoolId, @PathVariable String id) {
+    public ResponseEntity<ApiResponse<Void>> delete(@PathVariable String schoolId, @PathVariable String id, Authentication auth) {
+        RoleGuard.requireSchoolAccountManager(auth);
         studentService.delete(id, schoolId);
         return ResponseEntity.ok(ApiResponse.ok("Student deactivated", null));
+    }
+
+    /** Same ownership rule as AssessmentController's identically-named check — a parent may only
+     * reach a student record that matches their own authenticated email/phone as guardian. */
+    private void assertParentOwnsStudent(Student student, Authentication auth) {
+        AppUser user = userRepository.findById(auth.getName())
+                .orElseThrow(() -> new ForbiddenException("Authenticated parent was not found"));
+        boolean emailMatch = user.getEmail() != null && student.getGuardianEmail() != null
+                && user.getEmail().equalsIgnoreCase(student.getGuardianEmail());
+        boolean phoneMatch = user.getPhone() != null && student.getGuardianPhone() != null
+                && PhoneUtils.normalize(user.getPhone()).equalsIgnoreCase(PhoneUtils.normalize(student.getGuardianPhone()));
+        if (!emailMatch && !phoneMatch) {
+            throw new ForbiddenException("Parents can only view their own children");
+        }
     }
 }

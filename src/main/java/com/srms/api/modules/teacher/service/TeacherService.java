@@ -87,5 +87,11 @@ public class TeacherService {
         t.setBankName(dto.getBankName());
         t.setBankAccount(dto.getBankAccount());
         t.setAddress(dto.getAddress());
+        t.setContractType(dto.getContractType());
+        t.setContractEndDate(dto.getContractEndDate());
+        t.setSalaryBand(dto.getSalaryBand());
+        t.setTpin(dto.getTpin());
+        t.setPaymentMethod(dto.getPaymentMethod());
+        t.setNapsaEnrolled(dto.getNapsaEnrolled());
     }
 }

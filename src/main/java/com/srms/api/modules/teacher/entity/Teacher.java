@@ -34,5 +34,15 @@ public class Teacher extends BaseEntity {
     private String bankName;
     private String bankAccount;
     private String address;
+    // Plain strings rather than enums for contractType/paymentMethod — the frontend's dropdown
+    // labels here are free-form ("Permanent"/"Contract"/"Probation", "Bank transfer"/"Mobile
+    // money (Airtel)"/...) and a Java enum's exact-match deserialization is exactly what broke
+    // the payroll module's own contract-type field elsewhere in this app.
+    private String contractType;
+    private String contractEndDate;
+    private String salaryBand;
+    private String tpin;
+    private String paymentMethod;
+    private Boolean napsaEnrolled;
     public enum TeacherStatus { active, inactive, on_leave, suspended, terminated }
 }

@@ -21,4 +21,11 @@ public class InventoryItem extends BaseEntity {
     private String location;
     private LocalDate lastRestockedDate;
     private String status; // IN_STOCK, LOW_STOCK, OUT_OF_STOCK
+    private String supplierName;
+    private String barcode;
+    private String serialNumber;
+    private String condition;
+    private LocalDate expiryDate;
+    private LocalDate warrantyExpiry;
+    private String assetTag;
 }

@@ -9,9 +9,11 @@ import com.srms.api.modules.attendance.dto.AttendanceDto;
 import com.srms.api.modules.attendance.dto.AttendanceSummary;
 import com.srms.api.modules.attendance.entity.AttendanceRecord;
 import com.srms.api.modules.attendance.service.AttendanceService;
+import com.srms.api.common.PhoneUtils;
 import com.srms.api.modules.auth.entity.AppUser;
 import com.srms.api.modules.auth.repository.UserRepository;
 import com.srms.api.modules.student.entity.Student;
+import com.srms.api.modules.student.repository.StudentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -28,6 +30,7 @@ public class AttendanceController {
     private final AttendanceService attendanceService;
     private final AcademicService academicService;
     private final UserRepository userRepository;
+    private final StudentRepository studentRepository;
 
     /** Roles with "full" (not "read") access to the attendance module. */
     private static final Set<String> CAN_MARK_ROLES = Set.of(
@@ -74,6 +77,7 @@ public class AttendanceController {
                     .stream().map(Student::getId).anyMatch(studentId::equals);
             if (!isMyStudent) throw new ForbiddenException("This student is not in one of your classes");
         }
+        if ("PARENT".equals(roleOf(auth))) assertParentOwnsStudent(schoolId, studentId, auth);
         Pageable pageable = PageRequestUtil.build(page, size, sortBy, sortDir);
         if (pageable == null) return ResponseEntity.ok(ApiResponse.ok(attendanceService.getStudentAttendance(schoolId, studentId)));
         return ResponseEntity.ok(ApiResponse.ok(PageResponse.of(attendanceService.getStudentAttendancePaged(schoolId, studentId, pageable))));
@@ -93,5 +97,20 @@ public class AttendanceController {
             if (!isMyClass) throw new ForbiddenException("You are not assigned to this class");
         }
         return ResponseEntity.ok(ApiResponse.ok(attendanceService.markAttendance(schoolId, dto)));
+    }
+
+    /** Same ownership rule as AssessmentController/StudentController's identically-named check. */
+    private void assertParentOwnsStudent(String schoolId, String studentId, Authentication auth) {
+        AppUser user = userRepository.findById(auth.getName())
+                .orElseThrow(() -> new ForbiddenException("Authenticated parent was not found"));
+        Student student = studentRepository.findByIdAndSchoolId(studentId, schoolId)
+                .orElseThrow(() -> new ForbiddenException("Learner is not available to this parent"));
+        boolean emailMatch = user.getEmail() != null && student.getGuardianEmail() != null
+                && user.getEmail().equalsIgnoreCase(student.getGuardianEmail());
+        boolean phoneMatch = user.getPhone() != null && student.getGuardianPhone() != null
+                && PhoneUtils.normalize(user.getPhone()).equalsIgnoreCase(PhoneUtils.normalize(student.getGuardianPhone()));
+        if (!emailMatch && !phoneMatch) {
+            throw new ForbiddenException("Parents can only view attendance for their own children");
+        }
     }
 }

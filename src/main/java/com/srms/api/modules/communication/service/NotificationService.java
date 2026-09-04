@@ -272,7 +272,11 @@ public class NotificationService {
 
     private void sendEmails(List<String> recipients, String subject, String htmlBody, String plainBody, School school) {
         if (recipients.isEmpty()) return;
-        if (fromEmail.equals("noreply@srms.zm")) {
+        // "noreply@srms.zm" is the dev-profile default when MAIL_USERNAME/MAIL_PASSWORD are
+        // unset; production's own default is blank (see application-production.properties) —
+        // check for both so an unconfigured mail account is caught in either profile instead of
+        // attempting a send that would just fail per-recipient with a MailException.
+        if (fromEmail == null || fromEmail.isBlank() || fromEmail.equals("noreply@srms.zm")) {
             log.warn("Email channel selected but MAIL_USERNAME / MAIL_PASSWORD not configured — skipping {} emails", recipients.size());
             return;
         }

@@ -218,7 +218,6 @@ F:\school\School_system-api\src\main\java\com\srms\api\modules\attendance\contro
 F:\school\School_system-api\src\main\java\com\srms\api\modules\discipline\repository\DisciplineRepository.java
 F:\school\School_system-api\src\main\java\com\srms\api\common\PageResponse.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\canteen\entity\MenuItem.java
-F:\school\School_system-api\src\main\java\com\srms\api\security\ModuleAccessMatrix.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\assessment\entity\TermGrade.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\teacher\service\TeacherService.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\ptc\repository\PtcMeetingRepository.java

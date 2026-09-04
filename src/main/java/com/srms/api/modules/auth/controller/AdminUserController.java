@@ -63,7 +63,7 @@ public class AdminUserController {
     @DeleteMapping("/{userId}")
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable String userId, Authentication auth) {
         RoleGuard.requireSuperAdmin(auth);
-        authService.deactivateUser(userId);
-        return ResponseEntity.ok(ApiResponse.ok("User deactivated", null));
+        authService.deleteUserPermanently(auth.getName(), userId);
+        return ResponseEntity.ok(ApiResponse.ok("User deleted", null));
     }
 }

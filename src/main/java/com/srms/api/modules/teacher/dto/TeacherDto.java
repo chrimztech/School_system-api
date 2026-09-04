@@ -12,4 +12,10 @@ public class TeacherDto {
     private String bankName;
     private String bankAccount;
     private String address;
+    private String contractType;
+    private String contractEndDate;
+    private String salaryBand;
+    private String tpin;
+    private String paymentMethod;
+    private Boolean napsaEnrolled;
 }

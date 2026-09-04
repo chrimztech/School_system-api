@@ -19,6 +19,13 @@ public class StaffRecord extends BaseEntity {
     @Column(nullable = false, unique = true)
     private String staffNumber;
 
+    // Populated directly at creation time (see HrController's staff-hire form), not resolved
+    // through userId — this record can exist ahead of, or entirely without, a linked AppUser
+    // login account.
+    private String name;
+    private String gender;
+    private String nationalId;
+
     private String department;
     private String position;
 

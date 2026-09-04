@@ -3,6 +3,8 @@ package com.srms.api.modules.library.entity;
 import com.srms.api.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import java.math.BigDecimal;
+import java.time.LocalDate;
 
 @Entity
 @Table(name = "library_books", indexes = @Index(name = "idx_library_books_school_id", columnList = "school_id"))
@@ -32,4 +34,11 @@ public class LibraryBook extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     private Status status = Status.AVAILABLE;
+
+    private String edition;
+    private String readingLevel;
+    private String condition;
+    @Column(precision = 12, scale = 2) private BigDecimal acquisitionCost;
+    private LocalDate acquisitionDate;
+    @Column(columnDefinition = "TEXT") private String damageNotes;
 }
