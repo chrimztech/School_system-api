@@ -43,10 +43,14 @@ public class ActivitiesService {
     public void delete(String schoolId, String id) { activityRepo.findById(id).filter(a -> a.getSchoolId().equals(schoolId)).ifPresent(activityRepo::delete); }
 
     public List<ActivityEnrolment> getEnrolments(String schoolId, String activityId) { return enrolmentRepo.findBySchoolIdAndActivityId(schoolId, activityId); }
+    public List<ActivityEnrolment> getAllEnrolments(String schoolId) { return enrolmentRepo.findBySchoolId(schoolId); }
     public ActivityEnrolment enrol(String schoolId, ActivityEnrolment enrolment) {
         enrolment.setSchoolId(schoolId);
         if (enrolment.getEnrolmentDate() == null) enrolment.setEnrolmentDate(LocalDate.now());
         enrolment.setStatus("ACTIVE");
         return enrolmentRepo.save(enrolment);
+    }
+    public void withdraw(String schoolId, String enrolmentId) {
+        enrolmentRepo.findById(enrolmentId).filter(e -> e.getSchoolId().equals(schoolId)).ifPresent(enrolmentRepo::delete);
     }
 }

@@ -22,4 +22,7 @@ public class WorkOrder extends BaseEntity {
     @Column(columnDefinition = "TEXT") private String description;
     @Builder.Default
     @Column(columnDefinition = "boolean default false") private Boolean safetyRisk = false;
+    @Builder.Default
+    @Column(columnDefinition = "boolean default false") private Boolean recurring = false;
+    private Integer frequencyDays;
 }

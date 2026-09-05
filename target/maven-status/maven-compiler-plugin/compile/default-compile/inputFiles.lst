@@ -10,6 +10,7 @@ F:\school\School_system-api\src\main\java\com\srms\api\exception\ResourceNotFoun
 F:\school\School_system-api\src\main\java\com\srms\api\modules\academic\entity\AcademicTerm.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\reporting\repository\SavedReportRepository.java
 F:\school\School_system-api\src\main\java\com\srms\api\security\JwtAuthenticationFilter.java
+F:\school\School_system-api\src\main\java\com\srms\api\modules\platform\controller\SupportRequestController.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\testimonial\controller\PlatformTestimonialController.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\transport\controller\TransportController.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\fee\repository\FeeStructureRepository.java
@@ -80,10 +81,12 @@ F:\school\School_system-api\src\main\java\com\srms\api\modules\academic\entity\D
 F:\school\School_system-api\src\main\java\com\srms\api\modules\risk\service\RiskService.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\bursary\repository\BursaryRenewalRepository.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\communication\dto\MessageDto.java
+F:\school\School_system-api\src\main\java\com\srms\api\modules\payroll\dto\PayrollStaffView.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\accounting\entity\ChartAccount.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\payroll\controller\PayrollController.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\strategic\controller\StrategicPlanController.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\school\entity\School.java
+F:\school\School_system-api\src\main\java\com\srms\api\modules\assessment\dto\StudentScoreSummary.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\hostel\service\HostelService.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\visitor\service\VisitorService.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\assessment\entity\PublishedTermGrade.java
@@ -99,6 +102,7 @@ F:\school\School_system-api\src\main\java\com\srms\api\modules\strategic\reposit
 F:\school\School_system-api\src\main\java\com\srms\api\modules\health\entity\HealthRecord.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\calendar\entity\CalendarEvent.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\assessment\entity\Assessment.java
+F:\school\School_system-api\src\main\java\com\srms\api\modules\platform\dto\SupportTicketRequest.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\policy\service\PolicyDocumentService.java
 F:\school\School_system-api\src\main\java\com\srms\api\common\EncryptedStringConverter.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\academic\dto\PromotionResult.java
@@ -140,6 +144,7 @@ F:\school\School_system-api\src\main\java\com\srms\api\modules\accounting\entity
 F:\school\School_system-api\src\main\java\com\srms\api\modules\policy\repository\PolicyDocumentRepository.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\auth\entity\CustomRolePermission.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\inventory\service\InventoryService.java
+F:\school\School_system-api\src\main\java\com\srms\api\modules\facility\repository\AssetRepository.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\activities\entity\ActivityEnrolment.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\payment\dto\CardPaymentRequest.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\strategic\service\StrategicPlanService.java
@@ -173,6 +178,7 @@ F:\school\School_system-api\src\main\java\com\srms\api\modules\hostel\controller
 F:\school\School_system-api\src\main\java\com\srms\api\modules\billing\controller\BillingInvoiceController.java
 F:\school\School_system-api\src\main\java\com\srms\api\security\tenant\TenantResolver.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\assessment\controller\AssessmentController.java
+F:\school\School_system-api\src\main\java\com\srms\api\modules\canteen\entity\DailyMenu.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\communication\dto\AnnouncementDto.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\development\repository\StaffObservationRepository.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\communication\service\CommunicationService.java
@@ -238,6 +244,7 @@ F:\school\School_system-api\src\main\java\com\srms\api\config\SecurityConfig.jav
 F:\school\School_system-api\src\main\java\com\srms\api\modules\audit\service\AuditService.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\compliance\service\ComplianceService.java
 F:\school\School_system-api\src\main\java\com\srms\api\security\tenant\TenantResolution.java
+F:\school\School_system-api\src\main\java\com\srms\api\modules\canteen\repository\DailyMenuRepository.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\assessment\dto\SubjectBreakdown.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\backup\entity\Backup.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\activities\controller\ActivitiesController.java
@@ -352,6 +359,7 @@ F:\school\School_system-api\src\main\java\com\srms\api\modules\vendor\entity\Ven
 F:\school\School_system-api\src\main\java\com\srms\api\modules\transport\entity\TransportRoute.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\duty\controller\DutyController.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\student\service\StudentService.java
+F:\school\School_system-api\src\main\java\com\srms\api\modules\facility\entity\Asset.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\inventory\entity\InventoryItem.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\inventory\entity\StockMovement.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\policy\entity\PolicyDocument.java

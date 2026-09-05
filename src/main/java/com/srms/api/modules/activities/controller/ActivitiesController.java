@@ -22,4 +22,7 @@ public class ActivitiesController {
 
     @GetMapping("/{id}/enrolments") public ResponseEntity<ApiResponse<List<ActivityEnrolment>>> getEnrolments(@PathVariable String schoolId, @PathVariable String id) { return ResponseEntity.ok(ApiResponse.ok(activitiesService.getEnrolments(schoolId, id))); }
     @PostMapping("/{id}/enrolments") public ResponseEntity<ApiResponse<ActivityEnrolment>> enrol(@PathVariable String schoolId, @PathVariable String id, @RequestBody ActivityEnrolment enrolment) { enrolment.setActivityId(id); return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(activitiesService.enrol(schoolId, enrolment))); }
+
+    @GetMapping("/enrolments") public ResponseEntity<ApiResponse<List<ActivityEnrolment>>> getAllEnrolments(@PathVariable String schoolId) { return ResponseEntity.ok(ApiResponse.ok(activitiesService.getAllEnrolments(schoolId))); }
+    @DeleteMapping("/enrolments/{enrolmentId}") public ResponseEntity<ApiResponse<Void>> withdraw(@PathVariable String schoolId, @PathVariable String enrolmentId) { activitiesService.withdraw(schoolId, enrolmentId); return ResponseEntity.ok(ApiResponse.ok("Withdrawn", null)); }
 }

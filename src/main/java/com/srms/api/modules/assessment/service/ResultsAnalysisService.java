@@ -4,6 +4,7 @@ import com.srms.api.exception.ResourceNotFoundException;
 import com.srms.api.modules.academic.entity.SchoolClass;
 import com.srms.api.modules.academic.repository.SchoolClassRepository;
 import com.srms.api.modules.assessment.dto.AnalysisResponse;
+import com.srms.api.modules.assessment.dto.StudentScoreSummary;
 import com.srms.api.modules.assessment.dto.SubjectBreakdown;
 import com.srms.api.modules.assessment.entity.Assessment;
 import com.srms.api.modules.assessment.entity.PublishedTermGrade;
@@ -90,10 +91,48 @@ public class ResultsAnalysisService {
                 .map(entry -> buildSubjectBreakdown(entry.getKey(), entry.getValue(), passMark))
                 .sorted(Comparator.comparing(SubjectBreakdown::getSubjectName))
                 .toList();
+
+        List<Double> sortedTotals = grades.stream().map(PublishedTermGrade::getWeightedTotal)
+                .sorted().toList();
+        double highest = sortedTotals.get(sortedTotals.size() - 1);
+        double lowest = sortedTotals.get(0);
+        double median = sortedTotals.size() % 2 == 1
+                ? sortedTotals.get(sortedTotals.size() / 2)
+                : (sortedTotals.get(sortedTotals.size() / 2 - 1) + sortedTotals.get(sortedTotals.size() / 2)) / 2.0;
+
+        Double caAverage = averageOrNull(grades, PublishedTermGrade::getCaPercent);
+        Double midtermAverage = averageOrNull(grades, PublishedTermGrade::getMidtermPercent);
+        Double examAverage = averageOrNull(grades, PublishedTermGrade::getExamPercent);
+
+        List<StudentScoreSummary> perStudent = grades.stream()
+                .collect(Collectors.groupingBy(PublishedTermGrade::getStudentId))
+                .values().stream()
+                .map(studentGrades -> StudentScoreSummary.builder()
+                        .studentId(studentGrades.get(0).getStudentId())
+                        .studentName(studentGrades.get(0).getStudentName())
+                        .average(round1(studentGrades.stream().mapToDouble(PublishedTermGrade::getWeightedTotal).average().orElse(0)))
+                        .build())
+                .sorted(Comparator.comparing(StudentScoreSummary::getAverage).reversed())
+                .toList();
+        List<StudentScoreSummary> topPerformers = perStudent.stream().limit(5).toList();
+        List<StudentScoreSummary> bottomPerformers = perStudent.stream()
+                .sorted(Comparator.comparing(StudentScoreSummary::getAverage))
+                .limit(5).toList();
+
         return AnalysisResponse.builder()
                 .scope(scope).scopeLabel(scopeLabel).studentCount(grades.size())
                 .average(round1(average)).passRate(round1(passRate)).passMarkUsed(passMark)
-                .distribution(distribution).bySubject(bySubject).build();
+                .distribution(distribution).bySubject(bySubject)
+                .highest(round1(highest)).lowest(round1(lowest)).median(round1(median))
+                .caAverage(caAverage).midtermAverage(midtermAverage).examAverage(examAverage)
+                .topPerformers(topPerformers).bottomPerformers(bottomPerformers)
+                .build();
+    }
+
+    private Double averageOrNull(List<PublishedTermGrade> grades, java.util.function.Function<PublishedTermGrade, Double> extractor) {
+        List<Double> values = grades.stream().map(extractor).filter(Objects::nonNull).toList();
+        if (values.isEmpty()) return null;
+        return round1(values.stream().mapToDouble(Double::doubleValue).average().orElse(0));
     }
 
     private SubjectBreakdown buildSubjectBreakdown(String subjectName, List<PublishedTermGrade> grades, int passMark) {

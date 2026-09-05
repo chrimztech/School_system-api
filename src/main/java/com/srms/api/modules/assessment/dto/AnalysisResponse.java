@@ -21,4 +21,12 @@ public class AnalysisResponse {
     private int passMarkUsed;
     private Map<String, Long> distribution;
     private List<SubjectBreakdown> bySubject;
+    private Double highest;
+    private Double lowest;
+    private Double median;
+    private Double caAverage;
+    private Double midtermAverage;
+    private Double examAverage;
+    private List<StudentScoreSummary> topPerformers;
+    private List<StudentScoreSummary> bottomPerformers;
 }

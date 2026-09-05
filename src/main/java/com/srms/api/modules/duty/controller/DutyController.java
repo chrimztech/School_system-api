@@ -14,5 +14,6 @@ public class DutyController {
     private final DutyService dutyService;
     @GetMapping public ResponseEntity<ApiResponse<List<DutyAssignment>>> list(@PathVariable String schoolId) { return ResponseEntity.ok(ApiResponse.ok(dutyService.list(schoolId))); }
     @PostMapping public ResponseEntity<ApiResponse<DutyAssignment>> create(@PathVariable String schoolId, @RequestBody DutyAssignment d) { return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(dutyService.create(schoolId, d))); }
+    @PutMapping("/{id}") public ResponseEntity<ApiResponse<DutyAssignment>> update(@PathVariable String schoolId, @PathVariable String id, @RequestBody DutyAssignment d) { return ResponseEntity.ok(ApiResponse.ok(dutyService.update(schoolId, id, d))); }
     @DeleteMapping("/{id}") public ResponseEntity<ApiResponse<Void>> delete(@PathVariable String schoolId, @PathVariable String id) { dutyService.delete(schoolId, id); return ResponseEntity.ok(ApiResponse.ok("Deleted", null)); }
 }

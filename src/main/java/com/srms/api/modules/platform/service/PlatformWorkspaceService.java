@@ -4,16 +4,20 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.srms.api.modules.platform.dto.PlatformWorkspaceDto;
+import com.srms.api.modules.platform.dto.SupportTicketRequest;
 import com.srms.api.modules.platform.entity.PlatformWorkspace;
 import com.srms.api.modules.platform.repository.PlatformWorkspaceRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Stream;
 
 @Service
@@ -45,6 +49,36 @@ public class PlatformWorkspaceService {
                 .orElseGet(this::createDefaultWorkspace);
         merge(workspace, dto);
         return toDto(platformWorkspaceRepository.save(workspace));
+    }
+
+    /** Narrow, safe entry point for any authenticated school user to raise a support ticket —
+     * unlike getWorkspace()/updateWorkspace() this never exposes or accepts the full platform
+     * blob, it only ever appends one ticket to the existing list. */
+    public void submitSupportTicket(SupportTicketRequest request) {
+        PlatformWorkspace workspace = platformWorkspaceRepository.findByWorkspaceKey(DEFAULT_WORKSPACE_KEY)
+                .orElseGet(this::createDefaultWorkspace);
+        List<Map<String, Object>> tickets = readJson(workspace.getSupportTicketsJson(), LIST_OF_MAPS, new ArrayList<>());
+        Map<String, Object> ticket = new LinkedHashMap<>();
+        ticket.put("id", "SUP-" + ThreadLocalRandom.current().nextInt(100000, 999999));
+        ticket.put("tenantId", "");
+        ticket.put("tenantName", request.getTenantName());
+        ticket.put("subject", request.getSubject());
+        ticket.put("category", request.getCategory() != null ? request.getCategory() : "General");
+        ticket.put("priority", "Medium");
+        ticket.put("status", "New");
+        ticket.put("owner", "Unassigned");
+        ticket.put("slaHours", 24);
+        ticket.put("ageHours", 0);
+        ticket.put("article", "");
+        ticket.put("description", request.getMessage());
+        ticket.put("reporterName", request.getReporterName());
+        ticket.put("reporterEmail", request.getReporterEmail());
+        ticket.put("submittedAt", LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+        List<Map<String, Object>> next = new ArrayList<>();
+        next.add(ticket);
+        next.addAll(tickets);
+        workspace.setSupportTicketsJson(writeJson(next));
+        platformWorkspaceRepository.save(workspace);
     }
 
     private PlatformWorkspace createDefaultWorkspace() {

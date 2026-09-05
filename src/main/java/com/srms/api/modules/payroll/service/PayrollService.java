@@ -2,10 +2,13 @@ package com.srms.api.modules.payroll.service;
 
 import com.srms.api.modules.hr.entity.StaffRecord;
 import com.srms.api.modules.hr.repository.StaffRepository;
+import com.srms.api.modules.payroll.dto.PayrollStaffView;
 import com.srms.api.modules.payroll.entity.PayrollRun;
 import com.srms.api.modules.payroll.entity.PayslipEntry;
 import com.srms.api.modules.payroll.repository.PayrollRunRepository;
 import com.srms.api.modules.payroll.repository.PayslipEntryRepository;
+import com.srms.api.modules.teacher.entity.Teacher;
+import com.srms.api.modules.teacher.repository.TeacherRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service @RequiredArgsConstructor @Transactional
@@ -20,6 +24,7 @@ public class PayrollService {
     private final PayrollRunRepository runRepo;
     private final PayslipEntryRepository slipRepo;
     private final StaffRepository staffRepository;
+    private final TeacherRepository teacherRepository;
 
     // Zambian PAYE brackets (2024+, monthly, ZMW) and NAPSA's statutory monthly cap — must match
     // the frontend's own PAYE_BANDS/NAPSA_CAP in payroll.tsx exactly, since that page's "Payslip
@@ -52,6 +57,31 @@ public class PayrollService {
 
     public List<PayrollRun> getRuns(String schoolId) { return runRepo.findBySchoolIdOrderByYearDescMonthDesc(schoolId); }
 
+    /** Every person eligible for payroll: HR's own staff records plus teachers hired via the
+     * Teachers page (which previously had no linkage into payroll at all). */
+    public List<PayrollStaffView> getUnifiedStaff(String schoolId) {
+        List<PayrollStaffView> merged = new ArrayList<>();
+        for (StaffRecord s : staffRepository.findBySchoolId(schoolId)) {
+            merged.add(PayrollStaffView.builder()
+                    .id(s.getId()).source("STAFF").name(s.getName())
+                    .position(s.getPosition()).department(s.getDepartment())
+                    .nationalId(s.getNationalId()).bankName(s.getBankName()).accountNumber(s.getAccountNumber())
+                    .tpin(s.getTpin()).paymentMethod(s.getPaymentMethod()).napsaEnrolled(s.getNapsaEnrolled())
+                    .salary(s.getSalary()).status(s.getStatus() != null ? s.getStatus().name() : "ACTIVE")
+                    .build());
+        }
+        for (Teacher t : teacherRepository.findBySchoolId(schoolId)) {
+            merged.add(PayrollStaffView.builder()
+                    .id(t.getId()).source("TEACHER").name((t.getFirstName() + " " + t.getLastName()).trim())
+                    .position(t.getSubject() != null ? t.getSubject() + " Teacher" : "Teacher").department(t.getDepartment())
+                    .nationalId(t.getNationalId()).bankName(t.getBankName()).accountNumber(t.getBankAccount())
+                    .tpin(t.getTpin()).paymentMethod(t.getPaymentMethod()).napsaEnrolled(t.getNapsaEnrolled())
+                    .salary(BigDecimal.valueOf(t.getSalary())).status(t.getStatus() != null ? t.getStatus().name() : "active")
+                    .build());
+        }
+        return merged;
+    }
+
     public PayrollRun createRun(String schoolId, PayrollRun run) {
         run.setSchoolId(schoolId);
         run.setStatus("DRAFT");
@@ -63,13 +93,15 @@ public class PayrollService {
 
     public PayrollRun processRun(String schoolId, String runId) {
         PayrollRun run = runRepo.findById(runId).filter(r -> r.getSchoolId().equals(schoolId)).orElseThrow();
-        List<StaffRecord> staff = staffRepository.findBySchoolIdAndStatus(schoolId, StaffRecord.StaffStatus.ACTIVE);
+        List<PayrollStaffView> staff = getUnifiedStaff(schoolId).stream()
+                .filter(s -> s.getStatus() == null || s.getStatus().equalsIgnoreCase("ACTIVE"))
+                .toList();
         slipRepo.deleteAll(slipRepo.findBySchoolIdAndPayrollRunId(schoolId, runId));
 
         BigDecimal totalGross = BigDecimal.ZERO;
         BigDecimal totalNet = BigDecimal.ZERO;
 
-        for (StaffRecord s : staff) {
+        for (PayrollStaffView s : staff) {
             BigDecimal gross = s.getSalary() != null ? s.getSalary() : BigDecimal.ZERO;
             BigDecimal napsa = gross.multiply(NAPSA_RATE).min(NAPSA_CAP).setScale(2, RoundingMode.HALF_UP);
             BigDecimal nhima = gross.multiply(NHIMA_RATE).setScale(2, RoundingMode.HALF_UP);

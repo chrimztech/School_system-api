@@ -1,22 +1,44 @@
 package com.srms.api.modules.ptc.controller;
 
 import com.srms.api.common.ApiResponse;
+import com.srms.api.exception.ForbiddenException;
 import com.srms.api.modules.ptc.entity.PtcMeeting;
 import com.srms.api.modules.ptc.entity.PtcMember;
 import com.srms.api.modules.ptc.entity.PtcTransaction;
 import com.srms.api.modules.ptc.service.PtcService;
+import com.srms.api.security.ModuleAccessService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/schools/{schoolId}/ptc")
 @RequiredArgsConstructor
 public class PtcController {
     private final PtcService ptcService;
+    private final ModuleAccessService moduleAccessService;
+
+    /** Roles that can view/manage PTC committee finances — everyone else (including parents) is excluded. */
+    private static final Set<String> CAN_MANAGE_BUDGET_ROLES = Set.of(
+            "SUPER_ADMIN", "SCHOOL_ADMIN", "PRINCIPAL", "DEPUTY_HEAD", "FINANCE");
+
+    private static String roleOf(Authentication auth) {
+        return auth.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .findFirst().map(a -> a.replaceFirst("^ROLE_", "")).orElse("");
+    }
+
+    private void requireCanManageBudget(String schoolId, Authentication auth) {
+        if (!moduleAccessService.isAllowed(schoolId, auth, "ptc-budget", "full", CAN_MANAGE_BUDGET_ROLES.contains(roleOf(auth)))) {
+            throw new ForbiddenException("Your role does not have permission to view or manage PTC committee finances");
+        }
+    }
 
     // Members
     @GetMapping("/members")
@@ -63,17 +85,20 @@ public class PtcController {
 
     // Transactions
     @GetMapping("/transactions")
-    public ResponseEntity<ApiResponse<List<PtcTransaction>>> listTransactions(@PathVariable String schoolId) {
+    public ResponseEntity<ApiResponse<List<PtcTransaction>>> listTransactions(@PathVariable String schoolId, Authentication auth) {
+        requireCanManageBudget(schoolId, auth);
         return ResponseEntity.ok(ApiResponse.ok(ptcService.listTransactions(schoolId)));
     }
 
     @PostMapping("/transactions")
-    public ResponseEntity<ApiResponse<PtcTransaction>> createTransaction(@PathVariable String schoolId, @RequestBody PtcTransaction t) {
+    public ResponseEntity<ApiResponse<PtcTransaction>> createTransaction(@PathVariable String schoolId, @RequestBody PtcTransaction t, Authentication auth) {
+        requireCanManageBudget(schoolId, auth);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(ptcService.createTransaction(schoolId, t)));
     }
 
     @PatchMapping("/transactions/{id}")
-    public ResponseEntity<ApiResponse<PtcTransaction>> updateTransaction(@PathVariable String schoolId, @PathVariable String id, @RequestBody PtcTransaction patch) {
+    public ResponseEntity<ApiResponse<PtcTransaction>> updateTransaction(@PathVariable String schoolId, @PathVariable String id, @RequestBody PtcTransaction patch, Authentication auth) {
+        requireCanManageBudget(schoolId, auth);
         return ResponseEntity.ok(ApiResponse.ok(ptcService.updateTransaction(schoolId, id, patch)));
     }
 }

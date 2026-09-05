@@ -2,6 +2,7 @@ package com.srms.api.modules.payroll.controller;
 
 import com.srms.api.common.ApiResponse;
 import com.srms.api.exception.ForbiddenException;
+import com.srms.api.modules.payroll.dto.PayrollStaffView;
 import com.srms.api.modules.payroll.entity.PayrollRun;
 import com.srms.api.modules.payroll.entity.PayslipEntry;
 import com.srms.api.modules.payroll.service.PayrollService;
@@ -27,6 +28,7 @@ public class PayrollController {
     private static final Set<String> FINANCE_AND_LEADERSHIP = Set.of(
             "SUPER_ADMIN", "SCHOOL_ADMIN", "PRINCIPAL", "DEPUTY_HEAD", "FINANCE");
 
+    @GetMapping("/staff") public ResponseEntity<ApiResponse<List<PayrollStaffView>>> getStaff(@PathVariable String schoolId, Authentication auth) { requireRead(schoolId, auth); return ResponseEntity.ok(ApiResponse.ok(payrollService.getUnifiedStaff(schoolId))); }
     @GetMapping("/runs") public ResponseEntity<ApiResponse<List<PayrollRun>>> getRuns(@PathVariable String schoolId, Authentication auth) { requireRead(schoolId, auth); return ResponseEntity.ok(ApiResponse.ok(payrollService.getRuns(schoolId))); }
     @PostMapping("/runs") public ResponseEntity<ApiResponse<PayrollRun>> createRun(@PathVariable String schoolId, @RequestBody PayrollRun run, Authentication auth) { requireManage(schoolId, auth); return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(payrollService.createRun(schoolId, run))); }
     @GetMapping("/runs/{id}/payslips") public ResponseEntity<ApiResponse<List<PayslipEntry>>> getPayslips(@PathVariable String schoolId, @PathVariable String id, Authentication auth) { requireRead(schoolId, auth); return ResponseEntity.ok(ApiResponse.ok(payrollService.getPayslips(schoolId, id))); }
