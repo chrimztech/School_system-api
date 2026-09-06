@@ -5,9 +5,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.srms.api.exception.BusinessException;
 import com.srms.api.exception.ResourceNotFoundException;
 import com.srms.api.modules.assessment.dto.GradingBandDto;
+import com.srms.api.config.CacheConfig;
 import com.srms.api.modules.school.entity.School;
 import com.srms.api.modules.school.repository.SchoolRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -39,6 +41,7 @@ public class GradingScaleService {
                 .description(description).points(points).build();
     }
 
+    @Cacheable(value = CacheConfig.GRADING_BANDS, key = "#schoolId")
     public List<GradingBandDto> getBands(String schoolId) {
         School school = schoolRepository.findById(schoolId)
                 .orElseThrow(() -> new ResourceNotFoundException("School", schoolId));

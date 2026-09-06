@@ -38,23 +38,29 @@ public class DashboardController {
         AttendanceSummary attendance = attendanceService.getTodaySummary(schoolId);
         double feesCollected = feeService.getTotalCollected(schoolId);
 
-        List<Student> activeStudents = studentRepository.findBySchoolIdAndStatus(schoolId, Student.StudentStatus.active);
-        double outstanding = activeStudents.stream().mapToDouble(Student::getFeeBalance).sum();
+        // Aggregates computed in the database (SUM/COUNT), not by loading every active
+        // student row into the JVM and looping — the previous version pulled the school's
+        // entire active roster over the wire on every single dashboard load just to sum one
+        // column and bucket by grade, which doesn't scale past a few hundred students.
+        double outstanding = studentRepository.sumFeeBalanceBySchoolIdAndStatus(schoolId, Student.StudentStatus.active);
         double totalBilled = feesCollected + outstanding;
         double collectionRate = totalBilled > 0 ? (feesCollected / totalBilled) * 100 : 0;
 
         String type = school.getType() == null ? "" : school.getType().toUpperCase();
         boolean combined = type.equals("COMBINED") || type.equals("FULL");
-        Map<String, Integer> phaseCounts = new LinkedHashMap<>();
-        phaseCounts.put("Primary", 0);
-        phaseCounts.put("Secondary", 0);
-        for (Student s : activeStudents) {
-            boolean isPrimary = combined ? s.getGrade() <= 6 : type.equals("PRIMARY") || type.equals("NURSERY");
-            phaseCounts.merge(isPrimary ? "Primary" : "Secondary", 1, Integer::sum);
+        long totalActive = studentRepository.countActiveBySchoolId(schoolId);
+        Map<String, Long> phaseCounts = new LinkedHashMap<>();
+        if (combined) {
+            long primary = studentRepository.countBySchoolIdAndStatusAndGradeLessThanEqual(schoolId, Student.StudentStatus.active, 6);
+            phaseCounts.put("Primary", primary);
+            phaseCounts.put("Secondary", totalActive - primary);
+        } else {
+            boolean isPrimary = type.equals("PRIMARY") || type.equals("NURSERY");
+            phaseCounts.put(isPrimary ? "Primary" : "Secondary", totalActive);
         }
         List<DashboardStats.PhaseEnrolment> enrolmentByPhase = phaseCounts.entrySet().stream()
                 .filter(e -> e.getValue() > 0)
-                .map(e -> DashboardStats.PhaseEnrolment.builder().phase(e.getKey()).count(e.getValue()).build())
+                .map(e -> DashboardStats.PhaseEnrolment.builder().phase(e.getKey()).count(e.getValue().intValue()).build())
                 .toList();
 
         DashboardStats stats = DashboardStats.builder()

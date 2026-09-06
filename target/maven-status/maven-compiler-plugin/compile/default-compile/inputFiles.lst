@@ -8,6 +8,7 @@ F:\school\School_system-api\src\main\java\com\srms\api\modules\fee\entity\FeeBil
 F:\school\School_system-api\src\main\java\com\srms\api\modules\assessment\dto\AnalysisResponse.java
 F:\school\School_system-api\src\main\java\com\srms\api\exception\ResourceNotFoundException.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\academic\entity\AcademicTerm.java
+F:\school\School_system-api\src\main\java\com\srms\api\modules\school\entity\SchoolBrandingAsset.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\reporting\repository\SavedReportRepository.java
 F:\school\School_system-api\src\main\java\com\srms\api\security\JwtAuthenticationFilter.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\platform\controller\SupportRequestController.java
@@ -138,6 +139,7 @@ F:\school\School_system-api\src\main\java\com\srms\api\modules\canteen\entity\Ca
 F:\school\School_system-api\src\main\java\com\srms\api\modules\payment\repository\PaymentCallbackLogRepository.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\exam\service\GceCandidateService.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\welfare\service\WelfareService.java
+F:\school\School_system-api\src\main\java\com\srms\api\config\CacheConfig.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\academic\repository\AcademicTermRepository.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\welfare\repository\CounselingSessionRepository.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\accounting\entity\Expense.java
@@ -186,6 +188,7 @@ F:\school\School_system-api\src\main\java\com\srms\api\security\JwtTokenProvider
 F:\school\School_system-api\src\main\java\com\srms\api\modules\hr\repository\StaffRepository.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\auth\controller\SystemRolePermissionController.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\risk\repository\RiskRepository.java
+F:\school\School_system-api\src\main\java\com\srms\api\modules\school\repository\SchoolBrandingAssetRepository.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\exam\dto\GceCandidateDto.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\accounting\entity\JournalEntry.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\calendar\repository\CalendarEventRepository.java
@@ -199,6 +202,7 @@ F:\school\School_system-api\src\main\java\com\srms\api\modules\audit\repository\
 F:\school\School_system-api\src\main\java\com\srms\api\modules\facility\controller\FacilityController.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\billing\service\BillingInvoiceService.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\incident\controller\IncidentController.java
+F:\school\School_system-api\src\main\java\com\srms\api\modules\teacher\repository\TeacherSignatureAssetRepository.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\accounting\repository\ExpenseRepository.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\bursary\controller\BursaryController.java
 F:\school\School_system-api\src\main\java\com\srms\api\security\tenant\TenantRequestAttributes.java
@@ -263,6 +267,7 @@ F:\school\School_system-api\src\main\java\com\srms\api\modules\accounting\reposi
 F:\school\School_system-api\src\main\java\com\srms\api\modules\library\repository\LibraryLoanRepository.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\auth\controller\AdminUserController.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\development\repository\StaffAppraisalRepository.java
+F:\school\School_system-api\src\main\java\com\srms\api\modules\teacher\entity\TeacherSignatureAsset.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\accounting\entity\FixedAsset.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\fee\repository\FeeDiscountRuleRepository.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\backup\controller\BackupController.java

@@ -4,7 +4,9 @@ import com.srms.api.exception.BusinessException;
 import com.srms.api.exception.ResourceNotFoundException;
 import com.srms.api.modules.teacher.dto.TeacherDto;
 import com.srms.api.modules.teacher.entity.Teacher;
+import com.srms.api.modules.teacher.entity.TeacherSignatureAsset;
 import com.srms.api.modules.teacher.repository.TeacherRepository;
+import com.srms.api.modules.teacher.repository.TeacherSignatureAssetRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import java.util.ArrayList;
@@ -13,10 +15,18 @@ import java.util.List;
 @RequiredArgsConstructor
 public class TeacherService {
     private final TeacherRepository teacherRepository;
+    private final TeacherSignatureAssetRepository signatureAssetRepository;
+
+    // Signature intentionally left null here — see TeacherSignatureAsset's javadoc. A teacher
+    // LIST is used to populate ordinary staff-list UIs, and shouldn't carry every teacher's
+    // base64 signature image just because one caller (the report card) needs one teacher's.
     public List<Teacher> findAll(String schoolId) { return teacherRepository.findBySchoolId(schoolId); }
+
     public Teacher findById(String id, String schoolId) {
-        return teacherRepository.findByIdAndSchoolId(id, schoolId)
+        Teacher t = teacherRepository.findByIdAndSchoolId(id, schoolId)
                 .orElseThrow(() -> new ResourceNotFoundException("Teacher", id));
+        signatureAssetRepository.findById(id).ifPresent(asset -> t.setSignatureUrl(asset.getSignatureUrl()));
+        return t;
     }
     public Teacher create(String schoolId, TeacherDto dto) {
         assertEmailNotTaken(schoolId, dto.getEmail(), null);
@@ -26,7 +36,21 @@ public class TeacherService {
         t.setStaffNumber("STF-" + schoolId.toUpperCase() + "-" + String.format("%03d", count + 1));
         t.setStatus(Teacher.TeacherStatus.active);
         mapDto(t, dto);
-        return teacherRepository.save(t);
+        Teacher saved = teacherRepository.save(t);
+        saveSignatureIfProvided(saved.getId(), dto.getSignatureUrl());
+        // save()'s returned instance can be a JPA merge() copy rather than the same object `t`
+        // was — @Transient fields aren't guaranteed to survive that copy, so set it explicitly
+        // from the known dto value rather than trusting it carried over.
+        if (dto.getSignatureUrl() != null) saved.setSignatureUrl(dto.getSignatureUrl());
+        return saved;
+    }
+
+    private void saveSignatureIfProvided(String teacherId, String signatureUrl) {
+        if (signatureUrl == null) return;
+        TeacherSignatureAsset asset = signatureAssetRepository.findById(teacherId)
+                .orElse(TeacherSignatureAsset.builder().teacherId(teacherId).build());
+        asset.setSignatureUrl(signatureUrl);
+        signatureAssetRepository.save(asset);
     }
 
     /**
@@ -62,7 +86,10 @@ public class TeacherService {
         Teacher t = findById(id, schoolId);
         assertEmailNotTaken(schoolId, dto.getEmail(), id);
         mapDto(t, dto);
-        return teacherRepository.save(t);
+        Teacher saved = teacherRepository.save(t);
+        saveSignatureIfProvided(id, dto.getSignatureUrl());
+        if (dto.getSignatureUrl() != null) saved.setSignatureUrl(dto.getSignatureUrl());
+        return saved;
     }
     public void delete(String id, String schoolId) {
         Teacher t = findById(id, schoolId); t.setStatus(Teacher.TeacherStatus.inactive); teacherRepository.save(t);

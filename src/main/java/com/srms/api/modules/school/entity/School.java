@@ -47,11 +47,10 @@ public class School extends BaseEntity {
     @Column(columnDefinition = "TEXT")
     private String faviconUrl;
 
-    @Column(columnDefinition = "TEXT")
-    private String headTeacherSignatureUrl;
-
-    @Column(columnDefinition = "TEXT")
-    private String schoolStampUrl;
+    // headTeacherSignatureUrl / schoolStampUrl deliberately live in a separate table
+    // (SchoolBrandingAsset) now, not here — see its javadoc. Loading a School happens on
+    // effectively every request (tenant-context resolution), and these are large base64
+    // images only the report-card page and Settings' branding form actually need.
 
     @Column(columnDefinition = "TEXT")
     private String reportFooter;

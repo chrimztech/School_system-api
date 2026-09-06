@@ -264,6 +264,12 @@ public class PaymentGatewayService {
      * happened": if the callback never arrives (dropped webhook, parent closed the app before the
      * frontend's own poll could pick it up), this periodically re-checks any payment that's still
      * pending a minute or more after it started.
+     *
+     * Unlike BackupService's nightly cron, this one needs no cross-instance guard if this app
+     * ever runs multiple backend instances: it only re-reads a still-pending payment's status
+     * from the gateway and writes the resolved outcome (refreshIfPending), so two instances
+     * racing on the same row means two redundant gateway status calls at worst, never a
+     * duplicate charge or a duplicate record.
      */
     @Scheduled(fixedDelay = 120_000)
     public void reconcilePendingGatewayPayments() {

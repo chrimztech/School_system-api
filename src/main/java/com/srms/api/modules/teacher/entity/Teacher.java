@@ -45,7 +45,10 @@ public class Teacher extends BaseEntity {
     private String paymentMethod;
     private Boolean napsaEnrolled;
 
-    @Column(columnDefinition = "TEXT")
+    // Not persisted on this entity — see TeacherSignatureAsset's javadoc. @Transient so this
+    // stays a normal JSON field on the API response (populated explicitly by TeacherService for
+    // the single-teacher fetch only), without Hibernate trying to read/write a column for it.
+    @Transient
     private String signatureUrl;
 
     public enum TeacherStatus { active, inactive, on_leave, suspended, terminated }

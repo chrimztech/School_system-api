@@ -9,6 +9,8 @@ import com.srms.api.modules.academic.repository.SchoolClassRepository;
 import com.srms.api.modules.assessment.service.GradingScaleService;
 import com.srms.api.modules.school.dto.SchoolDto;
 import com.srms.api.modules.school.entity.School;
+import com.srms.api.modules.school.entity.SchoolBrandingAsset;
+import com.srms.api.modules.school.repository.SchoolBrandingAssetRepository;
 import com.srms.api.modules.school.repository.SchoolRepository;
 import com.srms.api.modules.student.repository.StudentRepository;
 import com.srms.api.modules.teacher.entity.Teacher;
@@ -37,6 +39,7 @@ public class SchoolService {
     private final TeacherRepository teacherRepository;
     private final SchoolClassRepository schoolClassRepository;
     private final GradingScaleService gradingScaleService;
+    private final SchoolBrandingAssetRepository brandingAssetRepository;
     private final JdbcTemplate jdbcTemplate;
 
     @Transactional(readOnly = true)
@@ -47,6 +50,22 @@ public class SchoolService {
     @Transactional(readOnly = true)
     public SchoolDto findById(String id) {
         return toDto(findEntityById(id));
+    }
+
+    // Deliberately separate from findById()/toDto() — those two large images should only be
+    // fetched by callers that actually render them (Settings' branding form, the report card),
+    // not by every tenant-context load. See SchoolBrandingAsset's javadoc.
+    @Transactional(readOnly = true)
+    public SchoolDto findBrandingAssets(String id) {
+        if (!schoolRepository.existsById(id)) {
+            throw new ResourceNotFoundException("School", id);
+        }
+        SchoolBrandingAsset asset = brandingAssetRepository.findById(id).orElse(null);
+        return SchoolDto.builder()
+                .id(id)
+                .headTeacherSignatureUrl(asset == null ? null : asset.getHeadTeacherSignatureUrl())
+                .schoolStampUrl(asset == null ? null : asset.getSchoolStampUrl())
+                .build();
     }
 
     @Transactional(readOnly = true)
@@ -81,10 +100,23 @@ public class SchoolService {
         return toDto(schoolRepository.save(school));
     }
 
+    // Settings can change grading bands (and, via GradeWeightConfigController, CA/midterm/exam
+    // weights) — evicting here rather than only inside GradingScaleService.writeBands() means
+    // the cache is invalidated at the one place a save through this path actually commits,
+    // regardless of which fields changed. A no-op eviction on unrelated setting changes is
+    // harmless; a stale grading-band cache after an edit is not.
+    @org.springframework.cache.annotation.CacheEvict(value = com.srms.api.config.CacheConfig.GRADING_BANDS, key = "#id")
     public SchoolDto update(String id, SchoolDto dto) {
         School school = findEntityById(id);
         mapDto(school, dto);
         applyDefaults(school);
+        if (dto.getHeadTeacherSignatureUrl() != null || dto.getSchoolStampUrl() != null) {
+            SchoolBrandingAsset asset = brandingAssetRepository.findById(id)
+                    .orElse(SchoolBrandingAsset.builder().schoolId(id).build());
+            if (dto.getHeadTeacherSignatureUrl() != null) asset.setHeadTeacherSignatureUrl(dto.getHeadTeacherSignatureUrl());
+            if (dto.getSchoolStampUrl() != null) asset.setSchoolStampUrl(dto.getSchoolStampUrl());
+            brandingAssetRepository.save(asset);
+        }
         return toDto(schoolRepository.save(school));
     }
 
@@ -147,8 +179,6 @@ public class SchoolService {
                 .reportFooter(school.getReportFooter())
                 .logoUrl(school.getLogoUrl())
                 .faviconUrl(school.getFaviconUrl())
-                .headTeacherSignatureUrl(school.getHeadTeacherSignatureUrl())
-                .schoolStampUrl(school.getSchoolStampUrl())
                 .registrationNo(school.getRegistrationNo())
                 .tpinNo(school.getTpinNo())
                 .moeCode(school.getMoeCode())
@@ -227,8 +257,6 @@ public class SchoolService {
         if (dto.getReportFooter() != null) school.setReportFooter(dto.getReportFooter());
         if (dto.getLogoUrl() != null) school.setLogoUrl(dto.getLogoUrl());
         if (dto.getFaviconUrl() != null) school.setFaviconUrl(dto.getFaviconUrl());
-        if (dto.getHeadTeacherSignatureUrl() != null) school.setHeadTeacherSignatureUrl(dto.getHeadTeacherSignatureUrl());
-        if (dto.getSchoolStampUrl() != null) school.setSchoolStampUrl(dto.getSchoolStampUrl());
         if (dto.getRegistrationNo() != null) school.setRegistrationNo(dto.getRegistrationNo());
         if (dto.getTpinNo() != null) school.setTpinNo(dto.getTpinNo());
         if (dto.getMoeCode() != null) school.setMoeCode(dto.getMoeCode());

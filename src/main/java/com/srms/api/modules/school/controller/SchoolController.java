@@ -46,6 +46,17 @@ public class SchoolController {
         return ResponseEntity.ok(ApiResponse.ok(schoolService.findById(id)));
     }
 
+    // Split from getById() on purpose — see SchoolBrandingAsset's javadoc. Only the report
+    // card and the Settings branding form need to call this; the tenant-context fetch every
+    // page load runs (getById/findAll) never does.
+    @GetMapping("/api/schools/{id}/branding-assets")
+    public ResponseEntity<ApiResponse<SchoolDto>> getBrandingAssets(@PathVariable String id, Authentication auth) {
+        if (!"SUPER_ADMIN".equals(roleOf(auth)) && !id.equals(actorSchool(auth))) {
+            throw new ForbiddenException("You cannot access another school's settings");
+        }
+        return ResponseEntity.ok(ApiResponse.ok(schoolService.findBrandingAssets(id)));
+    }
+
     @PostMapping("/api/schools")
     public ResponseEntity<ApiResponse<SchoolDto>> create(@RequestBody SchoolDto dto, Authentication auth) {
         if (!"SUPER_ADMIN".equals(roleOf(auth))) throw new ForbiddenException("Only the system administrator can onboard schools");

@@ -270,10 +270,24 @@ public class BackupService {
         backupRepository.delete(backup);
     }
 
-    /** Nightly export for every active school — matches what the Backups page promises. */
+    /**
+     * Nightly export for every active school — matches what the Backups page promises.
+     *
+     * There's no distributed lock here: if this app is ever deployed behind a load balancer
+     * with more than one backend instance, every instance's own in-process @Scheduled cron
+     * fires independently at 2am in each instance's JVM. The per-school "already ran within
+     * the last 12 hours" check below is what keeps that from producing one duplicate backup
+     * per school per extra instance — cheap and correct given backups already record when
+     * they ran, versus pulling in a distributed-lock dependency (e.g. ShedLock) for a single
+     * nightly job.
+     */
     @Scheduled(cron = "0 0 2 * * *", zone = "Africa/Harare")
     public void runScheduledBackups() {
+        LocalDateTime since = LocalDateTime.now().minusHours(12);
         for (School school : schoolRepository.findByActiveTrue()) {
+            if (backupRepository.existsBySchoolIdAndTriggeredByAndCreatedAtAfter(school.getId(), Backup.TriggeredBy.SCHEDULED, since)) {
+                continue;
+            }
             try {
                 createBackup(school.getId(), "System", Backup.TriggeredBy.SCHEDULED);
             } catch (Exception e) {
