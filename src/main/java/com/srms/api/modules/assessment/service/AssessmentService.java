@@ -155,6 +155,14 @@ public class AssessmentService {
         return assessmentRepository.save(assessment);
     }
 
+    public void delete(String id, String schoolId, String userId, String role) {
+        Assessment assessment = findById(id, schoolId);
+        assertCanManage(schoolId, userId, role, assessmentClass(assessment), assessment.getSubjectName());
+        assertEditable(assessment);
+        resultRepository.deleteByAssessmentId(id);
+        assessmentRepository.delete(assessment);
+    }
+
     public List<AssessmentResult> getResults(String assessmentId, String schoolId, String userId, String role) {
         findByIdForActor(assessmentId, schoolId, userId, role);
         return resultRepository.findByAssessmentId(assessmentId);
