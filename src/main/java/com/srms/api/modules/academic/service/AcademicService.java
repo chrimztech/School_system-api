@@ -6,11 +6,15 @@ import com.srms.api.modules.academic.entity.*;
 import com.srms.api.modules.academic.repository.*;
 import com.srms.api.modules.auth.entity.AppUser;
 import com.srms.api.modules.auth.repository.UserRepository;
+import com.srms.api.modules.school.entity.School;
+import com.srms.api.modules.school.repository.SchoolRepository;
 import com.srms.api.modules.student.entity.Student;
 import com.srms.api.modules.student.repository.StudentRepository;
 import com.srms.api.modules.teacher.entity.Teacher;
 import com.srms.api.modules.teacher.repository.TeacherRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,7 +26,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-@Service @RequiredArgsConstructor @Transactional
+@Service @RequiredArgsConstructor @Transactional @Slf4j
 public class AcademicService {
     private final SchoolClassRepository classRepository;
     private final SubjectRepository subjectRepository;
@@ -33,6 +37,7 @@ public class AcademicService {
     private final StudentRepository studentRepository;
     private final UserRepository userRepository;
     private final AcademicTermRepository academicTermRepository;
+    private final SchoolRepository schoolRepository;
 
     // ── Classes ──────────────────────────────────────────────────
     public List<SchoolClass> findAllClasses(String schoolId) { return classRepository.findBySchoolIdAndActiveTrue(schoolId); }
@@ -302,7 +307,9 @@ public class AcademicService {
             throw new BusinessException("Term " + dto.getTerm() + " for " + dto.getAcademicYear() + " is already defined — edit it instead");
         }
         dto.setSchoolId(schoolId);
-        return academicTermRepository.save(dto);
+        AcademicTerm saved = academicTermRepository.save(dto);
+        syncCurrentTermFromCalendar(schoolId);
+        return saved;
     }
 
     public AcademicTerm updateTerm(String id, String schoolId, AcademicTerm patch) {
@@ -317,7 +324,9 @@ public class AcademicService {
         term.setStartDate(nextStart);
         term.setEndDate(nextEnd);
         if (patch.getName() != null) term.setName(patch.getName());
-        return academicTermRepository.save(term);
+        AcademicTerm saved = academicTermRepository.save(term);
+        syncCurrentTermFromCalendar(schoolId);
+        return saved;
     }
 
     public void deleteTerm(String id, String schoolId) {
@@ -325,5 +334,56 @@ public class AcademicService {
             .filter(t -> t.getSchoolId().equals(schoolId))
             .orElseThrow(() -> new ResourceNotFoundException("AcademicTerm", id));
         academicTermRepository.delete(term);
+    }
+
+    /**
+     * Auto-advances School.currentTerm/currentYear off the academic term calendar, so a school
+     * that's actually filled in real term dates doesn't need an admin to remember to bump the
+     * "Current term" number in Settings by hand three times a year — see AcademicTerm's javadoc,
+     * this is what makes that comment's stated intent actually true.
+     *
+     * Deliberately conservative: if today's date isn't covered by any defined term for this
+     * school (calendar not fully filled in yet, or a real gap between terms — school holidays,
+     * say), this leaves School.currentTerm untouched rather than guessing. An admin can always
+     * still set it directly in Settings; this only overrides that once the calendar actually
+     * says something different for today's date, and does nothing before the calendar is
+     * meaningfully populated at all.
+     */
+    public void syncCurrentTermFromCalendar(String schoolId) {
+        LocalDate today = LocalDate.now();
+        List<AcademicTerm> covering = academicTermRepository
+                .findBySchoolIdAndStartDateLessThanEqualAndEndDateGreaterThanEqual(schoolId, today, today);
+        if (covering.isEmpty()) return;
+        AcademicTerm current = covering.get(0);
+        School school = schoolRepository.findById(schoolId).orElse(null);
+        if (school == null) return;
+        if (school.getCurrentTerm() == current.getTerm() && school.getCurrentYear() == current.getAcademicYear()) {
+            return;
+        }
+        log.info("Auto-advancing school {} to term {} of {} per the academic term calendar (was term {} of {})",
+                schoolId, current.getTerm(), current.getAcademicYear(), school.getCurrentTerm(), school.getCurrentYear());
+        school.setCurrentTerm(current.getTerm());
+        school.setCurrentYear(current.getAcademicYear());
+        schoolRepository.save(school);
+    }
+
+    /**
+     * Catches the case createTerm()/updateTerm() can't: a school's calendar already covers
+     * today, and the rollover happens purely because a day passed, with no one editing the
+     * calendar to trigger it. Runs early each morning so a fresh term is in effect before a
+     * school's day starts. No cross-instance lock needed — see BackupService's scheduled job
+     * for why a plain re-check like this is safe to run redundantly: this one just re-derives
+     * the correct term from the calendar and writes it if it actually differs, so two instances
+     * racing on the same school converge on the same value rather than compounding.
+     */
+    @Scheduled(cron = "0 5 0 * * *", zone = "Africa/Harare")
+    public void syncAllSchoolsCurrentTerm() {
+        for (School school : schoolRepository.findByActiveTrue()) {
+            try {
+                syncCurrentTermFromCalendar(school.getId());
+            } catch (Exception e) {
+                log.error("Term calendar sync failed for school {}", school.getId(), e);
+            }
+        }
     }
 }
