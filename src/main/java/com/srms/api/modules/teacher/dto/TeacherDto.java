@@ -18,4 +18,5 @@ public class TeacherDto {
     private String tpin;
     private String paymentMethod;
     private Boolean napsaEnrolled;
+    private String signatureUrl;
 }

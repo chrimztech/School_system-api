@@ -59,6 +59,8 @@ public class SchoolService {
             m.put("slug", s.getSlug());
             m.put("primaryColor", s.getPrimaryColor());
             m.put("secondaryColor", s.getSecondaryColor());
+            m.put("accentColor", s.getAccentColor());
+            m.put("fontFamily", s.getFontFamily());
             m.put("logoUrl", s.getLogoUrl());
             m.put("faviconUrl", s.getFaviconUrl());
             m.put("district", s.getDistrict());
@@ -145,6 +147,8 @@ public class SchoolService {
                 .reportFooter(school.getReportFooter())
                 .logoUrl(school.getLogoUrl())
                 .faviconUrl(school.getFaviconUrl())
+                .headTeacherSignatureUrl(school.getHeadTeacherSignatureUrl())
+                .schoolStampUrl(school.getSchoolStampUrl())
                 .registrationNo(school.getRegistrationNo())
                 .tpinNo(school.getTpinNo())
                 .moeCode(school.getMoeCode())
@@ -223,6 +227,8 @@ public class SchoolService {
         if (dto.getReportFooter() != null) school.setReportFooter(dto.getReportFooter());
         if (dto.getLogoUrl() != null) school.setLogoUrl(dto.getLogoUrl());
         if (dto.getFaviconUrl() != null) school.setFaviconUrl(dto.getFaviconUrl());
+        if (dto.getHeadTeacherSignatureUrl() != null) school.setHeadTeacherSignatureUrl(dto.getHeadTeacherSignatureUrl());
+        if (dto.getSchoolStampUrl() != null) school.setSchoolStampUrl(dto.getSchoolStampUrl());
         if (dto.getRegistrationNo() != null) school.setRegistrationNo(dto.getRegistrationNo());
         if (dto.getTpinNo() != null) school.setTpinNo(dto.getTpinNo());
         if (dto.getMoeCode() != null) school.setMoeCode(dto.getMoeCode());

@@ -44,5 +44,9 @@ public class Teacher extends BaseEntity {
     private String tpin;
     private String paymentMethod;
     private Boolean napsaEnrolled;
+
+    @Column(columnDefinition = "TEXT")
+    private String signatureUrl;
+
     public enum TeacherStatus { active, inactive, on_leave, suspended, terminated }
 }

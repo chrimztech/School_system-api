@@ -93,5 +93,6 @@ public class TeacherService {
         t.setTpin(dto.getTpin());
         t.setPaymentMethod(dto.getPaymentMethod());
         t.setNapsaEnrolled(dto.getNapsaEnrolled());
+        if (dto.getSignatureUrl() != null) t.setSignatureUrl(dto.getSignatureUrl());
     }
 }

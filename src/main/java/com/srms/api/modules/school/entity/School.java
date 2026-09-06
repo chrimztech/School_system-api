@@ -48,6 +48,12 @@ public class School extends BaseEntity {
     private String faviconUrl;
 
     @Column(columnDefinition = "TEXT")
+    private String headTeacherSignatureUrl;
+
+    @Column(columnDefinition = "TEXT")
+    private String schoolStampUrl;
+
+    @Column(columnDefinition = "TEXT")
     private String reportFooter;
     private String registrationNo;
     private String tpinNo;

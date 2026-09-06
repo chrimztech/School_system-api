@@ -42,6 +42,8 @@ public class SchoolDto {
     private String fontFamily;
     private String logoUrl;
     private String faviconUrl;
+    private String headTeacherSignatureUrl;
+    private String schoolStampUrl;
     private String reportFooter;
     private String registrationNo;
     private String tpinNo;
