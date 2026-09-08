@@ -259,6 +259,7 @@ F:\school\School_system-api\src\main\java\com\srms\api\modules\communication\ser
 F:\school\School_system-api\src\main\java\com\srms\api\modules\backup\service\BackupService.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\billing\entity\BillingInvoice.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\vendor\controller\VendorController.java
+F:\school\School_system-api\src\main\java\com\srms\api\modules\platform\controller\PublicDemoRequestController.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\strategic\repository\StrategicReviewRepository.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\academic\controller\ClassController.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\procurement\repository\ProcurementRepository.java
