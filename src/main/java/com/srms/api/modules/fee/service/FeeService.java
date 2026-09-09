@@ -158,10 +158,12 @@ public class FeeService {
             java.util.regex.Pattern.compile("^(Form|Grade)\\s+(\\d+)$", java.util.regex.Pattern.CASE_INSENSITIVE);
 
     /**
-     * Matches a mandatory levy's stored grade label (e.g. "Form 3", "Grade 5", "All forms")
-     * against a student's raw numeric grade. Mirrors the frontend's gradeLabelToNumber — a
-     * COMBINED/FULL school stores "Form N" as raw grade N+6, so a bare digit-extraction here
-     * would silently never match any Form-scoped levy on those school types.
+     * Matches a mandatory levy's stored grade label (e.g. "Form 3", "Grade 5", "Grade 10",
+     * "All forms") against a student's raw numeric grade. Mirrors the frontend's
+     * gradeLabelToNumber — a COMBINED/FULL school stores "Form N" as raw grade N+6, and a
+     * pre-2025-curriculum "Grade N" for N 7-12 (a transitional-cohort student who started
+     * before the Form 1-6 rollout) as raw grade N+6 as well, so a bare digit-extraction here
+     * would silently never match those levies on those school types.
      */
     private boolean gradeMatches(String levyGrade, int grade, String schoolType) {
         if (levyGrade == null || levyGrade.isBlank()) return true;
@@ -172,7 +174,12 @@ public class FeeService {
             int n = Integer.parseInt(m.group(2));
             boolean isForm = m.group(1).equalsIgnoreCase("form");
             boolean combined = "COMBINED".equalsIgnoreCase(schoolType) || "FULL".equalsIgnoreCase(schoolType);
-            int rawGrade = combined && isForm ? n + 6 : n;
+            int rawGrade;
+            if (combined) {
+                rawGrade = isForm ? n + 6 : (n <= 6 ? n : n + 6);
+            } else {
+                rawGrade = n;
+            }
             return rawGrade == grade;
         }
         // Legacy data: a levy grade stored as a bare number
