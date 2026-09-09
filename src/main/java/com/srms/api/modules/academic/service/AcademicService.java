@@ -2,6 +2,7 @@ package com.srms.api.modules.academic.service;
 
 import com.srms.api.exception.BusinessException;
 import com.srms.api.exception.ResourceNotFoundException;
+import com.srms.api.modules.academic.dto.GradeOffsetFixResult;
 import com.srms.api.modules.academic.entity.*;
 import com.srms.api.modules.academic.repository.*;
 import com.srms.api.modules.auth.entity.AppUser;
@@ -93,6 +94,66 @@ public class AcademicService {
         return classRepository.save(c);
     }
     public void deleteClass(String id, String schoolId) { SchoolClass c = findClassById(id, schoolId); c.setActive(false); classRepository.save(c); }
+
+    /**
+     * One-time repair for a bug in the class-creation UI (classes.tsx): on a COMBINED/FULL
+     * school, an O-Level/A-Level ("olevel"/"alevel" phase) class must store its grade at
+     * raw 7-12 (+6 off the Form number) to stay distinguishable from primary Grade 1-6, which
+     * shares the same raw 1-6 range — see the matching comment on formatGrade in the
+     * frontend's lib/tenant.tsx. The UI used to skip that offset, so any such class (and any
+     * student enrolled in one before the fix) may still be sitting at the wrong raw grade,
+     * silently mislabeled as a primary grade everywhere the type-aware formatGrade is used
+     * (report cards, fee structures, results analysis, communication targeting, ...).
+     *
+     * Safe to run more than once: once a class's grade is corrected to 7-12, it no longer
+     * matches the "olevel/alevel phase with grade 1-6" condition below, so a second run finds
+     * nothing left to touch. Pure PRIMARY/NURSERY/SECONDARY schools never hit the collision
+     * this offset exists for, so this is a deliberate no-op for them.
+     */
+    public GradeOffsetFixResult fixSecondaryGradeOffset(String schoolId) {
+        School school = schoolRepository.findById(schoolId)
+                .orElseThrow(() -> new ResourceNotFoundException("School", schoolId));
+        String type = school.getType();
+        boolean combined = "COMBINED".equalsIgnoreCase(type) || "FULL".equalsIgnoreCase(type);
+        List<String> details = new ArrayList<>();
+        if (!combined) {
+            details.add(school.getName() + " is a " + type
+                    + " school — Form 1-6 and legacy Grade 7-12 are never offset there, so there is nothing to fix.");
+            return new GradeOffsetFixResult(0, 0, details);
+        }
+
+        int classesFixed = 0;
+        int studentsFixed = 0;
+        for (SchoolClass cls : classRepository.findBySchoolId(schoolId)) {
+            boolean isFormPhase = "olevel".equals(cls.getPhase()) || "alevel".equals(cls.getPhase());
+            if (!isFormPhase || cls.getGrade() < 1 || cls.getGrade() > 6) continue;
+
+            int oldGrade = cls.getGrade();
+            int newGrade = oldGrade + 6;
+            int studentsFixedHere = 0;
+            for (ClassEnrolment enrolment : enrolmentRepository.findByClassIdAndSchoolId(cls.getId(), schoolId)) {
+                Student student = studentRepository.findById(enrolment.getStudentId()).orElse(null);
+                if (student != null && schoolId.equals(student.getSchoolId()) && student.getGrade() == oldGrade) {
+                    student.setGrade(newGrade);
+                    studentRepository.save(student);
+                    studentsFixedHere++;
+                }
+            }
+
+            cls.setGrade(newGrade);
+            classRepository.save(cls);
+            classesFixed++;
+            studentsFixed += studentsFixedHere;
+            details.add(cls.getName() + " (" + cls.getPhase() + "): raw grade " + oldGrade + " -> " + newGrade
+                    + ", " + studentsFixedHere + " enrolled student(s) corrected");
+        }
+
+        if (classesFixed == 0) {
+            details.add("No affected classes found for " + school.getName()
+                    + " — nothing to fix (either already correct, or no O-Level/A-Level classes created yet).");
+        }
+        return new GradeOffsetFixResult(classesFixed, studentsFixed, details);
+    }
 
     // ── Class enrolments (student → class) ───────────────────────
     public List<ClassEnrolment> getClassEnrolments(String classId, String schoolId) {

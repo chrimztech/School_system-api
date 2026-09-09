@@ -47,6 +47,7 @@ F:\school\School_system-api\src\main\java\com\srms\api\modules\visitor\entity\Vi
 F:\school\School_system-api\src\main\java\com\srms\api\modules\hr\entity\StaffRecord.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\assessment\repository\AssessmentRepository.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\inventory\repository\StockMovementRepository.java
+F:\school\School_system-api\src\main\java\com\srms\api\modules\academic\dto\GradeOffsetFixResult.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\accounting\repository\FixedAssetRepository.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\communication\entity\Message.java
 F:\school\School_system-api\src\main\java\com\srms\api\security\RoleGuard.java
