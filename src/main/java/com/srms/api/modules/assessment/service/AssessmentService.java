@@ -89,10 +89,17 @@ public class AssessmentService {
                     .toList();
         }
         if ("HOD".equals(normalRole)) {
+            // An HOD sees their whole department's assessments (for verification) *plus*
+            // whatever they're personally assigned to teach themselves — the latter can fall
+            // outside their own department (e.g. a Sciences HOD who also teaches a Humanities
+            // elective), so this is a union, not just the department-scoped set.
             Set<String> subjects = hodSubjectNames(schoolId, userId, role);
+            Set<String> assignments = teacherAssignmentKeys(schoolId, userId);
             return all.stream()
-                    .filter(a -> a.getSubjectName() != null
-                            && subjects.contains(a.getSubjectName().trim().toLowerCase()))
+                    .filter(a -> (a.getSubjectName() != null
+                                    && subjects.contains(a.getSubjectName().trim().toLowerCase()))
+                            || assignments.contains(assignmentKey(a.getClassName(), a.getSubjectName()))
+                            || assignments.contains(assignmentKey(a.getClassId(), a.getSubjectName())))
                     .toList();
         }
         return List.of();
@@ -126,7 +133,14 @@ public class AssessmentService {
             return assessment;
         }
         if ("HOD".equals(normalRole)) {
-            requireHodOverDepartment(schoolId, userId, role, assessment.getSubjectName());
+            Set<String> assignments = teacherAssignmentKeys(schoolId, userId);
+            boolean personallyAssigned = assignments.contains(
+                    assignmentKey(assessment.getClassName(), assessment.getSubjectName()))
+                    || assignments.contains(
+                    assignmentKey(assessment.getClassId(), assessment.getSubjectName()));
+            if (!personallyAssigned) {
+                requireHodOverDepartment(schoolId, userId, role, assessment.getSubjectName());
+            }
             return assessment;
         }
         throw new ForbiddenException("Your role cannot access this assessment");
@@ -482,12 +496,17 @@ public class AssessmentService {
         }
     }
 
+    /** TEACHER and HOD may create/edit/enter marks for a class+subject they are personally
+     * assigned to teach (via TeacherClassSubject) — an HOD is very often also a subject
+     * teacher, and their department-head status shouldn't take that away. Verification of
+     * *other* teachers' submissions stays a separate, department-scoped power — see
+     * requireHodOverDepartment. */
     private void assertCanManage(String schoolId, String userId, String role,
                                  String className, String subjectName) {
         assertActorSchool(schoolId, userId, role);
         String normalRole = role == null ? "" : role.toUpperCase();
         if (FULL_ACCESS_ROLES.contains(normalRole)) return;
-        if (!"TEACHER".equals(normalRole)) {
+        if (!"TEACHER".equals(normalRole) && !"HOD".equals(normalRole)) {
             throw new ForbiddenException("Your role does not have permission to manage assessments");
         }
         Set<String> assignments = teacherAssignmentKeys(schoolId, userId);

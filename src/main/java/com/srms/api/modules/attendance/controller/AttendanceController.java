@@ -34,9 +34,19 @@ public class AttendanceController {
     private final StudentRepository studentRepository;
     private final ModuleAccessService moduleAccessService;
 
-    /** Roles with "full" (not "read") access to the attendance module. */
+    /** Roles with "full" (not "read") access to the attendance module. HOD is included because
+     * a department head is very often also a personal class/subject teacher — see the
+     * ownership check in mark() below, which still confines an HOD (like a TEACHER) to only
+     * the classes they're personally assigned to, never the whole school. */
     private static final Set<String> CAN_MARK_ROLES = Set.of(
-            "SUPER_ADMIN", "SCHOOL_ADMIN", "TEACHER", "PRINCIPAL", "DEPUTY_HEAD");
+            "SUPER_ADMIN", "SCHOOL_ADMIN", "TEACHER", "HOD", "PRINCIPAL", "DEPUTY_HEAD");
+
+    /** TEACHER and HOD are the two roles whose "full" attendance access is confined to their
+     * own personally assigned classes (via Teacher/TeacherClassSubject), rather than granted
+     * school-wide like the leadership roles above. */
+    private static boolean actsAsPersonalTeacher(String role) {
+        return "TEACHER".equals(role) || "HOD".equals(role);
+    }
 
     private static String roleOf(Authentication auth) {
         return auth.getAuthorities().stream()
@@ -89,7 +99,7 @@ public class AttendanceController {
         if (!moduleAccessService.isAllowed(schoolId, auth, "attendance", "full", CAN_MARK_ROLES.contains(role))) {
             throw new ForbiddenException("Your role does not have permission to mark attendance");
         }
-        if ("TEACHER".equals(role) && dto.getClassId() != null) {
+        if (actsAsPersonalTeacher(role) && dto.getClassId() != null) {
             // The frontend register selector identifies a class by its display name (falling
             // back to id only when a class has no name) rather than its real id — match the
             // same way here, or a legitimate submission would be rejected as "not your class".

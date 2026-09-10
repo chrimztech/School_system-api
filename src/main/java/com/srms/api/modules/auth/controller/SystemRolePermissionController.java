@@ -43,7 +43,15 @@ public class SystemRolePermissionController {
     @GetMapping
     public ResponseEntity<ApiResponse<List<CustomRolePermission>>> get(
             @PathVariable String schoolId, @PathVariable String role, Authentication auth) {
-        RoleGuard.requireSchoolAccountManager(auth);
+        // School leadership can read any role's permissions (the admin UI). Everyone else may
+        // only read their OWN role's — this is also how every signed-in session resolves its
+        // own effective module access (auth.tsx's roleOverrides fetch), so without this a
+        // school-admin-granted override (e.g. bumping an HOD's "assessments" access to full)
+        // would never actually take effect for that HOD's own session. TenantAccessFilter has
+        // already confirmed the caller belongs to `schoolId`, so this can't leak across schools.
+        if (!RoleGuard.roleOf(auth).equalsIgnoreCase(role)) {
+            RoleGuard.requireSchoolAccountManager(auth);
+        }
         validateRole(role);
         return ResponseEntity.ok(ApiResponse.ok(roleService.getSystemRolePermissions(schoolId, role)));
     }
