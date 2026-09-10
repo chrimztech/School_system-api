@@ -1,22 +1,34 @@
 package com.srms.api.modules.library.controller;
 
 import com.srms.api.common.ApiResponse;
+import com.srms.api.exception.ForbiddenException;
 import com.srms.api.modules.library.entity.LibraryBook;
 import com.srms.api.modules.library.entity.LibraryLoan;
 import com.srms.api.modules.library.service.LibraryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+/** library is "false" for PARENT — the catalog itself (getAllBooks) isn't pupil-identifying so
+ * it's left open, but loans name which pupil borrowed what and has no per-student lookup to
+ * scope to instead, so it's staff-only. */
 @RestController
 @RequestMapping("/api/schools/{schoolId}/library")
 @RequiredArgsConstructor
 public class LibraryController {
 
     private final LibraryService libraryService;
+
+    private static String roleOf(Authentication auth) {
+        return auth.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .findFirst().map(a -> a.replaceFirst("^ROLE_", "")).orElse("");
+    }
 
     // ── Books ──────────────────────────────────────────────
 
@@ -52,7 +64,10 @@ public class LibraryController {
     // ── Loans ─────────────────────────────────────────────
 
     @GetMapping("/loans")
-    public ResponseEntity<ApiResponse<List<LibraryLoan>>> getAllLoans(@PathVariable String schoolId) {
+    public ResponseEntity<ApiResponse<List<LibraryLoan>>> getAllLoans(@PathVariable String schoolId, Authentication auth) {
+        if ("PARENT".equals(roleOf(auth))) {
+            throw new ForbiddenException("Your role cannot access library loan records");
+        }
         return ResponseEntity.ok(ApiResponse.ok(libraryService.getAllLoans(schoolId)));
     }
 

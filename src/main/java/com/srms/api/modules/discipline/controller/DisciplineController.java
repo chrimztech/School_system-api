@@ -9,6 +9,7 @@ import com.srms.api.modules.discipline.entity.DisciplineCase;
 import com.srms.api.modules.discipline.service.DisciplineService;
 import com.srms.api.modules.student.entity.Student;
 import com.srms.api.modules.student.repository.StudentRepository;
+import com.srms.api.security.ModuleAccessService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -16,11 +17,22 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
+import java.util.Set;
+
+/** Role sets mirror the frontend's own ACCESS matrix (auth.tsx) for "discipline": TEACHER, HOD
+ * and leadership get full read/write, CAREER_GUIDANCE is read-only, FINANCE and PARENT have
+ * none — except a parent may still read their own child's cases specifically. */
 @RestController @RequestMapping("/api/schools/{schoolId}/discipline") @RequiredArgsConstructor
 public class DisciplineController {
     private final DisciplineService disciplineService;
     private final UserRepository userRepository;
     private final StudentRepository studentRepository;
+    private final ModuleAccessService moduleAccessService;
+
+    private static final Set<String> FULL_ROLES = Set.of(
+            "SUPER_ADMIN", "SCHOOL_ADMIN", "PRINCIPAL", "DEPUTY_HEAD", "TEACHER", "HOD");
+    private static final Set<String> READ_ROLES = Set.of(
+            "SUPER_ADMIN", "SCHOOL_ADMIN", "PRINCIPAL", "DEPUTY_HEAD", "TEACHER", "HOD", "CAREER_GUIDANCE");
 
     private static String roleOf(Authentication auth) {
         return auth.getAuthorities().stream()
@@ -30,18 +42,29 @@ public class DisciplineController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<DisciplineCase>>> getAll(@PathVariable String schoolId, Authentication auth) {
-        if ("PARENT".equals(roleOf(auth))) {
-            throw new ForbiddenException("Parents can only view their own children's discipline records");
-        }
+        requireRead(schoolId, auth);
         return ResponseEntity.ok(ApiResponse.ok(disciplineService.findAll(schoolId)));
     }
     @GetMapping("/student/{studentId}")
     public ResponseEntity<ApiResponse<List<DisciplineCase>>> getByStudent(@PathVariable String schoolId, @PathVariable String studentId, Authentication auth) {
         if ("PARENT".equals(roleOf(auth))) assertParentOwnsStudent(schoolId, studentId, auth);
+        else requireRead(schoolId, auth);
         return ResponseEntity.ok(ApiResponse.ok(disciplineService.findByStudent(schoolId, studentId)));
     }
-    @PostMapping public ResponseEntity<ApiResponse<DisciplineCase>> create(@PathVariable String schoolId, @RequestBody DisciplineCaseDto dto) { return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(disciplineService.create(schoolId, dto))); }
-    @PatchMapping("/{id}/resolve") public ResponseEntity<ApiResponse<DisciplineCase>> resolve(@PathVariable String schoolId, @PathVariable String id) { return ResponseEntity.ok(ApiResponse.ok(disciplineService.resolve(schoolId, id))); }
+    @PostMapping public ResponseEntity<ApiResponse<DisciplineCase>> create(@PathVariable String schoolId, @RequestBody DisciplineCaseDto dto, Authentication auth) { requireFull(schoolId, auth); return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(disciplineService.create(schoolId, dto))); }
+    @PatchMapping("/{id}/resolve") public ResponseEntity<ApiResponse<DisciplineCase>> resolve(@PathVariable String schoolId, @PathVariable String id, Authentication auth) { requireFull(schoolId, auth); return ResponseEntity.ok(ApiResponse.ok(disciplineService.resolve(schoolId, id))); }
+
+    private void requireRead(String schoolId, Authentication auth) {
+        if (!moduleAccessService.isAllowed(schoolId, auth, "discipline", "read", READ_ROLES.contains(roleOf(auth)))) {
+            throw new ForbiddenException("Your role cannot access discipline records");
+        }
+    }
+
+    private void requireFull(String schoolId, Authentication auth) {
+        if (!moduleAccessService.isAllowed(schoolId, auth, "discipline", "full", FULL_ROLES.contains(roleOf(auth)))) {
+            throw new ForbiddenException("Your role cannot record or resolve discipline cases");
+        }
+    }
 
     /** Same ownership rule as AttendanceController/AssessmentController/StudentController's
      * identically-named check. */
