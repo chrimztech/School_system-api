@@ -57,6 +57,7 @@ public class SchoolDto {
     private String whatsappNumber;
     private String resultPublicationMode;
     private List<GradingBandDto> gradingBands;
+    private List<GradingBandDto> legacyGradingBands;
     private Integer passMark;
     private String currency;
     private String bankName;

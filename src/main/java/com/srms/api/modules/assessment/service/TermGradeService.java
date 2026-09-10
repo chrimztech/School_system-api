@@ -62,6 +62,15 @@ public class TermGradeService {
                 .orElseThrow(() -> new ResourceNotFoundException("SchoolClass", classIdOrName));
     }
 
+    /** Best-effort variant for backfilling old grades' descriptions: a historical grade whose
+     * class has since been deleted shouldn't break the whole history fetch the way
+     * resolveClass's throwing lookup would — falls back to the non-legacy scale, same as any
+     * other unresolvable phase. */
+    private String resolveClassPhaseSafely(String schoolId, String classId) {
+        if (classId == null) return null;
+        return schoolClassRepository.findByIdAndSchoolId(classId, schoolId).map(SchoolClass::getPhase).orElse(null);
+    }
+
     public List<TermGrade> compute(String schoolId, String classIdOrName, String subjectName,
                                    String term, String academicYear) {
         return computeInternal(schoolId, classIdOrName, subjectName, term, academicYear, null, false);
@@ -81,7 +90,7 @@ public class TermGradeService {
         GradeWeightConfig weights = gradeWeightConfigService.get(schoolId);
         String publicationMode = schoolRepository.findById(schoolId)
                 .map(School::getResultPublicationMode).orElse("SEPARATE");
-        List<GradingBandDto> gradingBands = gradingScaleService.getBands(schoolId);
+        List<GradingBandDto> gradingBands = gradingScaleService.getBandsForPhase(schoolId, schoolClass.getPhase());
 
         List<ClassEnrolment> enrolments = classEnrolmentRepository.findByClassIdAndSchoolId(classId, schoolId).stream()
                 .filter(e -> "ACTIVE".equalsIgnoreCase(e.getStatus()))
@@ -245,9 +254,11 @@ public class TermGradeService {
         // Records published before gradeDescription/gradePoints existed on this entity carry nulls;
         // fill them in from the current grading scale so old report cards don't show a blank Remarks column.
         if (grades.stream().anyMatch(g -> g.getGradeDescription() == null || g.getGradeDescription().isBlank())) {
-            List<GradingBandDto> bands = gradingScaleService.getBands(schoolId);
+            Map<String, List<GradingBandDto>> bandsByClass = new LinkedHashMap<>();
             for (PublishedTermGrade grade : grades) {
                 if (grade.getGradeDescription() != null && !grade.getGradeDescription().isBlank()) continue;
+                List<GradingBandDto> bands = bandsByClass.computeIfAbsent(String.valueOf(grade.getClassId()),
+                        k -> gradingScaleService.getBandsForPhase(schoolId, resolveClassPhaseSafely(schoolId, grade.getClassId())));
                 GradingBandDto band = gradingScaleService.findByGrade(bands, grade.getLetterGrade());
                 if (band != null) { grade.setGradeDescription(band.getDescription()); grade.setGradePoints(band.getPoints()); }
             }
@@ -260,9 +271,11 @@ public class TermGradeService {
                 ? termGradeRepository.findBySchoolIdAndStudentIdAndAcademicYear(schoolId, studentId, academicYear)
                 : termGradeRepository.findBySchoolIdAndStudentIdAndAcademicYearAndPublishedTrue(schoolId, studentId, academicYear);
         if (grades.stream().anyMatch(g -> g.getGradeDescription() == null || g.getGradeDescription().isBlank())) {
-            List<GradingBandDto> bands = gradingScaleService.getBands(schoolId);
+            Map<String, List<GradingBandDto>> bandsByClass = new LinkedHashMap<>();
             for (TermGrade grade : grades) {
                 if (grade.getGradeDescription() != null && !grade.getGradeDescription().isBlank()) continue;
+                List<GradingBandDto> bands = bandsByClass.computeIfAbsent(String.valueOf(grade.getClassId()),
+                        k -> gradingScaleService.getBandsForPhase(schoolId, resolveClassPhaseSafely(schoolId, grade.getClassId())));
                 GradingBandDto band = gradingScaleService.findByGrade(bands, grade.getLetterGrade());
                 if (band != null) { grade.setGradeDescription(band.getDescription()); grade.setGradePoints(band.getPoints()); }
             }

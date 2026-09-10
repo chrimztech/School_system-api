@@ -95,6 +95,10 @@ public class School extends BaseEntity {
 
     @Column(columnDefinition = "TEXT")
     private String gradingBandsJson;
+    // Separate scale for legacy Grade 7-12 (pre-2023-curriculum) transitional cohorts — see
+    // GradingScaleService.getBandsForPhase. Null/blank falls back to zambiaLegacyDefaults().
+    @Column(columnDefinition = "TEXT")
+    private String legacyGradingBandsJson;
     private String currency;
     private String bankName;
     private String bankAccount;

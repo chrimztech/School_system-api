@@ -5,8 +5,10 @@ import com.srms.api.exception.ForbiddenException;
 import com.srms.api.exception.ResourceNotFoundException;
 import com.srms.api.modules.academic.entity.ClassEnrolment;
 import com.srms.api.modules.academic.entity.Department;
+import com.srms.api.modules.academic.entity.SchoolClass;
 import com.srms.api.modules.academic.repository.ClassEnrolmentRepository;
 import com.srms.api.modules.academic.repository.DepartmentRepository;
+import com.srms.api.modules.academic.repository.SchoolClassRepository;
 import com.srms.api.modules.academic.repository.SubjectRepository;
 import com.srms.api.modules.academic.repository.TeacherClassSubjectRepository;
 import com.srms.api.modules.assessment.dto.GradingBandDto;
@@ -53,6 +55,7 @@ public class AssessmentService {
     private final SchoolRepository schoolRepository;
     private final DepartmentRepository departmentRepository;
     private final SubjectRepository subjectRepository;
+    private final SchoolClassRepository schoolClassRepository;
 
     private static final Set<String> FULL_ACCESS_ROLES = Set.of(
             "SUPER_ADMIN", "SCHOOL_ADMIN", "PRINCIPAL", "DEPUTY_HEAD");
@@ -204,7 +207,7 @@ public class AssessmentService {
         Set<String> rosterIds = roster.stream().map(ClassEnrolment::getStudentId).collect(Collectors.toSet());
         Set<String> seen = new HashSet<>();
         List<AssessmentResult> clean = new ArrayList<>();
-        List<GradingBandDto> gradingBands = gradingScaleService.getBands(schoolId);
+        List<GradingBandDto> gradingBands = gradingScaleService.getBandsForPhase(schoolId, resolveClassPhase(schoolId, assessment.getClassId()));
         for (AssessmentResult result : results) {
             if (!rosterIds.contains(result.getStudentId())) {
                 throw new BusinessException("A result was supplied for a learner not enrolled in this class");
@@ -378,7 +381,17 @@ public class AssessmentService {
     }
 
     private void gradeResult(AssessmentResult result, Assessment assessment) {
-        gradeResult(result, assessment, gradingScaleService.getBands(assessment.getSchoolId()));
+        List<GradingBandDto> gradingBands = gradingScaleService.getBandsForPhase(
+                assessment.getSchoolId(), resolveClassPhase(assessment.getSchoolId(), assessment.getClassId()));
+        gradeResult(result, assessment, gradingBands);
+    }
+
+    /** Null classId (or a class that's since been removed) falls back to the current-scale
+     * bands, same as any other phase that isn't "secondary_legacy". */
+    private String resolveClassPhase(String schoolId, String classId) {
+        if (classId == null) return null;
+        return schoolClassRepository.findByIdAndSchoolId(classId, schoolId)
+                .map(SchoolClass::getPhase).orElse(null);
     }
 
     private void gradeResult(AssessmentResult result, Assessment assessment, List<GradingBandDto> gradingBands) {

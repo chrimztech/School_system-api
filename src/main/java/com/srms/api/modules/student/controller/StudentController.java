@@ -58,6 +58,9 @@ public class StudentController {
             @RequestParam(required = false) Integer size,
             @RequestParam(required = false) String sortBy,
             @RequestParam(required = false) String sortDir,
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) Integer grade,
             Authentication auth) {
         // A teacher's scoping is derived from their own authenticated identity, never trusted
         // from the client — otherwise any teacher could see the full school roster simply by
@@ -75,7 +78,7 @@ public class StudentController {
         if (pageable == null) {
             return ResponseEntity.ok(ApiResponse.ok(studentService.findAll(schoolId)));
         }
-        return ResponseEntity.ok(ApiResponse.ok(PageResponse.of(studentService.findAllPaged(schoolId, pageable))));
+        return ResponseEntity.ok(ApiResponse.ok(PageResponse.of(studentService.findAllPaged(schoolId, q, status, grade, pageable))));
     }
 
     @GetMapping("/by-guardian")

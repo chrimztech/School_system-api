@@ -2,6 +2,7 @@ package com.srms.api.modules.student.service;
 
 import com.srms.api.common.BulkImportResult;
 import com.srms.api.common.PhoneUtils;
+import com.srms.api.exception.BusinessException;
 import com.srms.api.exception.ResourceNotFoundException;
 import com.srms.api.modules.academic.entity.ClassEnrolment;
 import com.srms.api.modules.academic.entity.SchoolClass;
@@ -27,6 +28,7 @@ import com.srms.api.modules.school.repository.SchoolRepository;
 import com.srms.api.modules.student.dto.StudentDto;
 import com.srms.api.modules.student.entity.Student;
 import com.srms.api.modules.student.repository.StudentRepository;
+import com.srms.api.modules.student.repository.StudentSpecifications;
 import com.srms.api.modules.transport.repository.TransportEnrolmentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -71,6 +73,12 @@ public class StudentService {
         return studentRepository.findBySchoolId(schoolId, pageable);
     }
 
+    public Page<Student> findAllPaged(String schoolId, String query, String status, Integer grade, Pageable pageable) {
+        boolean anyFilter = (query != null && !query.isBlank()) || (status != null && !status.isBlank()) || grade != null;
+        if (!anyFilter) return findAllPaged(schoolId, pageable);
+        return studentRepository.findAll(StudentSpecifications.search(schoolId, query, status, grade), pageable);
+    }
+
     public List<Student> findByGuardianEmail(String schoolId, String email) {
         return studentRepository.findBySchoolIdAndGuardianEmailIgnoreCase(schoolId, email);
     }
@@ -94,12 +102,56 @@ public class StudentService {
         return PhoneUtils.normalize(phone);
     }
 
+    /**
+     * Rejects a registration that looks like the same real child being added a second time —
+     * this is what was letting a duplicated pupil accrue its own separate fee balance and
+     * show up as a second invoice to the same guardian. A bare first+last name match isn't
+     * enough on its own to reject (common names are, well, common) — at least one
+     * corroborating field (national ID, birth certificate number, date of birth, or guardian
+     * phone) must also match an existing active record with the same name before this blocks
+     * the save. Runs for both the single "Register pupil" form and every row of a CSV bulk
+     * import, since create() is the one place both paths go through.
+     */
+    private void assertNotDuplicate(String schoolId, StudentDto dto) {
+        String firstName = dto.getFirstName();
+        String lastName = dto.getLastName();
+        if (firstName == null || firstName.isBlank() || lastName == null || lastName.isBlank()) return;
+
+        List<Student> candidates = studentRepository.findBySchoolIdAndFirstNameIgnoreCaseAndLastNameIgnoreCaseAndStatusNot(
+                schoolId, firstName.trim(), lastName.trim(), Student.StudentStatus.inactive);
+        if (candidates.isEmpty()) return;
+
+        String dob = dto.getDateOfBirth();
+        String guardianPhone = normalizePhone(dto.getGuardianPhone());
+        String nationalId = dto.getNationalId();
+        String birthCert = dto.getBirthCertificateNo();
+
+        for (Student existing : candidates) {
+            boolean sameNationalId = nationalId != null && !nationalId.isBlank()
+                    && nationalId.trim().equalsIgnoreCase(existing.getNationalId());
+            boolean sameBirthCert = birthCert != null && !birthCert.isBlank()
+                    && birthCert.trim().equalsIgnoreCase(existing.getBirthCertificateNo());
+            boolean sameDob = dob != null && !dob.isBlank() && dob.equals(existing.getDateOfBirth());
+            boolean sameGuardianPhone = !guardianPhone.isEmpty()
+                    && guardianPhone.equals(normalizePhone(existing.getGuardianPhone()));
+
+            if (sameNationalId || sameBirthCert || sameDob || sameGuardianPhone) {
+                throw new BusinessException(
+                        "A pupil named " + firstName.trim() + " " + lastName.trim()
+                                + " is already registered (admission no. " + existing.getAdmissionNumber()
+                                + "). If this is genuinely a different learner, make sure the name, date of "
+                                + "birth, and guardian phone are entered distinctly before saving again.");
+            }
+        }
+    }
+
     public Student findById(String id, String schoolId) {
         return studentRepository.findByIdAndSchoolId(id, schoolId)
                 .orElseThrow(() -> new ResourceNotFoundException("Student", id));
     }
 
     public Student create(String schoolId, StudentDto dto) {
+        assertNotDuplicate(schoolId, dto);
         String shortCode = schoolRepository.findShortCodeById(schoolId)
                 .map(String::toUpperCase)
                 .orElse("STU");

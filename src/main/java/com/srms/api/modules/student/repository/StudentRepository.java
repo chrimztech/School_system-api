@@ -4,13 +4,14 @@ import com.srms.api.modules.student.entity.Student;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface StudentRepository extends JpaRepository<Student, String> {
+public interface StudentRepository extends JpaRepository<Student, String>, JpaSpecificationExecutor<Student> {
     List<Student> findBySchoolId(String schoolId);
     Page<Student> findBySchoolId(String schoolId, Pageable pageable);
     Optional<Student> findByIdAndSchoolId(String id, String schoolId);
@@ -35,4 +36,11 @@ public interface StudentRepository extends JpaRepository<Student, String> {
 
     boolean existsByAdmissionNumber(String admissionNumber);
     List<Student> findBySchoolIdAndIdIn(String schoolId, List<String> ids);
+
+    // Candidate lookup for duplicate-registration detection (see StudentService.create) —
+    // deliberately name-only and broad; the service layer narrows to an actual duplicate
+    // using date of birth / national ID / birth certificate / guardian phone, since a bare
+    // name match alone is too weak a signal (common names are, well, common).
+    List<Student> findBySchoolIdAndFirstNameIgnoreCaseAndLastNameIgnoreCaseAndStatusNot(
+            String schoolId, String firstName, String lastName, Student.StudentStatus status);
 }

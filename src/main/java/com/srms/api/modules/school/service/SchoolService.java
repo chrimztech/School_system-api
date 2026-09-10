@@ -191,6 +191,7 @@ public class SchoolService {
                 .whatsappNumber(school.getWhatsappNumber())
                 .resultPublicationMode(school.getResultPublicationMode())
                 .gradingBands(gradingScaleService.readBands(school.getGradingBandsJson()))
+                .legacyGradingBands(gradingScaleService.readLegacyBands(school.getLegacyGradingBandsJson()))
                 .passMark(school.getPassMark())
                 .currency(school.getCurrency())
                 .bankName(school.getBankName())
@@ -293,6 +294,7 @@ public class SchoolService {
             school.setResultPublicationMode(mode);
         }
         if (dto.getGradingBands() != null) school.setGradingBandsJson(gradingScaleService.writeBands(dto.getGradingBands()));
+        if (dto.getLegacyGradingBands() != null) school.setLegacyGradingBandsJson(gradingScaleService.writeBands(dto.getLegacyGradingBands()));
         if (dto.getPassMark() != null) {
             if (dto.getPassMark() < 0 || dto.getPassMark() > 100) {
                 throw new IllegalArgumentException("Pass mark must be between 0 and 100");
@@ -397,6 +399,9 @@ public class SchoolService {
         }
         if (school.getGradingBandsJson() == null || school.getGradingBandsJson().isBlank()) {
             school.setGradingBandsJson(gradingScaleService.writeBands(GradingScaleService.zambia2023Defaults()));
+        }
+        if (school.getLegacyGradingBandsJson() == null || school.getLegacyGradingBandsJson().isBlank()) {
+            school.setLegacyGradingBandsJson(gradingScaleService.writeBands(GradingScaleService.zambiaLegacyDefaults()));
         }
         if (school.getPassMark() == null) {
             school.setPassMark(40);

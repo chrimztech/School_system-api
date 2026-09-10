@@ -63,6 +63,16 @@ public class FeeController {
         return ResponseEntity.ok(ApiResponse.ok(feeService.reversePayment(schoolId, id)));
     }
     @GetMapping("/collected") public ResponseEntity<ApiResponse<Double>> getCollected(@PathVariable String schoolId) { return ResponseEntity.ok(ApiResponse.ok(feeService.getTotalCollected(schoolId))); }
+
+    // Re-derives every active student's balance from the fee structures/levies that currently
+    // exist, minus payments already on file — see FeeService.recalculateBalances for why this
+    // exists (fee structures added after a roster import never retroactively bill anyone
+    // without this). Same permission bar as managing fee structures.
+    @PostMapping("/recalculate-balances")
+    public ResponseEntity<ApiResponse<?>> recalculateBalances(@PathVariable String schoolId, Authentication auth) {
+        requireCanManage(schoolId, auth, "fee-structure");
+        return ResponseEntity.ok(ApiResponse.ok(feeService.recalculateBalances(schoolId)));
+    }
     @GetMapping("/structures") public ResponseEntity<ApiResponse<List<FeeStructure>>> getStructures(@PathVariable String schoolId) { return ResponseEntity.ok(ApiResponse.ok(feeService.getFeeStructures(schoolId))); }
     @PostMapping("/structures") public ResponseEntity<ApiResponse<FeeStructure>> createStructure(@PathVariable String schoolId, @RequestBody FeeStructure fs, Authentication auth) { requireCanManage(schoolId, auth, "fee-structure"); return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(feeService.createFeeStructure(schoolId, fs))); }
     @PatchMapping("/structures/{id}") public ResponseEntity<ApiResponse<FeeStructure>> updateStructure(@PathVariable String schoolId, @PathVariable String id, @RequestBody FeeStructure patch, Authentication auth) { requireCanManage(schoolId, auth, "fee-structure"); return ResponseEntity.ok(ApiResponse.ok(feeService.updateFeeStructure(schoolId, id, patch))); }

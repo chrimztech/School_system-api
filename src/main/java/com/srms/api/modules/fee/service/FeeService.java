@@ -1,4 +1,6 @@
 package com.srms.api.modules.fee.service;
+import com.srms.api.exception.ResourceNotFoundException;
+import com.srms.api.modules.fee.dto.FeeBalanceRecalcResult;
 import com.srms.api.modules.fee.entity.FeeBillingRule;
 import com.srms.api.modules.fee.entity.FeeDiscountRule;
 import com.srms.api.modules.fee.entity.FeeLevy;
@@ -9,6 +11,9 @@ import com.srms.api.modules.fee.repository.FeeDiscountRuleRepository;
 import com.srms.api.modules.fee.repository.FeeLevyRepository;
 import com.srms.api.modules.fee.repository.FeePaymentRepository;
 import com.srms.api.modules.fee.repository.FeeStructureRepository;
+import com.srms.api.modules.school.entity.School;
+import com.srms.api.modules.school.repository.SchoolRepository;
+import com.srms.api.modules.student.entity.Student;
 import com.srms.api.modules.student.repository.StudentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -26,6 +31,7 @@ public class FeeService {
     private final FeeDiscountRuleRepository discountRuleRepository;
     private final FeeBillingRuleRepository billingRuleRepository;
     private final StudentRepository studentRepository;
+    private final SchoolRepository schoolRepository;
     public List<FeePayment> getAllPayments(String schoolId) { return paymentRepository.findBySchoolIdOrderByPaymentDateDesc(schoolId); }
     public Page<FeePayment> getAllPaymentsPaged(String schoolId, Pageable pageable) { return paymentRepository.findBySchoolIdOrderByPaymentDateDesc(schoolId, pageable); }
     public List<FeePayment> getStudentPayments(String schoolId, String studentId) { return paymentRepository.findBySchoolIdAndStudentId(schoolId, studentId); }
@@ -119,6 +125,43 @@ public class FeeService {
                 .sum();
 
         return structureFee + leviesTotal;
+    }
+
+    /**
+     * Re-derives every active student's fee balance from scratch: what they currently owe per
+     * computeInitialBalance minus every completed payment already on file. Exists because
+     * feeBalance is a snapshot taken once at student creation and only ever adjusted by
+     * individual payments after that — it is never automatically revisited, so a school that
+     * imports its roster before setting up fee structures (a completely natural order to do
+     * things in) ends up with every pupil showing "cleared" at K0 forever, even though nobody
+     * has actually paid anything. This is the admin-triggered fix for that: safe to run
+     * repeatedly, and never discards a payment already recorded — it only recomputes what's
+     * owed and subtracts what's actually been paid, exactly as computeInitialBalance +
+     * applyToStudentBalance would have arrived at if the fee structure had existed first.
+     */
+    public FeeBalanceRecalcResult recalculateBalances(String schoolId) {
+        School school = schoolRepository.findById(schoolId)
+                .orElseThrow(() -> new ResourceNotFoundException("School", schoolId));
+        List<Student> students = studentRepository.findBySchoolId(schoolId).stream()
+                .filter(s -> s.getStatus() == Student.StudentStatus.active)
+                .toList();
+
+        int updated = 0;
+        for (Student student : students) {
+            double totalPaid = paymentRepository.findBySchoolIdAndStudentId(schoolId, student.getId()).stream()
+                    .filter(p -> p.getStatus() == FeePayment.PaymentStatus.completed)
+                    .mapToDouble(FeePayment::getAmount)
+                    .sum();
+            double totalOwed = computeInitialBalance(schoolId, student.getGrade(), school.getCurrentTerm(),
+                    school.getCurrentYear(), school.getType(), student.getBoardingStatus());
+            double newBalance = Math.max(0.0, totalOwed - totalPaid);
+            if (Math.abs(newBalance - student.getFeeBalance()) > 0.005) {
+                student.setFeeBalance(newBalance);
+                studentRepository.save(student);
+                updated++;
+            }
+        }
+        return new FeeBalanceRecalcResult(students.size(), updated);
     }
 
     /** null/blank on the structure means "every student regardless of boarding status". */
