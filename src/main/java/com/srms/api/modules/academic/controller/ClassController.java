@@ -103,15 +103,22 @@ public class ClassController {
     @GetMapping("/assignments")
     public ResponseEntity<ApiResponse<List<TeacherClassSubject>>> getAssignmentsByTeacherEmail(
             @PathVariable String schoolId,
-            @RequestParam String teacherEmail,
+            @RequestParam(required = false) String teacherEmail,
             Authentication auth) {
+        // Same reasoning as StudentController/ClassController's own getAll: a TEACHER's own
+        // identity always wins over whatever (or nothing) the client sent. Every other role may
+        // omit teacherEmail to get every assignment in the school — the Departments page needs
+        // this to show a teacher under every department they actually teach a subject in.
         String effectiveTeacherEmail = teacherEmail;
         if ("TEACHER".equals(roleOf(auth))) {
             effectiveTeacherEmail = userRepository.findById(auth.getName())
                     .map(AppUser::getEmail)
                     .orElse(teacherEmail);
         }
-        return ResponseEntity.ok(ApiResponse.ok(academicService.findAssignmentsByTeacherEmail(schoolId, effectiveTeacherEmail)));
+        List<TeacherClassSubject> result = (effectiveTeacherEmail != null && !effectiveTeacherEmail.isBlank())
+                ? academicService.findAssignmentsByTeacherEmail(schoolId, effectiveTeacherEmail)
+                : academicService.findAllAssignments(schoolId);
+        return ResponseEntity.ok(ApiResponse.ok(result));
     }
     @GetMapping("/{classId}/teachers")
     public ResponseEntity<ApiResponse<List<TeacherClassSubject>>> getTeachers(@PathVariable String schoolId, @PathVariable String classId) {

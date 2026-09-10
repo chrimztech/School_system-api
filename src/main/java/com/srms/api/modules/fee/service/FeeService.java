@@ -1,6 +1,7 @@
 package com.srms.api.modules.fee.service;
 import com.srms.api.exception.ResourceNotFoundException;
 import com.srms.api.modules.fee.dto.FeeBalanceRecalcResult;
+import com.srms.api.modules.fee.dto.FeeCollectionSummary;
 import com.srms.api.modules.fee.entity.FeeBillingRule;
 import com.srms.api.modules.fee.entity.FeeDiscountRule;
 import com.srms.api.modules.fee.entity.FeeLevy;
@@ -95,6 +96,18 @@ public class FeeService {
     }
 
     public double getTotalCollected(String schoolId) { Double sum = paymentRepository.sumCollected(schoolId); return sum != null ? sum : 0; }
+
+    /** The Fees & Payments dashboard's headline numbers. "Outstanding" is the same
+     * sumFeeBalanceBySchoolIdAndStatus the school-wide dashboard stat already uses — it only
+     * reflects reality once a school has run recalculateBalances after setting up its fee
+     * structures (see that method's own doc for why feeBalance can otherwise sit stale at 0). */
+    public FeeCollectionSummary getCollectionSummary(String schoolId) {
+        double collected = getTotalCollected(schoolId);
+        double outstanding = studentRepository.sumFeeBalanceBySchoolIdAndStatus(schoolId, Student.StudentStatus.active);
+        double billed = collected + outstanding;
+        double collectionRate = billed > 0 ? Math.round((collected / billed) * 1000) / 10.0 : 0;
+        return new FeeCollectionSummary(collected, outstanding, collectionRate);
+    }
 
     /**
      * What a student in the given grade owes for the school's current term: the sum of every

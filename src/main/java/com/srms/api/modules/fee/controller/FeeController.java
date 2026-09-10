@@ -3,6 +3,7 @@ import com.srms.api.common.ApiResponse;
 import com.srms.api.common.PageRequestUtil;
 import com.srms.api.common.PageResponse;
 import com.srms.api.exception.ForbiddenException;
+import com.srms.api.modules.fee.dto.FeeCollectionSummary;
 import com.srms.api.modules.fee.entity.FeeBillingRule;
 import com.srms.api.modules.fee.entity.FeeDiscountRule;
 import com.srms.api.modules.fee.entity.FeeLevy;
@@ -62,7 +63,7 @@ public class FeeController {
         requireCanManage(schoolId, auth, "fees");
         return ResponseEntity.ok(ApiResponse.ok(feeService.reversePayment(schoolId, id)));
     }
-    @GetMapping("/collected") public ResponseEntity<ApiResponse<Double>> getCollected(@PathVariable String schoolId) { return ResponseEntity.ok(ApiResponse.ok(feeService.getTotalCollected(schoolId))); }
+    @GetMapping("/collected") public ResponseEntity<ApiResponse<FeeCollectionSummary>> getCollected(@PathVariable String schoolId) { return ResponseEntity.ok(ApiResponse.ok(feeService.getCollectionSummary(schoolId))); }
 
     // Re-derives every active student's balance from the fee structures/levies that currently
     // exist, minus payments already on file — see FeeService.recalculateBalances for why this

@@ -69,6 +69,12 @@ public class AcademicService {
                 .orElse(List.of());
     }
 
+    /** Every class+subject assignment in the school — lets the Departments page show a teacher
+     * under every department they actually teach a subject in, not just their home department. */
+    public List<TeacherClassSubject> findAllAssignments(String schoolId) {
+        return teacherSubjectRepository.findBySchoolId(schoolId);
+    }
+
     /** Returns only the students enrolled in the teacher's classes. */
     public List<Student> findStudentsByTeacherEmail(String schoolId, String email) {
         List<SchoolClass> teacherClasses = findClassesByTeacherEmail(schoolId, email);
