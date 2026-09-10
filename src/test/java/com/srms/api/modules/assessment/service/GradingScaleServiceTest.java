@@ -39,7 +39,7 @@ class GradingScaleServiceTest {
     @Test
     void preservesDescriptionsAndPoints() {
         GradingBandDto band = service.evaluate(bands, 75);
-        assertEquals("DISTINCTION", band.getDescription());
+        assertEquals("UPPER DISTINCTION", band.getDescription());
         assertEquals(1, band.getPoints());
     }
 
