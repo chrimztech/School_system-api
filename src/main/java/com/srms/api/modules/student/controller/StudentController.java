@@ -62,6 +62,13 @@ public class StudentController {
             @RequestParam(required = false) String status,
             @RequestParam(required = false) Integer grade,
             Authentication auth) {
+        // A parent has no legitimate use for the school roster — their portal only ever reads
+        // their own children via /by-guardian, which trusts their authenticated identity, not
+        // a client-supplied filter. Without this, a parent's own valid JWT could pull every
+        // pupil in the school straight from this endpoint, bypassing that scoping entirely.
+        if ("PARENT".equals(roleOf(auth))) {
+            throw new ForbiddenException("Parents can only look up their own children — use /students/by-guardian");
+        }
         // A teacher's scoping is derived from their own authenticated identity, never trusted
         // from the client — otherwise any teacher could see the full school roster simply by
         // omitting (or forging) the teacherEmail query param on a direct API call.

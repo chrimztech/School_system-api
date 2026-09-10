@@ -57,9 +57,14 @@ public class AttendanceController {
     /**
      * Registers are per-class — a teacher must only ever see attendance for their own
      * classes, derived from their authenticated identity, never a client-supplied filter.
-     * Returns null for non-teacher callers (leadership sees everything, unfiltered).
+     * Leadership sees everything, unfiltered. A parent has no legitimate use for this
+     * school-wide feed at all (every pupil's daily present/absent status) — they read their
+     * own children's attendance through the already-scoped /attendance/student/{id} below.
      */
     private List<AttendanceRecord> scopeToTeacher(String schoolId, Authentication auth, List<AttendanceRecord> records) {
+        if ("PARENT".equals(roleOf(auth))) {
+            throw new ForbiddenException("Parents can only view attendance for their own children — use /attendance/student/{id}");
+        }
         if (!"TEACHER".equals(roleOf(auth))) return records;
         String email = userRepository.findById(auth.getName()).map(AppUser::getEmail).orElse(null);
         if (email == null) return List.of();
