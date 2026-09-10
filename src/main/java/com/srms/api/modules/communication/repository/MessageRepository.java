@@ -12,4 +12,5 @@ public interface MessageRepository extends JpaRepository<Message, String> {
     List<Message> findBySchoolIdOrderByCreatedAtDesc(String schoolId);
     Page<Message> findBySchoolIdOrderByCreatedAtDesc(String schoolId, Pageable pageable);
     List<Message> findBySchoolIdAndStatus(String schoolId, String status);
+    List<Message> findBySchoolIdAndStudentId(String schoolId, String studentId);
 }

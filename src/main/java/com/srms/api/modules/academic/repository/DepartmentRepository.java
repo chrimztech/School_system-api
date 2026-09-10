@@ -9,4 +9,5 @@ public interface DepartmentRepository extends JpaRepository<Department, String> 
     List<Department>     findBySchoolIdAndActiveTrue(String schoolId);
     Optional<Department> findByIdAndSchoolId(String id, String schoolId);
     boolean existsBySchoolIdAndName(String schoolId, String name);
+    List<Department> findBySchoolIdAndHeadTeacherId(String schoolId, String headTeacherId);
 }

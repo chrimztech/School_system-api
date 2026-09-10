@@ -14,6 +14,7 @@ import com.srms.api.modules.student.entity.Student;
 import com.srms.api.modules.student.service.StudentService;
 import com.srms.api.security.ModuleAccessService;
 import com.srms.api.security.RoleGuard;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -126,6 +127,17 @@ public class StudentController {
         requireManage(schoolId, auth);
         studentService.delete(id, schoolId);
         return ResponseEntity.ok(ApiResponse.ok("Student deactivated", null));
+    }
+
+    // Irreversible: erases the pupil and every record tied to them (enrolments, results,
+    // attendance, fee payments, ...) — see StudentService.deletePermanently's javadoc for
+    // exactly what is and isn't touched. Restricted to school-account-manager roles, stricter
+    // than the general "can manage students" check the soft delete above uses.
+    @DeleteMapping("/{id}/permanent")
+    public ResponseEntity<ApiResponse<Void>> deletePermanently(@PathVariable String schoolId, @PathVariable String id, Authentication auth) {
+        RoleGuard.requireSchoolAccountManager(auth);
+        studentService.deletePermanently(id, schoolId);
+        return ResponseEntity.ok(ApiResponse.ok("Student permanently deleted", null));
     }
 
     /** Same ownership rule as AssessmentController's identically-named check — a parent may only

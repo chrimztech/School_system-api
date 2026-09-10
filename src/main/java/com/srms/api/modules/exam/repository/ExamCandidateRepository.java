@@ -7,6 +7,7 @@ import java.util.Optional;
 
 public interface ExamCandidateRepository extends JpaRepository<ExamCandidate, String> {
     List<ExamCandidate> findByExamPaperIdAndSchoolId(String examPaperId, String schoolId);
+    List<ExamCandidate> findBySchoolIdAndStudentId(String schoolId, String studentId);
     long countByExamPaperId(String examPaperId);
     boolean existsByExamPaperIdAndStudentId(String examPaperId, String studentId);
     boolean existsByExamPaperIdAndGceCandidateId(String examPaperId, String gceCandidateId);

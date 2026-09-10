@@ -2,13 +2,20 @@ package com.srms.api.modules.teacher.service;
 import com.srms.api.common.BulkImportResult;
 import com.srms.api.exception.BusinessException;
 import com.srms.api.exception.ResourceNotFoundException;
+import com.srms.api.modules.academic.entity.Department;
+import com.srms.api.modules.academic.entity.SchoolClass;
+import com.srms.api.modules.academic.repository.DepartmentRepository;
+import com.srms.api.modules.academic.repository.SchoolClassRepository;
+import com.srms.api.modules.academic.repository.TeacherClassSubjectRepository;
 import com.srms.api.modules.teacher.dto.TeacherDto;
 import com.srms.api.modules.teacher.entity.Teacher;
 import com.srms.api.modules.teacher.entity.TeacherSignatureAsset;
 import com.srms.api.modules.teacher.repository.TeacherRepository;
 import com.srms.api.modules.teacher.repository.TeacherSignatureAssetRepository;
+import com.srms.api.modules.timetable.repository.TimetableRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.List;
 @Service
@@ -16,6 +23,10 @@ import java.util.List;
 public class TeacherService {
     private final TeacherRepository teacherRepository;
     private final TeacherSignatureAssetRepository signatureAssetRepository;
+    private final TeacherClassSubjectRepository teacherClassSubjectRepository;
+    private final TimetableRepository timetableRepository;
+    private final SchoolClassRepository schoolClassRepository;
+    private final DepartmentRepository departmentRepository;
 
     // Signature intentionally left null here — see TeacherSignatureAsset's javadoc. A teacher
     // LIST is used to populate ordinary staff-list UIs, and shouldn't carry every teacher's
@@ -93,6 +104,38 @@ public class TeacherService {
     }
     public void delete(String id, String schoolId) {
         Teacher t = findById(id, schoolId); t.setStatus(Teacher.TeacherStatus.inactive); teacherRepository.save(t);
+    }
+
+    /**
+     * Permanently erases a staff record — see StudentService.deletePermanently's javadoc for
+     * the same reasoning (this is the separate, explicit, irreversible action; the soft
+     * delete above is what ordinary "Delete" means). Removes what's genuinely this teacher's
+     * own data (their signature, their subject/class teaching assignments, their timetable
+     * slots) and clears references to them elsewhere (a class's "class teacher", a
+     * department's head) rather than deleting those records outright. Deliberately leaves
+     * their authorship on academic history alone — TermGrade.teacherId, Assessment.teacherId,
+     * and AttendanceRecord.teacherId record who graded/created/marked something that belongs
+     * to a student's record, not the teacher's; that history must survive a staff departure.
+     */
+    @Transactional
+    public void deletePermanently(String id, String schoolId) {
+        Teacher t = findById(id, schoolId);
+
+        signatureAssetRepository.findById(id).ifPresent(signatureAssetRepository::delete);
+        teacherClassSubjectRepository.deleteAll(teacherClassSubjectRepository.findByTeacherIdAndSchoolId(id, schoolId));
+        timetableRepository.deleteAll(timetableRepository.findBySchoolIdAndTeacherId(schoolId, id));
+
+        for (SchoolClass c : schoolClassRepository.findBySchoolIdAndClassTeacherId(schoolId, id)) {
+            c.setClassTeacherId(null);
+            c.setClassTeacherName(null);
+            schoolClassRepository.save(c);
+        }
+        for (Department d : departmentRepository.findBySchoolIdAndHeadTeacherId(schoolId, id)) {
+            d.setHeadTeacherId(null);
+            departmentRepository.save(d);
+        }
+
+        teacherRepository.delete(t);
     }
     private void mapDto(Teacher t, TeacherDto dto) {
         if (dto.getFirstName() != null) t.setFirstName(dto.getFirstName());

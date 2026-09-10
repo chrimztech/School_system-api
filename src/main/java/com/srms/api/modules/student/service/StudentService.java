@@ -3,16 +3,36 @@ package com.srms.api.modules.student.service;
 import com.srms.api.common.BulkImportResult;
 import com.srms.api.common.PhoneUtils;
 import com.srms.api.exception.ResourceNotFoundException;
+import com.srms.api.modules.academic.entity.ClassEnrolment;
+import com.srms.api.modules.academic.entity.SchoolClass;
+import com.srms.api.modules.academic.repository.ClassEnrolmentRepository;
+import com.srms.api.modules.academic.repository.SchoolClassRepository;
+import com.srms.api.modules.activities.repository.ActivityEnrolmentRepository;
+import com.srms.api.modules.assessment.repository.PublishedTermGradeRepository;
+import com.srms.api.modules.assessment.repository.ResultRepository;
+import com.srms.api.modules.assessment.repository.TermGradeRepository;
+import com.srms.api.modules.attendance.repository.AttendanceRepository;
+import com.srms.api.modules.communication.repository.MessageRepository;
+import com.srms.api.modules.discipline.repository.DisciplineRepository;
+import com.srms.api.modules.exam.repository.ExamCandidateRepository;
+import com.srms.api.modules.fee.repository.FeePaymentRepository;
 import com.srms.api.modules.fee.service.FeeService;
+import com.srms.api.modules.health.repository.HealthRecordRepository;
+import com.srms.api.modules.health.repository.HealthVisitRepository;
+import com.srms.api.modules.hostel.repository.HostelAllocationRepository;
+import com.srms.api.modules.hostel.repository.HostelLeaveRepository;
+import com.srms.api.modules.report.repository.ReportCommentRepository;
 import com.srms.api.modules.school.entity.School;
 import com.srms.api.modules.school.repository.SchoolRepository;
 import com.srms.api.modules.student.dto.StudentDto;
 import com.srms.api.modules.student.entity.Student;
 import com.srms.api.modules.student.repository.StudentRepository;
+import com.srms.api.modules.transport.repository.TransportEnrolmentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.Year;
@@ -25,6 +45,23 @@ public class StudentService {
     private final StudentRepository studentRepository;
     private final SchoolRepository schoolRepository;
     private final FeeService feeService;
+    private final ClassEnrolmentRepository classEnrolmentRepository;
+    private final SchoolClassRepository schoolClassRepository;
+    private final ResultRepository resultRepository;
+    private final TermGradeRepository termGradeRepository;
+    private final PublishedTermGradeRepository publishedTermGradeRepository;
+    private final DisciplineRepository disciplineRepository;
+    private final HealthRecordRepository healthRecordRepository;
+    private final HealthVisitRepository healthVisitRepository;
+    private final HostelAllocationRepository hostelAllocationRepository;
+    private final HostelLeaveRepository hostelLeaveRepository;
+    private final TransportEnrolmentRepository transportEnrolmentRepository;
+    private final ActivityEnrolmentRepository activityEnrolmentRepository;
+    private final ExamCandidateRepository examCandidateRepository;
+    private final ReportCommentRepository reportCommentRepository;
+    private final FeePaymentRepository feePaymentRepository;
+    private final AttendanceRepository attendanceRepository;
+    private final MessageRepository messageRepository;
 
     public List<Student> findAll(String schoolId) {
         return studentRepository.findBySchoolId(schoolId);
@@ -96,15 +133,17 @@ public class StudentService {
     public BulkImportResult bulkCreate(String schoolId, List<StudentDto> dtos) {
         int imported = 0;
         List<BulkImportResult.RowError> errors = new ArrayList<>();
+        List<BulkImportResult.CreatedRow> created = new ArrayList<>();
         for (int i = 0; i < dtos.size(); i++) {
             try {
-                create(schoolId, dtos.get(i));
+                Student saved = create(schoolId, dtos.get(i));
+                created.add(new BulkImportResult.CreatedRow(i, saved.getId()));
                 imported++;
             } catch (Exception e) {
                 errors.add(new BulkImportResult.RowError(i, e.getMessage()));
             }
         }
-        return new BulkImportResult(imported, errors);
+        return new BulkImportResult(imported, errors, created);
     }
 
     public Student update(String id, String schoolId, StudentDto dto) {
@@ -117,6 +156,52 @@ public class StudentService {
         Student student = findById(id, schoolId);
         student.setStatus(Student.StudentStatus.inactive);
         studentRepository.save(student);
+    }
+
+    /**
+     * Permanently erases a pupil and every record tied to them by studentId — the soft
+     * delete above (status -> inactive) is what "Delete" normally means in this app, kept
+     * on purpose so a mistaken removal doesn't lose history. This is the separate, explicit
+     * "permanently delete" action for when a record genuinely needs to be gone (a duplicate,
+     * a test entry, a data-protection request) — irreversible, and the controller restricts
+     * it to school-account-manager roles for that reason.
+     *
+     * Deliberately does NOT touch: the guardian's AppUser login (one guardian can have several
+     * children — deleting one must not delete a login that still serves the others), or
+     * WelfareCase/BursaryAward/BursaryApplication (those reference a student by free-typed
+     * name text, not studentId, so there's no reliable link to clean up without risking a
+     * false-positive match on an unrelated record that happens to share that name).
+     */
+    @Transactional
+    public void deletePermanently(String id, String schoolId) {
+        Student student = findById(id, schoolId);
+
+        List<ClassEnrolment> enrolments = classEnrolmentRepository.findByStudentIdAndSchoolId(id, schoolId);
+        for (ClassEnrolment enrolment : enrolments) {
+            schoolClassRepository.findByIdAndSchoolId(enrolment.getClassId(), schoolId).ifPresent(c -> {
+                c.setCurrentEnrolment(Math.max(0, c.getCurrentEnrolment() - 1));
+                schoolClassRepository.save(c);
+            });
+        }
+        classEnrolmentRepository.deleteAll(enrolments);
+
+        resultRepository.deleteAll(resultRepository.findBySchoolIdAndStudentId(schoolId, id));
+        termGradeRepository.deleteAll(termGradeRepository.findBySchoolIdAndStudentId(schoolId, id));
+        publishedTermGradeRepository.deleteAll(publishedTermGradeRepository.findBySchoolIdAndStudentId(schoolId, id));
+        disciplineRepository.deleteAll(disciplineRepository.findBySchoolIdAndStudentId(schoolId, id));
+        healthRecordRepository.findBySchoolIdAndStudentId(schoolId, id).ifPresent(healthRecordRepository::delete);
+        healthVisitRepository.deleteAll(healthVisitRepository.findBySchoolIdAndStudentId(schoolId, id));
+        hostelAllocationRepository.deleteAll(hostelAllocationRepository.findBySchoolIdAndStudentId(schoolId, id));
+        hostelLeaveRepository.deleteAll(hostelLeaveRepository.findBySchoolIdAndStudentId(schoolId, id));
+        transportEnrolmentRepository.deleteAll(transportEnrolmentRepository.findBySchoolIdAndStudentId(schoolId, id));
+        activityEnrolmentRepository.deleteAll(activityEnrolmentRepository.findBySchoolIdAndStudentId(schoolId, id));
+        examCandidateRepository.deleteAll(examCandidateRepository.findBySchoolIdAndStudentId(schoolId, id));
+        reportCommentRepository.deleteAll(reportCommentRepository.findBySchoolIdAndStudentId(schoolId, id));
+        feePaymentRepository.deleteAll(feePaymentRepository.findBySchoolIdAndStudentId(schoolId, id));
+        attendanceRepository.deleteAll(attendanceRepository.findBySchoolIdAndStudentIdOrderByDateDesc(schoolId, id));
+        messageRepository.deleteAll(messageRepository.findBySchoolIdAndStudentId(schoolId, id));
+
+        studentRepository.delete(student);
     }
 
     private double billInitialTermFee(String schoolId, Student student) {

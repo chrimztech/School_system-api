@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Optional;
 @Repository
 public interface TermGradeRepository extends JpaRepository<TermGrade, String> {
+    List<TermGrade> findBySchoolIdAndStudentId(String schoolId, String studentId);
     List<TermGrade> findBySchoolIdAndStudentIdAndAcademicYear(String schoolId, String studentId, String academicYear);
     List<TermGrade> findBySchoolIdAndStudentIdAndAcademicYearAndPublishedTrue(String schoolId, String studentId, String academicYear);
     List<TermGrade> findBySchoolIdAndClassIdAndSubjectNameAndTermAndAcademicYear(String schoolId, String classId, String subjectName, String term, String academicYear);

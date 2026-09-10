@@ -6,4 +6,5 @@ import java.util.List;
 
 public interface HostelLeaveRepository extends JpaRepository<HostelLeave, String> {
     List<HostelLeave> findBySchoolIdOrderByCreatedAtDesc(String schoolId);
+    List<HostelLeave> findBySchoolIdAndStudentId(String schoolId, String studentId);
 }
