@@ -38,5 +38,6 @@ public class StudentDto {
     private String emergencyContactPhone;
     private String status;
     private String boardingStatus;
+    private String photoUrl;
     private Boolean needsTransport;
 }

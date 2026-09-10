@@ -104,8 +104,14 @@ public class SchoolService {
     // weights) — evicting here rather than only inside GradingScaleService.writeBands() means
     // the cache is invalidated at the one place a save through this path actually commits,
     // regardless of which fields changed. A no-op eviction on unrelated setting changes is
-    // harmless; a stale grading-band cache after an edit is not.
-    @org.springframework.cache.annotation.CacheEvict(value = com.srms.api.config.CacheConfig.GRADING_BANDS, key = "#id")
+    // harmless; a stale grading-band cache after an edit is not. Two entries because
+    // GradingScaleService.getLegacyBands caches under a distinct 'legacy:'-prefixed key in
+    // this same cache region (see its javadoc) — evicting only "#id" would leave a stale
+    // legacy scale cached for up to its TTL after an admin edits it.
+    @org.springframework.cache.annotation.Caching(evict = {
+            @org.springframework.cache.annotation.CacheEvict(value = com.srms.api.config.CacheConfig.GRADING_BANDS, key = "#id"),
+            @org.springframework.cache.annotation.CacheEvict(value = com.srms.api.config.CacheConfig.GRADING_BANDS, key = "'legacy:' + #id"),
+    })
     public SchoolDto update(String id, SchoolDto dto) {
         School school = findEntityById(id);
         mapDto(school, dto);

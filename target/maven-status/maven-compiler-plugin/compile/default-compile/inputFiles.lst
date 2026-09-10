@@ -49,6 +49,7 @@ F:\school\School_system-api\src\main\java\com\srms\api\modules\assessment\reposi
 F:\school\School_system-api\src\main\java\com\srms\api\modules\inventory\repository\StockMovementRepository.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\academic\dto\GradeOffsetFixResult.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\accounting\repository\FixedAssetRepository.java
+F:\school\School_system-api\src\main\java\com\srms\api\modules\student\repository\StudentSpecifications.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\communication\entity\Message.java
 F:\school\School_system-api\src\main\java\com\srms\api\security\RoleGuard.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\activities\repository\ActivityRepository.java
@@ -218,6 +219,7 @@ F:\school\School_system-api\src\main\java\com\srms\api\modules\assessment\contro
 F:\school\School_system-api\src\main\java\com\srms\api\modules\hostel\repository\HostelLeaveRepository.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\platform\service\PlatformWorkspaceService.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\assessment\service\AssessmentService.java
+F:\school\School_system-api\src\main\java\com\srms\api\modules\fee\dto\FeeBalanceRecalcResult.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\payment\dto\PaymentStatusView.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\activities\service\ActivitiesService.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\assessment\entity\GradeWeightConfig.java
@@ -233,12 +235,14 @@ F:\school\School_system-api\src\main\java\com\srms\api\modules\discipline\reposi
 F:\school\School_system-api\src\main\java\com\srms\api\common\PageResponse.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\canteen\entity\MenuItem.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\assessment\entity\TermGrade.java
+F:\school\School_system-api\src\main\java\com\srms\api\modules\student\entity\StudentPhotoAsset.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\teacher\service\TeacherService.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\ptc\repository\PtcMeetingRepository.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\hostel\entity\HostelAllocation.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\admission\controller\AdmissionController.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\auth\repository\UserRepository.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\procurement\entity\ProcurementRequest.java
+F:\school\School_system-api\src\main\java\com\srms\api\modules\student\repository\StudentPhotoAssetRepository.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\payment\service\PaymentGatewayService.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\teacher\controller\TeacherController.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\payment\dto\MerchantBalanceView.java

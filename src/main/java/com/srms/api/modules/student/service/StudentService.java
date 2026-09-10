@@ -27,6 +27,8 @@ import com.srms.api.modules.school.entity.School;
 import com.srms.api.modules.school.repository.SchoolRepository;
 import com.srms.api.modules.student.dto.StudentDto;
 import com.srms.api.modules.student.entity.Student;
+import com.srms.api.modules.student.entity.StudentPhotoAsset;
+import com.srms.api.modules.student.repository.StudentPhotoAssetRepository;
 import com.srms.api.modules.student.repository.StudentRepository;
 import com.srms.api.modules.student.repository.StudentSpecifications;
 import com.srms.api.modules.transport.repository.TransportEnrolmentRepository;
@@ -64,6 +66,7 @@ public class StudentService {
     private final FeePaymentRepository feePaymentRepository;
     private final AttendanceRepository attendanceRepository;
     private final MessageRepository messageRepository;
+    private final StudentPhotoAssetRepository photoAssetRepository;
 
     public List<Student> findAll(String schoolId) {
         return studentRepository.findBySchoolId(schoolId);
@@ -146,11 +149,28 @@ public class StudentService {
     }
 
     public Student findById(String id, String schoolId) {
-        return studentRepository.findByIdAndSchoolId(id, schoolId)
+        Student student = studentRepository.findByIdAndSchoolId(id, schoolId)
                 .orElseThrow(() -> new ResourceNotFoundException("Student", id));
+        photoAssetRepository.findById(id).ifPresent(asset -> student.setPhotoUrl(asset.getPhotoUrl()));
+        return student;
+    }
+
+    /** No DTO field currently sets a pupil's photo (there's no upload endpoint yet), but this
+     * keeps create/update consistent with TeacherService's saveSignatureIfProvided pattern for
+     * whenever that lands, rather than needing this wiring added retroactively then too. */
+    private void savePhotoIfProvided(String studentId, String photoUrl) {
+        if (photoUrl == null) return;
+        StudentPhotoAsset asset = photoAssetRepository.findById(studentId)
+                .orElse(StudentPhotoAsset.builder().studentId(studentId).build());
+        asset.setPhotoUrl(photoUrl);
+        photoAssetRepository.save(asset);
     }
 
     public Student create(String schoolId, StudentDto dto) {
+        if (dto.getFirstName() == null || dto.getFirstName().isBlank()
+                || dto.getLastName() == null || dto.getLastName().isBlank()) {
+            throw new BusinessException("First name and last name are required");
+        }
         assertNotDuplicate(schoolId, dto);
         String shortCode = schoolRepository.findShortCodeById(schoolId)
                 .map(String::toUpperCase)
@@ -179,7 +199,13 @@ public class StudentService {
             student.setAdmissionDate(LocalDate.now().toString());
         }
         student.setFeeBalance(billInitialTermFee(schoolId, student));
-        return studentRepository.save(student);
+        Student saved = studentRepository.save(student);
+        savePhotoIfProvided(saved.getId(), dto.getPhotoUrl());
+        // save()'s returned instance can be a JPA merge() copy rather than the same object —
+        // @Transient fields aren't guaranteed to survive that copy (see TeacherService.create
+        // for the same reasoning), so set it explicitly from the known dto value.
+        if (dto.getPhotoUrl() != null) saved.setPhotoUrl(dto.getPhotoUrl());
+        return saved;
     }
 
     public BulkImportResult bulkCreate(String schoolId, List<StudentDto> dtos) {
@@ -201,7 +227,10 @@ public class StudentService {
     public Student update(String id, String schoolId, StudentDto dto) {
         Student student = findById(id, schoolId);
         mapDto(student, dto);
-        return studentRepository.save(student);
+        Student saved = studentRepository.save(student);
+        savePhotoIfProvided(id, dto.getPhotoUrl());
+        if (dto.getPhotoUrl() != null) saved.setPhotoUrl(dto.getPhotoUrl());
+        return saved;
     }
 
     public void delete(String id, String schoolId) {

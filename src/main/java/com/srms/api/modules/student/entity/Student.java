@@ -67,7 +67,9 @@ public class Student extends BaseEntity {
 
     private double feeBalance;
 
-    @Column(columnDefinition = "TEXT")
+    // Not persisted on this entity — see StudentPhotoAsset's javadoc. @Transient so this
+    // still round-trips through the DTO/API layer unchanged; only its storage location moved.
+    @Transient
     private String photoUrl;
 
     /** "DAY" or "BOARDING" — plain string like the rest of this entity's loosely-typed
