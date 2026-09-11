@@ -23,9 +23,11 @@ public class GradingScaleService {
     private final ObjectMapper objectMapper;
 
     // ECZ's Competency-Based Curriculum (CBC) grading scale, introduced with the 2023
-    // curriculum reform for Form 1-4 (ECSEOL Assessment Schemes, Ch. 30) — five competency
-    // levels rather than the pre-2023 nine-point scale, each reported as a label 1-5
-    // alongside the raw score on examination results and other assessment reports.
+    // curriculum reform for every non-legacy secondary class — Form 1-4 (O-Level) and
+    // Form 5-6 (A-Level) alike, see getBandsForPhase below — (ECSEOL Assessment Schemes,
+    // Ch. 30). Five competency levels rather than the pre-2023 nine-point scale, each
+    // reported as a label 1-5 alongside the raw score on examination results and other
+    // assessment reports.
     public static List<GradingBandDto> zambia2023Defaults() {
         return List.of(
                 band(70, 100, "1", "OUTSTANDING", 1),
@@ -38,7 +40,7 @@ public class GradingScaleService {
 
     // Pre-2023-curriculum nine-point scale (Distinction/Merit/Credit/Satisfactory/
     // Unsatisfactory). A transitional-cohort legacy Grade 7-12 student finishes under this
-    // same scale they started with, not the newer Form 1-4 CBC scale.
+    // same scale they started with, not the newer Form 1-6 CBC scale.
     public static List<GradingBandDto> zambiaLegacyDefaults() {
         return List.of(
                 band(75, 100, "1", "DISTINCTION", 1),
