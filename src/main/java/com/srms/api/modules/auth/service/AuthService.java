@@ -194,6 +194,22 @@ public class AuthService {
         return toDto(saved);
     }
 
+    /** Self-service profile update — deliberately narrower than updateUser: only ever touches
+     * a caller's own phone/notification preferences, never role/schoolId/active/password, so
+     * this can be called by any authenticated user against their own id with no admin-tier
+     * permission check at all. Editing your own contact details was previously only reachable
+     * through updateUser via the admin-only /schools/{id}/users or /admin/users endpoints,
+     * which every non-leadership role (teacher, hod, finance, career_guidance, parent) got a
+     * 403 from — "manage other accounts" and "edit my own profile" are different permissions
+     * that had been conflated onto the same endpoint. */
+    public UserDto updateOwnProfile(String userId, String phone, Boolean notifyEmail, Boolean notifySms) {
+        AppUser user = findUserEntity(userId);
+        if (phone != null) user.setPhone(phone.isBlank() ? null : normalizePhone(phone));
+        if (notifyEmail != null) user.setNotifyEmail(notifyEmail);
+        if (notifySms != null) user.setNotifySms(notifySms);
+        return toDto(userRepository.save(user));
+    }
+
     public void changePassword(String userId, String currentPassword, String newPassword) {
         AppUser user = findUserEntity(userId);
         if (!passwordEncoder.matches(currentPassword, user.getPasswordHash())) {
