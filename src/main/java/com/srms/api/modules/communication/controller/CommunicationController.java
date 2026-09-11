@@ -4,6 +4,8 @@ import com.srms.api.common.ApiResponse;
 import com.srms.api.common.PageRequestUtil;
 import com.srms.api.common.PageResponse;
 import com.srms.api.exception.ForbiddenException;
+import com.srms.api.modules.auth.entity.AppUser;
+import com.srms.api.modules.auth.repository.UserRepository;
 import com.srms.api.modules.communication.dto.AnnouncementDto;
 import com.srms.api.modules.communication.dto.MessageDto;
 import com.srms.api.modules.communication.entity.Announcement;
@@ -29,6 +31,7 @@ public class CommunicationController {
 
     private final CommunicationService communicationService;
     private final ModuleAccessService moduleAccessService;
+    private final UserRepository userRepository;
 
     /** Mirrors the frontend's SCHOOL_LEADERSHIP_ROLES — the only roles allowed to mass-broadcast
      *  or manage announcements, so a parent/teacher/HOD/finance/career-guidance account can't
@@ -102,12 +105,25 @@ public class CommunicationController {
     }
 
     // ── Messages ───────────────────────────────────────────────────────────────
+    // This is a shared parent<->school ticket inbox (Message has senderEmail/recipientEmail,
+    // not a broadcast) — getMessages returned every family's private correspondence to any
+    // authenticated caller with no filtering at all. A parent may only ever see and send their
+    // own messages; replying/closing is the school's side of the conversation, so those two
+    // actions are staff-only regardless of whose thread it is.
 
     @GetMapping("/messages")
     public ResponseEntity<ApiResponse<?>> getMessages(
             @PathVariable String schoolId,
             @RequestParam(required = false) Integer page, @RequestParam(required = false) Integer size,
-            @RequestParam(required = false) String sortBy, @RequestParam(required = false) String sortDir) {
+            @RequestParam(required = false) String sortBy, @RequestParam(required = false) String sortDir,
+            Authentication auth) {
+        if ("PARENT".equals(roleOf(auth))) {
+            String email = currentEmail(auth);
+            List<Message> mine = communicationService.getMessages(schoolId).stream()
+                    .filter(m -> email != null && email.equalsIgnoreCase(m.getSenderEmail()))
+                    .toList();
+            return ResponseEntity.ok(ApiResponse.ok(mine));
+        }
         Pageable pageable = PageRequestUtil.build(page, size, sortBy, sortDir);
         if (pageable == null) return ResponseEntity.ok(ApiResponse.ok(communicationService.getMessages(schoolId)));
         return ResponseEntity.ok(ApiResponse.ok(PageResponse.of(communicationService.getMessagesPaged(schoolId, pageable))));
@@ -116,7 +132,16 @@ public class CommunicationController {
     @PostMapping("/messages")
     public ResponseEntity<ApiResponse<Message>> sendMessage(
             @PathVariable String schoolId,
-            @RequestBody MessageDto dto) {
+            @RequestBody MessageDto dto,
+            Authentication auth) {
+        if ("PARENT".equals(roleOf(auth))) {
+            // Never trust a client-supplied sender identity — otherwise a parent could send a
+            // message that reads as if it came from a different family.
+            AppUser user = userRepository.findById(auth.getName())
+                    .orElseThrow(() -> new ForbiddenException("Authenticated parent was not found"));
+            dto.setSenderEmail(user.getEmail());
+            dto.setSenderName(user.getName());
+        }
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.created(communicationService.sendMessage(schoolId, dto)));
     }
@@ -125,7 +150,9 @@ public class CommunicationController {
     public ResponseEntity<ApiResponse<Message>> replyToMessage(
             @PathVariable String schoolId,
             @PathVariable String id,
-            @RequestBody Map<String, String> body) {
+            @RequestBody Map<String, String> body,
+            Authentication auth) {
+        requireStaff(auth, "reply to");
         String replyBody = body.get("replyBody");
         return ResponseEntity.ok(ApiResponse.ok(communicationService.replyToMessage(schoolId, id, replyBody)));
     }
@@ -133,7 +160,19 @@ public class CommunicationController {
     @PutMapping("/messages/{id}/close")
     public ResponseEntity<ApiResponse<Message>> closeMessage(
             @PathVariable String schoolId,
-            @PathVariable String id) {
+            @PathVariable String id,
+            Authentication auth) {
+        requireStaff(auth, "close");
         return ResponseEntity.ok(ApiResponse.ok(communicationService.closeMessage(schoolId, id)));
+    }
+
+    private void requireStaff(Authentication auth, String action) {
+        if ("PARENT".equals(roleOf(auth))) {
+            throw new ForbiddenException("Only school staff can " + action + " a message");
+        }
+    }
+
+    private String currentEmail(Authentication auth) {
+        return userRepository.findById(auth.getName()).map(AppUser::getEmail).orElse(null);
     }
 }
