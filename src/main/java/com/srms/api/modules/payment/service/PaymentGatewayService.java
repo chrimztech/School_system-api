@@ -200,7 +200,8 @@ public class PaymentGatewayService {
         FeePayment payment = feePaymentRepository.findByReferenceNumber(referenceNo)
                 .orElseThrow(() -> new ResourceNotFoundException("Payment reference not found"));
         refreshIfPending(payment);
-        return new PaymentStatusView(payment.getStatus().name(), payment.getAmount(), payment.getStudentName(), payment.getReferenceNumber());
+        return new PaymentStatusView(payment.getStatus().name(), payment.getAmount(), payment.getStudentName(),
+                payment.getReferenceNumber(), payment.getStudentId(), payment.getSchoolId());
     }
 
     private void refreshIfPending(FeePayment payment) {

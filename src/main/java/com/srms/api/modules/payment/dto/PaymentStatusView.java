@@ -10,4 +10,6 @@ public class PaymentStatusView {
     private double amount;
     private String studentName;
     private String referenceNumber;
+    private String studentId;
+    private String schoolId;
 }
