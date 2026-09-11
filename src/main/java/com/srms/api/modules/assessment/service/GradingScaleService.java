@@ -22,28 +22,23 @@ public class GradingScaleService {
     private final SchoolRepository schoolRepository;
     private final ObjectMapper objectMapper;
 
-    // Matches the Examinations Council of Zambia's published School Certificate / GCE
-    // O-Level scale (see e.g. ECZ's 2025 School Certificate performance report) — each
-    // point-pair carries the official Upper/Lower distinction rather than a repeated bare
-    // descriptor, so a "2" doesn't just say the same "DISTINCTION" a "1" does.
+    // ECZ's Competency-Based Curriculum (CBC) grading scale, introduced with the 2023
+    // curriculum reform for Form 1-4 (ECSEOL Assessment Schemes, Ch. 30) — five competency
+    // levels rather than the pre-2023 nine-point scale, each reported as a label 1-5
+    // alongside the raw score on examination results and other assessment reports.
     public static List<GradingBandDto> zambia2023Defaults() {
         return List.of(
-                band(75, 100, "1", "UPPER DISTINCTION", 1),
-                band(70, 74, "2", "LOWER DISTINCTION", 2),
-                band(65, 69, "3", "UPPER MERIT", 3),
-                band(60, 64, "4", "LOWER MERIT", 4),
-                band(55, 59, "5", "UPPER CREDIT", 5),
-                band(50, 54, "6", "LOWER CREDIT", 6),
-                band(45, 49, "7", "UPPER SATISFACTORY", 7),
-                band(40, 44, "8", "LOWER SATISFACTORY", 8),
-                band(0, 39, "9", "UNSATISFACTORY", 9)
+                band(70, 100, "1", "OUTSTANDING", 1),
+                band(60, 69, "2", "ADVANCED", 2),
+                band(50, 59, "3", "BASIC", 3),
+                band(40, 49, "4", "SATISFACTORY", 4),
+                band(0, 39, "5", "UNSATISFACTORY", 5)
         );
     }
 
-    // Pre-2023-curriculum descriptors — no Upper/Lower split within a point-pair. This is
-    // what zambia2023Defaults() itself read as before ECZ's Upper/Lower wording was applied
-    // there for Form 1-4; a transitional-cohort legacy Grade 7-12 student finishes under
-    // this same scale they started with, not the newer Form wording.
+    // Pre-2023-curriculum nine-point scale (Distinction/Merit/Credit/Satisfactory/
+    // Unsatisfactory). A transitional-cohort legacy Grade 7-12 student finishes under this
+    // same scale they started with, not the newer Form 1-4 CBC scale.
     public static List<GradingBandDto> zambiaLegacyDefaults() {
         return List.of(
                 band(75, 100, "1", "DISTINCTION", 1),
@@ -74,12 +69,31 @@ public class GradingScaleService {
         if (raw == null || raw.isBlank()) return zambia2023Defaults();
         try {
             List<GradingBandDto> bands = objectMapper.readValue(raw, new TypeReference<List<GradingBandDto>>() {});
-            return validateAndSort(bands);
+            List<GradingBandDto> validated = validateAndSort(bands);
+            return isFormerCurrentDefault(validated) ? zambia2023Defaults() : validated;
         } catch (BusinessException exception) {
             throw exception;
         } catch (Exception exception) {
             return zambia2023Defaults();
         }
+    }
+
+    /** Transparently upgrades the pre-2023 nine-point scale to the CBC scale for any school
+     * that saved it as an explicit customization while it was still the "current" default —
+     * a school that never touched this setting already gets the new default for free via the
+     * blank-JSON branch above; this covers the ones that have a literal old default on file. */
+    private boolean isFormerCurrentDefault(List<GradingBandDto> bands) {
+        int[][] ranges = {
+                {75, 100}, {70, 74}, {65, 69}, {60, 64}, {55, 59},
+                {50, 54}, {45, 49}, {40, 44}, {0, 39}
+        };
+        if (bands.size() != ranges.length) return false;
+        for (int i = 0; i < ranges.length; i++) {
+            GradingBandDto band = bands.get(i);
+            if (band.getMin() != ranges[i][0] || band.getMax() != ranges[i][1]
+                    || !String.valueOf(i + 1).equals(band.getGrade())) return false;
+        }
+        return true;
     }
 
     @Cacheable(value = CacheConfig.GRADING_BANDS, key = "'legacy:' + #schoolId")

@@ -13,33 +13,24 @@ class GradingScaleServiceTest {
     private final List<GradingBandDto> bands = GradingScaleService.zambia2023Defaults();
 
     @Test
-    void mapsEveryBoundaryToTheZambia2023AchievementGrade() {
+    void mapsEveryBoundaryToTheCbcCompetencyLevel() {
         assertGrade(100, "1");
-        assertGrade(75, "1");
-        assertGrade(74.99, "2");
-        assertGrade(74, "2");
-        assertGrade(70, "2");
-        assertGrade(69.5, "3");
-        assertGrade(69, "3");
-        assertGrade(65, "3");
-        assertGrade(64, "4");
-        assertGrade(60, "4");
-        assertGrade(59, "5");
-        assertGrade(55, "5");
-        assertGrade(54, "6");
-        assertGrade(50, "6");
-        assertGrade(49, "7");
-        assertGrade(45, "7");
-        assertGrade(44, "8");
-        assertGrade(40, "8");
-        assertGrade(39, "9");
-        assertGrade(0, "9");
+        assertGrade(70, "1");
+        assertGrade(69.5, "2");
+        assertGrade(69, "2");
+        assertGrade(60, "2");
+        assertGrade(59, "3");
+        assertGrade(50, "3");
+        assertGrade(49, "4");
+        assertGrade(40, "4");
+        assertGrade(39, "5");
+        assertGrade(0, "5");
     }
 
     @Test
     void preservesDescriptionsAndPoints() {
         GradingBandDto band = service.evaluate(bands, 75);
-        assertEquals("UPPER DISTINCTION", band.getDescription());
+        assertEquals("OUTSTANDING", band.getDescription());
         assertEquals(1, band.getPoints());
     }
 
