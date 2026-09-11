@@ -119,8 +119,12 @@ public class CommunicationController {
             Authentication auth) {
         if ("PARENT".equals(roleOf(auth))) {
             String email = currentEmail(auth);
+            // A parent's own thread includes messages they raised (senderEmail) AND messages
+            // staff initiated to them directly (recipientEmail) — without the latter, staff
+            // messaging a parent first (rather than replying to an existing ticket) would be
+            // invisible to that parent forever.
             List<Message> mine = communicationService.getMessages(schoolId).stream()
-                    .filter(m -> email != null && email.equalsIgnoreCase(m.getSenderEmail()))
+                    .filter(m -> email != null && (email.equalsIgnoreCase(m.getSenderEmail()) || email.equalsIgnoreCase(m.getRecipientEmail())))
                     .toList();
             return ResponseEntity.ok(ApiResponse.ok(mine));
         }
