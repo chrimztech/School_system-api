@@ -7,6 +7,7 @@ import com.srms.api.modules.audit.entity.AuditEvent;
 import com.srms.api.modules.audit.repository.AuditEventRepository;
 import com.srms.api.modules.auth.dto.AuthResponse;
 import com.srms.api.modules.auth.dto.LoginRequest;
+import com.srms.api.modules.auth.dto.PhoneNormalizationResult;
 import com.srms.api.modules.auth.dto.UserDto;
 import com.srms.api.modules.auth.entity.AppUser;
 import com.srms.api.modules.auth.repository.UserRepository;
@@ -19,8 +20,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.security.SecureRandom;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -208,6 +211,51 @@ public class AuthService {
         if (notifyEmail != null) user.setNotifyEmail(notifyEmail);
         if (notifySms != null) user.setNotifySms(notifySms);
         return toDto(userRepository.save(user));
+    }
+
+    /**
+     * One-time repair for accounts created before phone normalization existed on the write
+     * path (createUserEntity/updateUser both normalize now, but a row saved before that landed
+     * — or written by some other path — can still hold a raw, un-normalized value like
+     * "+260 977 000 000" or "0977000000"). Login normalizes whatever the user typed before
+     * looking it up (see login()/normalizePhone), so a stored value that isn't already in that
+     * same canonical form can never be found by any input, in any format, at all — the account
+     * is effectively locked out of phone login until this runs. Safe to run repeatedly: skips
+     * anything already canonical, and skips (reporting, not crashing) any pair that would
+     * collide under app_users' unique phone constraint once normalized to the same value —
+     * that's the pre-existing "two accounts share one phone" case login() already handles at
+     * sign-in time by asking the user to use email instead, not something this should silently
+     * resolve by picking a winner.
+     */
+    public PhoneNormalizationResult normalizeStoredPhones() {
+        List<AppUser> all = userRepository.findAll();
+        Set<String> canonicalPhonesInUse = new HashSet<>();
+        for (AppUser u : all) {
+            if (u.getPhone() != null && !u.getPhone().isBlank()) {
+                canonicalPhonesInUse.add(u.getPhone());
+            }
+        }
+
+        int scanned = 0;
+        int updated = 0;
+        List<String> conflicts = new ArrayList<>();
+        for (AppUser u : all) {
+            String raw = u.getPhone();
+            if (raw == null || raw.isBlank()) continue;
+            scanned++;
+            String normalized = PhoneUtils.normalize(raw);
+            if (normalized.equals(raw)) continue;
+            if (canonicalPhonesInUse.contains(normalized)) {
+                conflicts.add(u.getId() + " (" + raw + " -> " + normalized + " already used by another account)");
+                continue;
+            }
+            canonicalPhonesInUse.remove(raw);
+            canonicalPhonesInUse.add(normalized);
+            u.setPhone(normalized);
+            userRepository.save(u);
+            updated++;
+        }
+        return new PhoneNormalizationResult(scanned, updated, conflicts);
     }
 
     public void changePassword(String userId, String currentPassword, String newPassword) {

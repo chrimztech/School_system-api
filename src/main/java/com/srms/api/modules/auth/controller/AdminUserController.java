@@ -1,6 +1,7 @@
 package com.srms.api.modules.auth.controller;
 
 import com.srms.api.common.ApiResponse;
+import com.srms.api.modules.auth.dto.PhoneNormalizationResult;
 import com.srms.api.modules.auth.dto.UserDto;
 import com.srms.api.modules.auth.entity.AppUser;
 import com.srms.api.modules.auth.service.AuthService;
@@ -65,5 +66,14 @@ public class AdminUserController {
         RoleGuard.requireSuperAdmin(auth);
         authService.deleteUserPermanently(auth.getName(), userId);
         return ResponseEntity.ok(ApiResponse.ok("User deleted", null));
+    }
+
+    // One-time repair for accounts whose phone was stored before write-path normalization
+    // existed — see AuthService.normalizeStoredPhones's javadoc. Scans every school, so
+    // super-admin-only rather than the per-school pattern the other one-time repairs use.
+    @PostMapping("/normalize-phones")
+    public ResponseEntity<ApiResponse<PhoneNormalizationResult>> normalizePhones(Authentication auth) {
+        RoleGuard.requireSuperAdmin(auth);
+        return ResponseEntity.ok(ApiResponse.ok(authService.normalizeStoredPhones()));
     }
 }
