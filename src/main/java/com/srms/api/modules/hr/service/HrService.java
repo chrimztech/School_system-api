@@ -38,17 +38,29 @@ public class HrService {
         return staffRepository.save(record);
     }
 
+    // Null-safe partial update, matching every other update() in this codebase (e.g.
+    // FeeService.updateFeeStructure) — this previously overwrote every field unconditionally,
+    // so a caller that only knows about a subset of fields (the frontend's edit form doesn't
+    // collect qualifications, bank details, TPIN, etc.) would silently null them out.
     public StaffRecord updateStaff(String schoolId, String id, StaffRecord updated) {
         StaffRecord record = getStaff(schoolId, id);
-        record.setName(updated.getName());
-        record.setGender(updated.getGender());
-        record.setNationalId(updated.getNationalId());
-        record.setDepartment(updated.getDepartment());
-        record.setPosition(updated.getPosition());
-        record.setQualifications(updated.getQualifications());
-        record.setContractType(updated.getContractType());
-        record.setSalary(updated.getSalary());
-        record.setStatus(updated.getStatus());
+        if (updated.getName() != null) record.setName(updated.getName());
+        if (updated.getGender() != null) record.setGender(updated.getGender());
+        if (updated.getNationalId() != null) record.setNationalId(updated.getNationalId());
+        if (updated.getDepartment() != null) record.setDepartment(updated.getDepartment());
+        if (updated.getPosition() != null) record.setPosition(updated.getPosition());
+        if (updated.getQualifications() != null) record.setQualifications(updated.getQualifications());
+        if (updated.getContractType() != null) record.setContractType(updated.getContractType());
+        if (updated.getHireDate() != null) record.setHireDate(updated.getHireDate());
+        if (updated.getSalary() != null) record.setSalary(updated.getSalary());
+        if (updated.getStatus() != null) record.setStatus(updated.getStatus());
+        if (updated.getTpin() != null) record.setTpin(updated.getTpin());
+        if (updated.getPaymentMethod() != null) record.setPaymentMethod(updated.getPaymentMethod());
+        if (updated.getNapsaEnrolled() != null) record.setNapsaEnrolled(updated.getNapsaEnrolled());
+        if (updated.getBankName() != null) record.setBankName(updated.getBankName());
+        if (updated.getAccountNumber() != null) record.setAccountNumber(updated.getAccountNumber());
+        if (updated.getEmergencyContactName() != null) record.setEmergencyContactName(updated.getEmergencyContactName());
+        if (updated.getEmergencyContactPhone() != null) record.setEmergencyContactPhone(updated.getEmergencyContactPhone());
         return staffRepository.save(record);
     }
 
