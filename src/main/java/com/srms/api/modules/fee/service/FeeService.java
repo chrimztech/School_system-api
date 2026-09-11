@@ -144,12 +144,16 @@ public class FeeService {
      * Re-derives every active student's fee balance from scratch: what they currently owe per
      * computeInitialBalance minus every completed payment already on file. Exists because
      * feeBalance is a snapshot taken once at student creation and only ever adjusted by
-     * individual payments after that — it is never automatically revisited, so a school that
-     * imports its roster before setting up fee structures (a completely natural order to do
-     * things in) ends up with every pupil showing "cleared" at K0 forever, even though nobody
-     * has actually paid anything. This is the admin-triggered fix for that: safe to run
-     * repeatedly, and never discards a payment already recorded — it only recomputes what's
-     * owed and subtracts what's actually been paid, exactly as computeInitialBalance +
+     * individual payments after that — it is never automatically revisited on its own. Every
+     * fee-structure/levy create, update, and delete now calls this automatically, so a newly
+     * defined fee is applied to the whole roster immediately without anyone needing to know a
+     * manual step exists (a new student is already billed correctly at creation time via
+     * billInitialTermFee, whichever order structures and roster happen to be set up in). It
+     * stays public and is still exposed as its own "Recalculate balances" action for cases
+     * that change what a student owes without touching a fee structure at all — most notably
+     * the school advancing to a new term/year, which has no hook here yet. Safe to run repeatedly,
+     * and never discards a payment already recorded — it only recomputes what's owed and
+     * subtracts what's actually been paid, exactly as computeInitialBalance +
      * applyToStudentBalance would have arrived at if the fee structure had existed first.
      */
     public FeeBalanceRecalcResult recalculateBalances(String schoolId) {
@@ -242,7 +246,12 @@ public class FeeService {
         return trimmed.equals(String.valueOf(grade));
     }
     public List<FeeStructure> getFeeStructures(String schoolId) { return structureRepository.findBySchoolIdOrderByAcademicYearDescGradeFromAscTermAsc(schoolId); }
-    public FeeStructure createFeeStructure(String schoolId, FeeStructure fs) { fs.setSchoolId(schoolId); return structureRepository.save(fs); }
+    public FeeStructure createFeeStructure(String schoolId, FeeStructure fs) {
+        fs.setSchoolId(schoolId);
+        FeeStructure saved = structureRepository.save(fs);
+        recalculateBalances(schoolId);
+        return saved;
+    }
     public FeeStructure updateFeeStructure(String schoolId, String id, FeeStructure patch) {
         FeeStructure structure = structureRepository.findById(id).filter(item -> item.getSchoolId().equals(schoolId)).orElseThrow();
         structure.setActive(patch.isActive());
@@ -261,15 +270,23 @@ public class FeeService {
         if (patch.getTerm() != null) structure.setTerm(patch.getTerm());
         if (patch.getAcademicYear() != 0) structure.setAcademicYear(patch.getAcademicYear());
         if (patch.getBoardingStatus() != null) structure.setBoardingStatus(patch.getBoardingStatus());
-        return structureRepository.save(structure);
+        FeeStructure saved = structureRepository.save(structure);
+        recalculateBalances(schoolId);
+        return saved;
     }
     public void deleteFeeStructure(String schoolId, String id) {
         FeeStructure structure = structureRepository.findById(id).filter(item -> item.getSchoolId().equals(schoolId)).orElseThrow();
         structureRepository.delete(structure);
+        recalculateBalances(schoolId);
     }
 
     public List<FeeLevy> getLevies(String schoolId) { return levyRepository.findBySchoolIdOrderByCreatedAtDesc(schoolId); }
-    public FeeLevy createLevy(String schoolId, FeeLevy levy) { levy.setSchoolId(schoolId); return levyRepository.save(levy); }
+    public FeeLevy createLevy(String schoolId, FeeLevy levy) {
+        levy.setSchoolId(schoolId);
+        FeeLevy saved = levyRepository.save(levy);
+        recalculateBalances(schoolId);
+        return saved;
+    }
     public FeeLevy updateLevy(String schoolId, String id, FeeLevy patch) {
         FeeLevy levy = levyRepository.findById(id).filter(item -> item.getSchoolId().equals(schoolId)).orElseThrow();
         if (patch.getName() != null) levy.setName(patch.getName());
@@ -279,11 +296,14 @@ public class FeeService {
         if (patch.getDescription() != null) levy.setDescription(patch.getDescription());
         if (patch.getApplicableTo() != null) levy.setApplicableTo(patch.getApplicableTo());
         if (patch.getEffectiveFrom() != null) levy.setEffectiveFrom(patch.getEffectiveFrom());
-        return levyRepository.save(levy);
+        FeeLevy saved = levyRepository.save(levy);
+        recalculateBalances(schoolId);
+        return saved;
     }
     public void deleteLevy(String schoolId, String id) {
         FeeLevy levy = levyRepository.findById(id).filter(item -> item.getSchoolId().equals(schoolId)).orElseThrow();
         levyRepository.delete(levy);
+        recalculateBalances(schoolId);
     }
 
     public List<FeeDiscountRule> getDiscountRules(String schoolId) { return discountRuleRepository.findBySchoolIdOrderByCreatedAtDesc(schoolId); }
