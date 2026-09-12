@@ -5,8 +5,12 @@ import com.srms.api.exception.ForbiddenException;
 import com.srms.api.modules.academic.dto.GradeOffsetFixResult;
 import com.srms.api.modules.academic.entity.*;
 import com.srms.api.modules.academic.service.AcademicService;
+import com.srms.api.modules.academic.repository.DepartmentRepository;
+import com.srms.api.modules.academic.repository.SubjectRepository;
 import com.srms.api.modules.auth.entity.AppUser;
 import com.srms.api.modules.auth.repository.UserRepository;
+import com.srms.api.modules.teacher.entity.Teacher;
+import com.srms.api.modules.teacher.repository.TeacherRepository;
 import com.srms.api.security.RoleGuard;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -16,6 +20,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/schools/{schoolId}/classes")
@@ -23,6 +28,9 @@ import java.util.List;
 public class ClassController {
     private final AcademicService academicService;
     private final UserRepository userRepository;
+    private final TeacherRepository teacherRepository;
+    private final SubjectRepository subjectRepository;
+    private final DepartmentRepository departmentRepository;
 
     private static String roleOf(Authentication auth) {
         return auth.getAuthorities().stream()
@@ -125,8 +133,40 @@ public class ClassController {
         return ResponseEntity.ok(ApiResponse.ok(academicService.getClassTeachers(classId, schoolId)));
     }
     @PostMapping("/{classId}/teachers")
-    public ResponseEntity<ApiResponse<TeacherClassSubject>> assignTeacher(@PathVariable String schoolId, @PathVariable String classId, @RequestBody TeacherClassSubject dto) {
+    public ResponseEntity<ApiResponse<TeacherClassSubject>> assignTeacher(@PathVariable String schoolId, @PathVariable String classId, @RequestBody TeacherClassSubject dto, Authentication auth) {
+        assertCanAssignTeacher(schoolId, dto.getSubjectName(), auth);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(academicService.assignTeacher(classId, schoolId, dto)));
+    }
+
+    /** School leadership (super admin / school admin / principal / deputy head) may assign a
+     * teacher to any subject in any department — this is what makes it possible for one teacher
+     * to carry subjects from more than one department. An HOD may still assign teachers within
+     * their own department only, matching how the Departments page already scopes everything
+     * else an HOD can see and do; every other role has no legitimate reason to create these
+     * assignments at all (mirrors "teachers" being read-only for TEACHER/HOD and false for
+     * everyone else in the frontend's own access matrix). Nothing enforced this server-side
+     * before — the endpoint accepted any authenticated caller's assignment unconditionally. */
+    private void assertCanAssignTeacher(String schoolId, String subjectName, Authentication auth) {
+        String role = RoleGuard.roleOf(auth);
+        if (RoleGuard.isSuperAdmin(auth) || Set.of("SCHOOL_ADMIN", "PRINCIPAL", "DEPUTY_HEAD").contains(role)) {
+            return;
+        }
+        if (!"HOD".equals(role)) {
+            throw new ForbiddenException("Your role cannot assign teachers to classes");
+        }
+        AppUser user = userRepository.findById(auth.getName())
+                .orElseThrow(() -> new ForbiddenException("Authenticated user was not found"));
+        Teacher hodTeacher = user.getEmail() == null ? null
+                : teacherRepository.findByEmailIgnoreCaseAndSchoolId(user.getEmail(), schoolId).orElse(null);
+        String subjectDept = subjectName == null ? null : subjectRepository.findBySchoolIdAndActiveTrue(schoolId).stream()
+                .filter(s -> subjectName.trim().equalsIgnoreCase(s.getName() == null ? "" : s.getName().trim()))
+                .findFirst().map(Subject::getDepartment).orElse(null);
+        boolean headsThatDepartment = hodTeacher != null && subjectDept != null
+                && departmentRepository.findBySchoolIdAndHeadTeacherId(schoolId, hodTeacher.getId()).stream()
+                        .anyMatch(d -> subjectDept.equalsIgnoreCase(d.getName()));
+        if (!headsThatDepartment) {
+            throw new ForbiddenException("You can only assign teachers within the department you head");
+        }
     }
     @DeleteMapping("/{classId}/teachers/{assignmentId}")
     public ResponseEntity<ApiResponse<Void>> removeTeacher(@PathVariable String schoolId, @PathVariable String classId, @PathVariable String assignmentId) {
