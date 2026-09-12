@@ -65,6 +65,18 @@ public class BackupService {
     // school_id-column walk below and has to be captured/restored separately.
     private static final String SCHOOL_TABLE = "schools";
 
+    /** Sentinel Backup.schoolId for a whole-system snapshot's platform-wide-tables entry —
+     * everything that has no school_id column at all (app_users, platform_workspace,
+     * platform_integration_configs, ...), captured once per full-system backup rather than
+     * once per school. Reuses the entire existing Backup entity/repository/download/delete
+     * machinery; schoolId here is a plain unconstrained string column, not a real school. */
+    public static final String PLATFORM_SCOPE = "__PLATFORM__";
+
+    // Excluded from the platform-tables walk for the same reasons EXCLUDED_TABLES excludes them
+    // from the per-school walk, plus flyway's own bookkeeping table (never meaningful to
+    // snapshot/restore) and every school_id-scoped table (already captured per-school).
+    private static final Set<String> PLATFORM_EXTRA_EXCLUDED = Set.of("flyway_schema_history");
+
     private final BackupRepository backupRepository;
     private final SchoolRepository schoolRepository;
     private final JdbcTemplate jdbcTemplate;
@@ -210,32 +222,42 @@ public class BackupService {
             String table = entry.getKey();
             if (SCHOOL_TABLE.equals(table)) continue; // handled above — keyed by "id", not "school_id"
             if (!currentTenantTables.contains(table)) continue; // table renamed/dropped since this backup was taken
-            List<Map<String, Object>> rows = entry.getValue();
+            restoreTableRows(table, entry.getValue(), schoolId);
+        }
+    }
 
-            jdbcTemplate.update("DELETE FROM \"" + table + "\" WHERE school_id = ?", schoolId);
-            if (rows.isEmpty()) continue;
+    /** Deletes then re-inserts one table's rows from a backup dump. When forcedSchoolId is
+     * non-null (restoring one school's tenant-scoped table), only that school's rows are
+     * touched and "school_id" is always forced to the target rather than trusted from the
+     * file — an uploaded import isn't guaranteed to have come from this same schoolId, and
+     * inserting rows under a different tenant's id would leak data across schools. When null
+     * (restoring a platform-wide table that has no school_id column at all), the whole table
+     * is replaced. */
+    private void restoreTableRows(String table, List<Map<String, Object>> rows, String forcedSchoolId) {
+        if (forcedSchoolId != null) {
+            jdbcTemplate.update("DELETE FROM \"" + table + "\" WHERE school_id = ?", forcedSchoolId);
+        } else {
+            jdbcTemplate.update("DELETE FROM \"" + table + "\"");
+        }
+        if (rows.isEmpty()) return;
 
-            Map<String, Integer> currentColumns = tableColumnTypes(table);
-            for (Map<String, Object> row : rows) {
-                List<String> columns = new ArrayList<>();
-                List<Object> values = new ArrayList<>();
-                for (Map.Entry<String, Object> col : row.entrySet()) {
-                    Integer sqlType = currentColumns.get(col.getKey());
-                    if (sqlType == null) continue; // column dropped since backup
-                    columns.add(col.getKey());
-                    // Force to the target tenant rather than trusting the file's own value — an
-                    // uploaded import (unlike a same-tenant restore-by-id) isn't guaranteed to
-                    // have been exported from this same schoolId, and inserting rows under a
-                    // different tenant's id would leak data across schools.
-                    values.add("school_id".equals(col.getKey()) ? schoolId : coerceForColumn(col.getValue(), sqlType));
-                }
-                if (columns.isEmpty()) continue;
-                String placeholders = String.join(",", columns.stream().map(c -> "?").toList());
-                String columnList = columns.stream().map(c -> "\"" + c + "\"").reduce((a, b) -> a + "," + b).orElse("");
-                jdbcTemplate.update(
-                        "INSERT INTO \"" + table + "\" (" + columnList + ") VALUES (" + placeholders + ")",
-                        values.toArray());
+        Map<String, Integer> currentColumns = tableColumnTypes(table);
+        for (Map<String, Object> row : rows) {
+            List<String> columns = new ArrayList<>();
+            List<Object> values = new ArrayList<>();
+            for (Map.Entry<String, Object> col : row.entrySet()) {
+                Integer sqlType = currentColumns.get(col.getKey());
+                if (sqlType == null) continue; // column dropped since backup
+                columns.add(col.getKey());
+                values.add(forcedSchoolId != null && "school_id".equals(col.getKey())
+                        ? forcedSchoolId : coerceForColumn(col.getValue(), sqlType));
             }
+            if (columns.isEmpty()) continue;
+            String placeholders = String.join(",", columns.stream().map(c -> "?").toList());
+            String columnList = columns.stream().map(c -> "\"" + c + "\"").reduce((a, b) -> a + "," + b).orElse("");
+            jdbcTemplate.update(
+                    "INSERT INTO \"" + table + "\" (" + columnList + ") VALUES (" + placeholders + ")",
+                    values.toArray());
         }
     }
 
@@ -260,6 +282,10 @@ public class BackupService {
 
     public void delete(String schoolId, String backupId) {
         Backup backup = get(schoolId, backupId);
+        deleteInternal(backup);
+    }
+
+    private void deleteInternal(Backup backup) {
         if (backup.getFilePath() != null) {
             try {
                 Files.deleteIfExists(Paths.get(backup.getFilePath()));
@@ -268,6 +294,136 @@ public class BackupService {
             }
         }
         backupRepository.delete(backup);
+    }
+
+    // ── Platform-wide (System Backup) ──────────────────────────────────────────────────────
+    // Everything below operates across every school at once, or on the platform-scoped tables
+    // that have no school_id column at all — super-admin only, see PlatformBackupController.
+
+    /** Every backup across every school plus every platform-tables entry, newest first — the
+     * consolidated view the System Backup page needs instead of picking one school at a time. */
+    public List<Backup> listAll() {
+        return backupRepository.findAllByOrderByCreatedAtDesc();
+    }
+
+    public Backup getById(String backupId) {
+        return backupRepository.findById(backupId)
+                .orElseThrow(() -> new ResourceNotFoundException("Backup", backupId));
+    }
+
+    public byte[] readFileById(String backupId) {
+        Backup backup = getById(backupId);
+        if (backup.getStatus() != Backup.Status.COMPLETED || backup.getFilePath() == null) {
+            throw new BusinessException("This backup did not complete successfully and has no file to download");
+        }
+        try {
+            return Files.readAllBytes(Paths.get(backup.getFilePath()));
+        } catch (IOException e) {
+            throw new BusinessException("Backup file is missing from storage: " + e.getMessage());
+        }
+    }
+
+    public void deleteById(String backupId) {
+        deleteInternal(getById(backupId));
+    }
+
+    /** One backup per active school (reusing createBackup exactly as-is) plus one additional
+     * entry for every platform-wide table — a school that fails doesn't stop the others; its
+     * own backup row just ends up FAILED with the error recorded, same as any single-school
+     * backup failure would. */
+    public List<Backup> createFullSystemBackup(String actorName, Backup.TriggeredBy triggeredBy) {
+        List<Backup> created = new ArrayList<>();
+        for (School school : schoolRepository.findByActiveTrue()) {
+            try {
+                created.add(createBackup(school.getId(), actorName, triggeredBy));
+            } catch (Exception e) {
+                log.error("Full-system backup: school {} failed", school.getId(), e);
+            }
+        }
+        created.add(createPlatformTablesBackup(actorName, triggeredBy));
+        return created;
+    }
+
+    public Backup createPlatformTablesBackup(String actorName, Backup.TriggeredBy triggeredBy) {
+        Backup backup = new Backup();
+        backup.setSchoolId(PLATFORM_SCOPE);
+        backup.setStatus(Backup.Status.IN_PROGRESS);
+        backup.setTriggeredBy(triggeredBy);
+        backup.setCreatedBy(actorName);
+        backup = backupRepository.save(backup);
+
+        try {
+            List<String> tables = platformTableNames();
+            Map<String, List<Map<String, Object>>> dump = new LinkedHashMap<>();
+            long rowCount = 0;
+            for (String table : tables) {
+                List<Map<String, Object>> rows = jdbcTemplate.queryForList("SELECT * FROM \"" + table + "\"");
+                dump.put(table, rows);
+                rowCount += rows.size();
+            }
+
+            Path dir = Paths.get(storageDir, PLATFORM_SCOPE);
+            Files.createDirectories(dir);
+            String fileName = FILE_STAMP.format(LocalDateTime.now()) + "_" + backup.getId() + ".json.gz";
+            Path file = dir.resolve(fileName);
+            try (var out = Files.newOutputStream(file); var gzip = new GZIPOutputStream(out)) {
+                objectMapper.writeValue(gzip, dump);
+            }
+
+            backup.setFileName(fileName);
+            backup.setFilePath(file.toAbsolutePath().toString());
+            backup.setSizeBytes(Files.size(file));
+            backup.setTableCount(tables.size());
+            backup.setRowCount(rowCount);
+            backup.setStatus(Backup.Status.COMPLETED);
+            backup.setCompletedAt(LocalDateTime.now());
+            return backupRepository.save(backup);
+        } catch (Exception e) {
+            log.error("Platform-tables backup failed", e);
+            backup.setStatus(Backup.Status.FAILED);
+            backup.setErrorMessage(e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage());
+            backup.setCompletedAt(LocalDateTime.now());
+            backupRepository.save(backup);
+            throw new BusinessException("Platform-tables backup failed: " + (e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage()));
+        }
+    }
+
+    @Transactional
+    public void restorePlatformTables(String backupId) {
+        Backup backup = getById(backupId);
+        if (!PLATFORM_SCOPE.equals(backup.getSchoolId())) {
+            throw new BusinessException("This backup is not a platform-tables snapshot");
+        }
+        if (backup.getStatus() != Backup.Status.COMPLETED || backup.getFilePath() == null) {
+            throw new BusinessException("Only a completed backup can be restored");
+        }
+        Map<String, List<Map<String, Object>>> dump;
+        try (InputStream in = Files.newInputStream(Paths.get(backup.getFilePath()));
+             GZIPInputStream gzip = new GZIPInputStream(in)) {
+            dump = objectMapper.readValue(gzip, new TypeReference<>() {});
+        } catch (IOException e) {
+            throw new BusinessException("Could not read backup file: " + e.getMessage());
+        }
+        List<String> currentPlatformTables = platformTableNames();
+        for (Map.Entry<String, List<Map<String, Object>>> entry : dump.entrySet()) {
+            if (!currentPlatformTables.contains(entry.getKey())) continue; // table renamed/dropped since this backup was taken
+            restoreTableRows(entry.getKey(), entry.getValue(), null);
+        }
+    }
+
+    /** Every base table in the public schema that does NOT carry a school_id column — the
+     * inverse of tenantTableNames() — excluding this module's own bookkeeping table and
+     * Flyway's migration history, neither of which is ever meaningful to snapshot/restore. */
+    private List<String> platformTableNames() {
+        List<String> allTables = jdbcTemplate.queryForList(
+                "SELECT table_name FROM information_schema.tables "
+                        + "WHERE table_schema = 'public' AND table_type = 'BASE TABLE' ORDER BY table_name",
+                String.class);
+        Set<String> schoolScoped = Set.copyOf(tenantTableNames());
+        return allTables.stream()
+                .filter(t -> !schoolScoped.contains(t))
+                .filter(t -> !EXCLUDED_TABLES.contains(t) && !PLATFORM_EXTRA_EXCLUDED.contains(t))
+                .toList();
     }
 
     /**

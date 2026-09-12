@@ -20,4 +20,8 @@ public interface BackupRepository extends JpaRepository<Backup, String> {
     // here — see BackupService.runScheduledBackups) — this check is what stops that from
     // producing one duplicate backup per school per extra instance.
     boolean existsBySchoolIdAndTriggeredByAndCreatedAtAfter(String schoolId, Backup.TriggeredBy triggeredBy, LocalDateTime after);
+
+    /** Platform-wide view across every school (and the platform-tables scope) — used by the
+     * System Backup page, not any per-school one. */
+    List<Backup> findAllByOrderByCreatedAtDesc();
 }
