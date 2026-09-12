@@ -4,6 +4,7 @@ import com.srms.api.common.ApiResponse;
 import com.srms.api.common.GuardianNames;
 import com.srms.api.common.PhoneUtils;
 import com.srms.api.exception.ForbiddenException;
+import com.srms.api.modules.assessment.dto.HistoricalResultDto;
 import com.srms.api.modules.assessment.entity.Assessment;
 import com.srms.api.modules.assessment.entity.PublishedTermGrade;
 import com.srms.api.modules.assessment.entity.TermGrade;
@@ -13,7 +14,9 @@ import com.srms.api.modules.auth.repository.UserRepository;
 import com.srms.api.modules.student.entity.Student;
 import com.srms.api.modules.student.repository.StudentRepository;
 import com.srms.api.security.ModuleAccessService;
+import com.srms.api.security.RoleGuard;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -53,6 +56,20 @@ public class TermGradeController {
         List<TermGrade> result = termGradeService.compute(schoolId, body.get("classId"), body.get("subjectName"),
                 body.get("term"), body.get("academicYear"));
         return ResponseEntity.ok(ApiResponse.ok(result));
+    }
+
+    // Bypasses the live capture/verify/publish pipeline entirely — see
+    // TermGradeService.backfillResult's javadoc for why that pipeline can never produce these
+    // rows. Restricted to school-account-manager roles: this writes directly into what every
+    // other reader treats as an already-verified, already-published result, skipping the HOD
+    // verification and Careers Guidance sign-off a live result normally goes through.
+    @PostMapping("/backfill")
+    public ResponseEntity<ApiResponse<List<PublishedTermGrade>>> backfill(
+            @PathVariable String schoolId, @RequestBody List<HistoricalResultDto> rows, Authentication auth) {
+        assertActorSchool(schoolId, auth);
+        RoleGuard.requireSchoolAccountManager(auth);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.created(termGradeService.backfillResults(schoolId, rows, auth.getName())));
     }
 
     @GetMapping

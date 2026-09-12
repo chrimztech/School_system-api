@@ -9,7 +9,9 @@ import com.srms.api.modules.academic.repository.SchoolClassRepository;
 import com.srms.api.modules.academic.repository.TeacherClassSubjectRepository;
 import com.srms.api.modules.teacher.dto.TeacherDto;
 import com.srms.api.modules.teacher.entity.Teacher;
+import com.srms.api.modules.teacher.entity.TeacherPhotoAsset;
 import com.srms.api.modules.teacher.entity.TeacherSignatureAsset;
+import com.srms.api.modules.teacher.repository.TeacherPhotoAssetRepository;
 import com.srms.api.modules.teacher.repository.TeacherRepository;
 import com.srms.api.modules.teacher.repository.TeacherSignatureAssetRepository;
 import com.srms.api.modules.timetable.repository.TimetableRepository;
@@ -18,11 +20,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 @Service
 @RequiredArgsConstructor
 public class TeacherService {
     private final TeacherRepository teacherRepository;
     private final TeacherSignatureAssetRepository signatureAssetRepository;
+    private final TeacherPhotoAssetRepository photoAssetRepository;
     private final TeacherClassSubjectRepository teacherClassSubjectRepository;
     private final TimetableRepository timetableRepository;
     private final SchoolClassRepository schoolClassRepository;
@@ -37,6 +41,7 @@ public class TeacherService {
         Teacher t = teacherRepository.findByIdAndSchoolId(id, schoolId)
                 .orElseThrow(() -> new ResourceNotFoundException("Teacher", id));
         signatureAssetRepository.findById(id).ifPresent(asset -> t.setSignatureUrl(asset.getSignatureUrl()));
+        photoAssetRepository.findById(id).ifPresent(asset -> t.setPhotoUrl(asset.getPhotoUrl()));
         return t;
     }
     public Teacher create(String schoolId, TeacherDto dto) {
@@ -49,10 +54,12 @@ public class TeacherService {
         mapDto(t, dto);
         Teacher saved = teacherRepository.save(t);
         saveSignatureIfProvided(saved.getId(), dto.getSignatureUrl());
+        savePhotoIfProvided(saved.getId(), dto.getPhotoUrl());
         // save()'s returned instance can be a JPA merge() copy rather than the same object `t`
         // was — @Transient fields aren't guaranteed to survive that copy, so set it explicitly
         // from the known dto value rather than trusting it carried over.
         if (dto.getSignatureUrl() != null) saved.setSignatureUrl(dto.getSignatureUrl());
+        if (dto.getPhotoUrl() != null) saved.setPhotoUrl(dto.getPhotoUrl());
         return saved;
     }
 
@@ -62,6 +69,14 @@ public class TeacherService {
                 .orElse(TeacherSignatureAsset.builder().teacherId(teacherId).build());
         asset.setSignatureUrl(signatureUrl);
         signatureAssetRepository.save(asset);
+    }
+
+    private void savePhotoIfProvided(String teacherId, String photoUrl) {
+        if (photoUrl == null) return;
+        TeacherPhotoAsset asset = photoAssetRepository.findById(teacherId)
+                .orElse(TeacherPhotoAsset.builder().teacherId(teacherId).build());
+        asset.setPhotoUrl(photoUrl);
+        photoAssetRepository.save(asset);
     }
 
     /**
@@ -99,9 +114,37 @@ public class TeacherService {
         mapDto(t, dto);
         Teacher saved = teacherRepository.save(t);
         saveSignatureIfProvided(id, dto.getSignatureUrl());
+        savePhotoIfProvided(id, dto.getPhotoUrl());
         if (dto.getSignatureUrl() != null) saved.setSignatureUrl(dto.getSignatureUrl());
+        if (dto.getPhotoUrl() != null) saved.setPhotoUrl(dto.getPhotoUrl());
         return saved;
     }
+    /**
+     * Self-service profile edit — deliberately narrower than the admin-only update() above,
+     * same reasoning as AuthService.updateOwnProfile: a teacher may update their own contact
+     * details, portrait, and signature, but never their salary, bank details, employment
+     * status, contract terms, or which department/subject they're assigned to. Those stay
+     * admin-only via the ordinary PUT /teachers/{id}.
+     */
+    public Teacher updateOwnProfile(String id, String schoolId, Map<String, String> fields) {
+        Teacher t = findById(id, schoolId);
+        if (fields.containsKey("phone")) t.setPhone(fields.get("phone"));
+        if (fields.containsKey("qualification")) t.setQualification(fields.get("qualification"));
+        if (fields.containsKey("address")) t.setAddress(fields.get("address"));
+        if (fields.containsKey("emergencyContactName")) t.setEmergencyContactName(fields.get("emergencyContactName"));
+        if (fields.containsKey("emergencyContactPhone")) t.setEmergencyContactPhone(fields.get("emergencyContactPhone"));
+        Teacher saved = teacherRepository.save(t);
+        if (fields.containsKey("photoUrl")) {
+            savePhotoIfProvided(id, fields.get("photoUrl"));
+            saved.setPhotoUrl(fields.get("photoUrl"));
+        }
+        if (fields.containsKey("signatureUrl")) {
+            saveSignatureIfProvided(id, fields.get("signatureUrl"));
+            saved.setSignatureUrl(fields.get("signatureUrl"));
+        }
+        return saved;
+    }
+
     public void delete(String id, String schoolId) {
         Teacher t = findById(id, schoolId); t.setStatus(Teacher.TeacherStatus.inactive); teacherRepository.save(t);
     }

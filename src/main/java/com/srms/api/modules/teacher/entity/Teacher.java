@@ -51,5 +51,9 @@ public class Teacher extends BaseEntity {
     @Transient
     private String signatureUrl;
 
+    // Same reasoning and split-table pattern as signatureUrl above, see TeacherPhotoAsset.
+    @Transient
+    private String photoUrl;
+
     public enum TeacherStatus { active, inactive, on_leave, suspended, terminated }
 }

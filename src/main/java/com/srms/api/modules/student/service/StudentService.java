@@ -166,9 +166,8 @@ public class StudentService {
         return student;
     }
 
-    /** No DTO field currently sets a pupil's photo (there's no upload endpoint yet), but this
-     * keeps create/update consistent with TeacherService's saveSignatureIfProvided pattern for
-     * whenever that lands, rather than needing this wiring added retroactively then too. */
+    /** Same split-table pattern as TeacherService's saveSignatureIfProvided — set via the
+     * ordinary PUT /students/{id} (StudentDto.photoUrl), edited from the pupil profile page. */
     private void savePhotoIfProvided(String studentId, String photoUrl) {
         if (photoUrl == null) return;
         StudentPhotoAsset asset = photoAssetRepository.findById(studentId)

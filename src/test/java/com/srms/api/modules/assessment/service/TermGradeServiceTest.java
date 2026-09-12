@@ -7,7 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class TermGradeServiceTest {
     private final TermGradeService service = new TermGradeService(
-            null, null, null, null, null, null, null, null, null);
+            null, null, null, null, null, null, null, null, null, null);
 
     @Test
     void combinedSchoolModeOverridesAnOlderSeparateAssessmentCycle() {

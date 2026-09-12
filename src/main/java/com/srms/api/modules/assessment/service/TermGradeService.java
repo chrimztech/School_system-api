@@ -1,11 +1,13 @@
 package com.srms.api.modules.assessment.service;
 
+import com.srms.api.exception.BusinessException;
 import com.srms.api.exception.ResourceNotFoundException;
 import com.srms.api.modules.academic.entity.ClassEnrolment;
 import com.srms.api.modules.academic.entity.SchoolClass;
 import com.srms.api.modules.academic.repository.ClassEnrolmentRepository;
 import com.srms.api.modules.academic.repository.SchoolClassRepository;
 import com.srms.api.modules.assessment.dto.GradingBandDto;
+import com.srms.api.modules.assessment.dto.HistoricalResultDto;
 import com.srms.api.modules.assessment.entity.Assessment;
 import com.srms.api.modules.assessment.entity.AssessmentResult;
 import com.srms.api.modules.assessment.entity.GradeWeightConfig;
@@ -17,6 +19,8 @@ import com.srms.api.modules.assessment.repository.ResultRepository;
 import com.srms.api.modules.assessment.repository.TermGradeRepository;
 import com.srms.api.modules.school.entity.School;
 import com.srms.api.modules.school.repository.SchoolRepository;
+import com.srms.api.modules.student.entity.Student;
+import com.srms.api.modules.student.repository.StudentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -50,6 +54,7 @@ public class TermGradeService {
     private final GradeWeightConfigService gradeWeightConfigService;
     private final GradingScaleService gradingScaleService;
     private final SchoolRepository schoolRepository;
+    private final StudentRepository studentRepository;
 
     public String resolveClassId(String schoolId, String classIdOrName) {
         return resolveClass(schoolId, classIdOrName).getId();
@@ -242,6 +247,90 @@ public class TermGradeService {
             }
         }
         return publishedRepository.saveAll(toSave);
+    }
+
+    /**
+     * Records a pupil's already-known result for a past term/year directly — a transfer
+     * pupil's grades from a previous school, or a paper report card being digitized. Deliberately
+     * bypasses the live capture → HOD verification → Careers Guidance publication pipeline
+     * entirely: that pipeline can never produce these rows (computeInternal requires an active
+     * ClassEnrolment plus live Assessment/AssessmentResult rows for the term, neither of which
+     * exist for a result that predates the pupil's time in this system). Writes both TermGrade
+     * and PublishedTermGrade so every existing reader (report cards, results history, parent
+     * portal) treats it exactly like a normally-published result. Upserts on the same unique key
+     * each of those tables already enforces, so re-submitting a correction updates the same row
+     * rather than duplicating it.
+     */
+    public PublishedTermGrade backfillResult(String schoolId, HistoricalResultDto dto, String actorId) {
+        if (dto.getStudentId() == null || dto.getStudentId().isBlank()) throw new BusinessException("A pupil is required");
+        if (dto.getSubjectName() == null || dto.getSubjectName().isBlank()) throw new BusinessException("A subject is required");
+        if (dto.getTerm() == null || dto.getTerm().isBlank()) throw new BusinessException("A term is required");
+        if (dto.getAcademicYear() == null || dto.getAcademicYear().isBlank()) throw new BusinessException("An academic year is required");
+        if (dto.getWeightedTotal() == null) throw new BusinessException("A score is required");
+        double total = Math.max(0, Math.min(100, dto.getWeightedTotal()));
+
+        Assessment.ReportingPeriod period;
+        try {
+            period = dto.getReportingPeriod() == null || dto.getReportingPeriod().isBlank()
+                    ? Assessment.ReportingPeriod.END_TERM
+                    : Assessment.ReportingPeriod.valueOf(dto.getReportingPeriod().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new BusinessException("Reporting period must be MIDTERM, END_TERM, or COMBINED");
+        }
+
+        String letterGrade = dto.getLetterGrade();
+        String gradeDescription = dto.getGradeDescription();
+        Integer gradePoints = dto.getGradePoints();
+        if (letterGrade == null || letterGrade.isBlank()) {
+            List<GradingBandDto> bands = gradingScaleService.getBandsForPhase(schoolId, dto.getClassPhase());
+            GradingBandDto band = gradingScaleService.evaluate(bands, total);
+            letterGrade = band.getGrade();
+            gradeDescription = band.getDescription();
+            gradePoints = band.getPoints();
+        }
+
+        Student student = studentRepository.findByIdAndSchoolId(dto.getStudentId(), schoolId)
+                .orElseThrow(() -> new ResourceNotFoundException("Student", dto.getStudentId()));
+        String studentName = (student.getFirstName() + " " + student.getLastName()).trim();
+
+        TermGrade grade = termGradeRepository
+                .findBySchoolIdAndStudentIdAndSubjectNameAndTermAndAcademicYear(
+                        schoolId, dto.getStudentId(), dto.getSubjectName(), dto.getTerm(), dto.getAcademicYear())
+                .orElse(TermGrade.builder()
+                        .schoolId(schoolId).studentId(dto.getStudentId())
+                        .subjectName(dto.getSubjectName()).term(dto.getTerm()).academicYear(dto.getAcademicYear())
+                        .build());
+        grade.setStudentName(studentName);
+        grade.setWeightedTotal(total);
+        grade.setLetterGrade(letterGrade);
+        grade.setGradeDescription(gradeDescription);
+        grade.setGradePoints(gradePoints);
+        grade.setComplete(true);
+        grade.setPublished(true);
+        grade.setTeacherId(actorId);
+        termGradeRepository.save(grade);
+
+        PublishedTermGrade snapshot = publishedRepository
+                .findBySchoolIdAndStudentIdAndSubjectNameAndTermAndAcademicYearAndReportingPeriod(
+                        schoolId, dto.getStudentId(), dto.getSubjectName(), dto.getTerm(), dto.getAcademicYear(), period)
+                .orElse(PublishedTermGrade.builder()
+                        .schoolId(schoolId).studentId(dto.getStudentId())
+                        .subjectName(dto.getSubjectName()).term(dto.getTerm()).academicYear(dto.getAcademicYear())
+                        .reportingPeriod(period).build());
+        snapshot.setStudentName(studentName);
+        snapshot.setWeightedTotal(total);
+        snapshot.setLetterGrade(letterGrade);
+        snapshot.setGradeDescription(gradeDescription);
+        snapshot.setGradePoints(gradePoints);
+        snapshot.setPublishedBy(actorId);
+        snapshot.setPublishedAt(LocalDateTime.now());
+        return publishedRepository.save(snapshot);
+    }
+
+    public List<PublishedTermGrade> backfillResults(String schoolId, List<HistoricalResultDto> rows, String actorId) {
+        List<PublishedTermGrade> saved = new ArrayList<>();
+        for (HistoricalResultDto row : rows) saved.add(backfillResult(schoolId, row, actorId));
+        return saved;
     }
 
     @Transactional(readOnly = true)
