@@ -36,6 +36,8 @@ public class NotificationService {
     private final AlumniRepository alumniRepository;
     private final JavaMailSender mailSender;
     private final ZamtelSmsClient smsClient;
+    private final com.srms.api.modules.integration.client.AfricasTalkingSmsClient africasTalkingSmsClient;
+    private final com.srms.api.modules.integration.service.IntegrationService integrationService;
 
     private static final Pattern FORM_OR_GRADE = Pattern.compile("(?:form|grade)\\s*(\\d{1,2})");
     /** Every contact is a literal URL path segment (see ZamtelSmsClient.send), not a request
@@ -115,7 +117,7 @@ public class NotificationService {
                 case "sms" -> {
                     String senderId = school != null ? school.getSmsSenderId() : null;
                     String smsBody = withPriorityPrefix(prefixSchoolIfSharedSender(body, school, senderId), ann.getPriority());
-                    sendSms(phones, smsBody, senderId);
+                    sendSms(schoolId, phones, smsBody, senderId);
                 }
                 case "whatsapp" -> log.info("WhatsApp channel not yet active (requires Meta Business approval) — {} recipients", phones.size());
                 case "ussd" -> log.info("USSD is pull-based — no push dispatch for announcement {}", ann.getId());
@@ -176,7 +178,7 @@ public class NotificationService {
         }
         if (guardianPhone != null && !guardianPhone.isBlank()) {
             String senderId = school != null ? school.getSmsSenderId() : null;
-            sendSms(List.of(PhoneUtils.normalize(guardianPhone)), prefixSchoolIfSharedSender(body, school, senderId), senderId);
+            sendSms(schoolId, List.of(PhoneUtils.normalize(guardianPhone)), prefixSchoolIfSharedSender(body, school, senderId), senderId);
         }
     }
 
@@ -302,8 +304,22 @@ public class NotificationService {
         log.info("Email dispatch complete: {}/{} sent", sent, recipients.size());
     }
 
-    private void sendSms(List<String> recipients, String message, String senderId) {
+    private void sendSms(String schoolId, List<String> recipients, String message, String senderId) {
         if (recipients.isEmpty()) return;
+
+        // A school that has connected its own Africa's Talking account (Integrations page, "sms"
+        // provider) uses that instead of the shared Zamtel sender — purely additive: a school
+        // that has never touched that page behaves exactly as before, going through Zamtel.
+        boolean useAfricasTalking = integrationService.getConnected(schoolId, com.srms.api.modules.integration.client.AfricasTalkingSmsClient.CODE).isPresent();
+        if (useAfricasTalking) {
+            int sent = 0;
+            for (String to : recipients) {
+                if (africasTalkingSmsClient.sendSms(schoolId, to, message)) sent++;
+            }
+            log.info("SMS dispatch complete: {}/{} sent via Africa's Talking", sent, recipients.size());
+            return;
+        }
+
         if (!smsClient.isConfigured()) {
             log.warn("SMS channel selected but zamtel.bulksms.api-key not configured — skipping {} SMS", recipients.size());
             return;

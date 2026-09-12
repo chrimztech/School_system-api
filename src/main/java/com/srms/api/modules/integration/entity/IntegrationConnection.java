@@ -35,13 +35,25 @@ public class IntegrationConnection extends BaseEntity {
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    @Builder.Default
+    // Deliberately no Java-level default (`= false`) here even though the column has one at the
+    // DB level: a field initializer runs in every constructor Lombok generates, including the
+    // plain no-args one Jackson uses to build the @RequestBody for PATCH /integrations/{code} —
+    // so a JSON patch body that simply omits "connected" would deserialize to `false` instead of
+    // `null`, and IntegrationService.merge()'s "only touch fields the caller actually sent" check
+    // (`patch.getConnected() != null`) would then silently disconnect the integration on every
+    // save of any other field (owner, webhook, credentials, ...). Leaving this unset means a
+    // brand-new row must set it explicitly (every current creation path already does).
     @Column(columnDefinition = "boolean default false")
-    private Boolean connected = false;
+    private Boolean connected;
 
     private String status;
     private String owner;
     private String webhook;
+
+    /** Human-readable outcome of the most recent real "Test connection" / live call — shown on
+     * the Connection health tab so a "Degraded" chip has an actual reason attached. */
+    @Column(columnDefinition = "TEXT")
+    private String lastTestMessage;
 
     /** Merchant/account/client ID — appears on receipts and dashboards for most providers, not
      * secret-grade like the key/secret below, so kept in plain text. */

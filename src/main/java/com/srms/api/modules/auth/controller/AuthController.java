@@ -29,6 +29,14 @@ public class AuthController {
                 authService.login(request, TenantRequestAttributes.resolution(servletRequest))));
     }
 
+    @PostMapping("/google")
+    public ResponseEntity<ApiResponse<AuthResponse>> loginWithGoogle(
+            @RequestBody Map<String, String> body,
+            HttpServletRequest servletRequest) {
+        return ResponseEntity.ok(ApiResponse.ok(
+                authService.loginWithGoogle(body.get("idToken"), TenantRequestAttributes.resolution(servletRequest))));
+    }
+
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<UserDto>> me(Authentication auth) {
         return ResponseEntity.ok(ApiResponse.ok(authService.getMe(auth.getName())));

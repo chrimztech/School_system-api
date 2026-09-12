@@ -25,7 +25,8 @@ public record IntegrationConnectionView(
         boolean hasApiKey,
         String apiKeyMasked,
         boolean hasApiSecret,
-        String apiSecretMasked
+        String apiSecretMasked,
+        String lastTestMessage
 ) {
     public static IntegrationConnectionView from(IntegrationConnection c) {
         return new IntegrationConnectionView(
@@ -33,7 +34,8 @@ public record IntegrationConnectionView(
                 c.getConnected(), c.getStatus(), c.getOwner(), c.getWebhook(),
                 c.getAccountId(), c.getBaseUrl(), c.getEnvironment(),
                 hasValue(c.getApiKey()), mask(c.getApiKey()),
-                hasValue(c.getApiSecret()), mask(c.getApiSecret())
+                hasValue(c.getApiSecret()), mask(c.getApiSecret()),
+                c.getLastTestMessage()
         );
     }
 

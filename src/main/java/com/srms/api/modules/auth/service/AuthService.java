@@ -11,6 +11,7 @@ import com.srms.api.modules.auth.dto.PhoneNormalizationResult;
 import com.srms.api.modules.auth.dto.UserDto;
 import com.srms.api.modules.auth.entity.AppUser;
 import com.srms.api.modules.auth.repository.UserRepository;
+import com.srms.api.modules.integration.client.GoogleWorkspaceClient;
 import com.srms.api.modules.teacher.entity.Teacher;
 import com.srms.api.modules.teacher.repository.TeacherRepository;
 import com.srms.api.security.JwtTokenProvider;
@@ -35,6 +36,7 @@ public class AuthService {
     private final AuditEventRepository auditEventRepository;
     private final JwtTokenProvider jwtTokenProvider;
     private final PasswordEncoder passwordEncoder;
+    private final GoogleWorkspaceClient googleWorkspaceClient;
 
     // Roles whose assessment/verification workflows resolve identity through the Teacher
     // (HR staff) table by email — see AcademicService.findAssignmentsByTeacherEmail and
@@ -68,6 +70,41 @@ public class AuthService {
         String token = jwtTokenProvider.generateToken(
                 user.getId(), user.getEmail(), user.getRole().name(), user.getSchoolId());
         recordLoginAttempt(user, "success", "Signed in");
+        return AuthResponse.builder()
+                .token(token).id(user.getId()).name(user.getName())
+                .email(user.getEmail()).phone(user.getPhone()).role(user.getRole().name())
+                .schoolId(user.getSchoolId()).initials(user.getInitials())
+                .mustChangePassword(user.isMustChangePassword())
+                .build();
+    }
+
+    /**
+     * Real Google Workspace SSO: verifies the ID token against Google (see
+     * GoogleWorkspaceClient), then requires a pre-existing, active SRMS account for that email
+     * at this school — this is not self-signup, it's an alternate sign-in path for staff who
+     * already have an account. Only available on a school's own subdomain, matching how Google
+     * Workspace credentials are configured per-school on the Integrations page.
+     */
+    public AuthResponse loginWithGoogle(String idToken, TenantResolution tenant) {
+        if (!tenant.isTenant()) {
+            throw new ForbiddenException("Google sign-in is only available on a school's own subdomain");
+        }
+        GoogleWorkspaceClient.VerifiedIdentity identity = googleWorkspaceClient.verify(tenant.schoolId(), idToken)
+                .orElseThrow(() -> new BusinessException("Could not verify this Google account for your school — check that Google Workspace is connected and the Client ID matches"));
+        if (!identity.emailVerified()) {
+            throw new BusinessException("This Google account's email address is not verified");
+        }
+        AppUser user = userRepository.findByEmail(identity.email()).orElse(null);
+        if (user == null || !tenant.schoolId().equals(user.getSchoolId())) {
+            throw new BusinessException("No SRMS account found for this Google account at this school");
+        }
+        if (!user.isActive()) {
+            recordLoginAttempt(user, "warning", "Google sign-in blocked — account deactivated");
+            throw new BusinessException("Account is deactivated");
+        }
+        String token = jwtTokenProvider.generateToken(
+                user.getId(), user.getEmail(), user.getRole().name(), user.getSchoolId());
+        recordLoginAttempt(user, "success", "Signed in via Google");
         return AuthResponse.builder()
                 .token(token).id(user.getId()).name(user.getName())
                 .email(user.getEmail()).phone(user.getPhone()).role(user.getRole().name())

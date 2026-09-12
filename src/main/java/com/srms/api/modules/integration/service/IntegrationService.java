@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -16,6 +17,26 @@ public class IntegrationService {
 
     public List<IntegrationConnection> list(String schoolId) {
         return integrationConnectionRepository.findBySchoolIdOrderByCreatedAtDesc(schoolId);
+    }
+
+    /** Used by the provider clients to fetch decrypted credentials for a live API call — only
+     * returns a connection the admin has actually switched on. */
+    public Optional<IntegrationConnection> getConnected(String schoolId, String code) {
+        return integrationConnectionRepository.findBySchoolIdAndCode(schoolId, code)
+                .filter(c -> Boolean.TRUE.equals(c.getConnected()));
+    }
+
+    /** Records the outcome of a real live test/call against the provider so the Integrations
+     * page's "Healthy"/"Degraded" status reflects what actually happened, not just whether
+     * credentials were saved. A no-op when the school never created a connection row for this
+     * provider at all (as opposed to one that exists but isn't switched on) — there's nothing
+     * to attach the outcome to yet. */
+    public Optional<IntegrationConnection> recordTestOutcome(String schoolId, String code, boolean success, String message) {
+        return integrationConnectionRepository.findBySchoolIdAndCode(schoolId, code).map(connection -> {
+            connection.setStatus(success ? "healthy" : "degraded");
+            connection.setLastTestMessage(message);
+            return integrationConnectionRepository.save(connection);
+        });
     }
 
     public IntegrationConnection createOrConnect(String schoolId, IntegrationConnection connection) {
