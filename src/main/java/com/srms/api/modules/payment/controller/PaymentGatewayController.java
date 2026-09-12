@@ -37,8 +37,8 @@ public class PaymentGatewayController {
     }
 
     @GetMapping("/gateway-status")
-    public ResponseEntity<ApiResponse<Map<String, Boolean>>> gatewayStatus() {
-        return ResponseEntity.ok(ApiResponse.ok(Map.of("available", paymentGatewayService.isGatewayAvailable())));
+    public ResponseEntity<ApiResponse<Map<String, Boolean>>> gatewayStatus(@PathVariable String schoolId) {
+        return ResponseEntity.ok(ApiResponse.ok(Map.of("available", paymentGatewayService.isGatewayAvailable(schoolId))));
     }
 
     @PostMapping("/card/initiate")

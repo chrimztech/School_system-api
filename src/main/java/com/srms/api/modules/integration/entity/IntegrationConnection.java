@@ -62,6 +62,10 @@ public class IntegrationConnection extends BaseEntity {
     /** API base URL — e.g. a sandbox vs. production host for the same provider. */
     private String baseUrl;
 
+    /** Second endpoint URL some providers need (e.g. ZynlePay's separate payment-status URL) —
+     * blank/unused for providers that only need one. */
+    private String secondaryUrl;
+
     /** "sandbox" | "production" */
     private String environment;
 

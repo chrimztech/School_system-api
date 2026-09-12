@@ -43,18 +43,24 @@ public class PaymentGatewayService {
     private final NotificationService notificationService;
     private final ObjectMapper objectMapper;
 
-    public boolean isGatewayAvailable() {
-        return zynlePayClient.isConfigured();
+    public boolean isGatewayAvailable(String schoolId) {
+        return zynlePayClient.isConfigured(schoolId);
     }
 
-    private void assertGatewayAvailable() {
-        if (!zynlePayClient.isConfigured()) {
+    private void assertGatewayAvailable(String schoolId) {
+        if (!zynlePayClient.isConfigured(schoolId)) {
             throw new BusinessException("Online payment isn't connected for this school yet — please pay at the school office or ask them for other payment options.");
         }
     }
 
+    private void assertPlatformGatewayAvailable() {
+        if (!zynlePayClient.isConfigured()) {
+            throw new BusinessException("The platform's own payment gateway isn't configured yet.");
+        }
+    }
+
     public Map<String, Object> initiateCardPayment(String schoolId, CardPaymentRequest req) {
-        assertGatewayAvailable();
+        assertGatewayAvailable(schoolId);
         if (req.getAmount() <= 0) {
             throw new BusinessException("Payment amount must be greater than zero");
         }
@@ -79,7 +85,7 @@ public class PaymentGatewayService {
         data.put("zip_code", req.getZipCode());
         data.put("country", "ZMB");
 
-        Map<String, Object> response = zynlePayClient.postToGateway("card", data);
+        Map<String, Object> response = zynlePayClient.postToGateway(schoolId, "card", data);
         FeePayment saved = savePendingPayment(schoolId, student, studentName, req.getAmount(), "card",
                 "Card payment via ZynlePay", referenceNo, response);
 
@@ -91,7 +97,7 @@ public class PaymentGatewayService {
     }
 
     public Map<String, Object> initiateMomoPayment(String schoolId, MomoPaymentRequest req) {
-        assertGatewayAvailable();
+        assertGatewayAvailable(schoolId);
         if (req.getAmount() <= 0) {
             throw new BusinessException("Payment amount must be greater than zero");
         }
@@ -109,7 +115,7 @@ public class PaymentGatewayService {
         data.put("reference_no", referenceNo);
         data.put("amount", String.valueOf(req.getAmount()));
 
-        Map<String, Object> response = zynlePayClient.postToGateway("momo", data);
+        Map<String, Object> response = zynlePayClient.postToGateway(schoolId, "momo", data);
         FeePayment saved = savePendingPayment(schoolId, student, studentName, req.getAmount(), "momo",
                 "Mobile money payment via ZynlePay", referenceNo, response);
 
@@ -209,7 +215,7 @@ public class PaymentGatewayService {
             log.info("Skipping status refresh for {} — already {}", payment.getReferenceNumber(), payment.getStatus());
             return;
         }
-        Map<String, Object> statusResponse = zynlePayClient.checkStatus(payment.getReferenceNumber());
+        Map<String, Object> statusResponse = zynlePayClient.checkStatus(payment.getSchoolId(), payment.getReferenceNumber());
         applyGatewayStatus(payment, statusResponse);
     }
 
@@ -288,7 +294,7 @@ public class PaymentGatewayService {
     }
 
     public MerchantBalanceView getMerchantBalance() {
-        assertGatewayAvailable();
+        assertPlatformGatewayAvailable();
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("method", "checkBalance");
         Map<String, Object> response = zynlePayClient.postToGateway(null, data);

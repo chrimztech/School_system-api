@@ -21,6 +21,7 @@ public record IntegrationConnectionView(
         String webhook,
         String accountId,
         String baseUrl,
+        String secondaryUrl,
         String environment,
         boolean hasApiKey,
         String apiKeyMasked,
@@ -32,7 +33,7 @@ public record IntegrationConnectionView(
         return new IntegrationConnectionView(
                 c.getId(), c.getCode(), c.getName(), c.getCategory(), c.getDescription(),
                 c.getConnected(), c.getStatus(), c.getOwner(), c.getWebhook(),
-                c.getAccountId(), c.getBaseUrl(), c.getEnvironment(),
+                c.getAccountId(), c.getBaseUrl(), c.getSecondaryUrl(), c.getEnvironment(),
                 hasValue(c.getApiKey()), mask(c.getApiKey()),
                 hasValue(c.getApiSecret()), mask(c.getApiSecret()),
                 c.getLastTestMessage()

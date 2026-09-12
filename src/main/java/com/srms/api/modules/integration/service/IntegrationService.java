@@ -69,6 +69,7 @@ public class IntegrationService {
         if (patch.getWebhook() != null) target.setWebhook(patch.getWebhook());
         if (patch.getAccountId() != null) target.setAccountId(patch.getAccountId());
         if (patch.getBaseUrl() != null) target.setBaseUrl(patch.getBaseUrl());
+        if (patch.getSecondaryUrl() != null) target.setSecondaryUrl(patch.getSecondaryUrl());
         if (patch.getEnvironment() != null) target.setEnvironment(patch.getEnvironment());
         // Left blank on the form (and therefore omitted from the request body) means "don't
         // change the saved credential" — exactly the null-safe behavior every other field here
