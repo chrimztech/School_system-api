@@ -117,6 +117,7 @@ F:\school\School_system-api\src\main\java\com\srms\api\common\PageResponse.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\assessment\entity\TermGrade.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\teacher\service\TeacherService.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\ptc\repository\PtcMeetingRepository.java
+F:\school\School_system-api\src\main\java\com\srms\api\modules\assessment\dto\HistoricalResultDto.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\auth\repository\UserRepository.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\procurement\entity\ProcurementRequest.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\payment\dto\MerchantBalanceView.java
@@ -351,6 +352,7 @@ F:\school\School_system-api\src\main\java\com\srms\api\security\tenant\TenantReq
 F:\school\School_system-api\src\main\java\com\srms\api\modules\platform\dto\PlatformWorkspaceDto.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\platform\repository\PlatformWorkspaceRepository.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\testimonial\repository\TestimonialRepository.java
+F:\school\School_system-api\src\main\java\com\srms\api\modules\teacher\repository\TeacherPhotoAssetRepository.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\hr\repository\LeaveRepository.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\academic\controller\PromotionController.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\transport\repository\VehicleRepository.java
@@ -376,6 +378,7 @@ F:\school\School_system-api\src\main\java\com\srms\api\modules\assessment\dto\Gr
 F:\school\School_system-api\src\main\java\com\srms\api\modules\exam\repository\GceCandidateRepository.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\audit\aspect\AuditAspect.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\health\repository\HealthRecordRepository.java
+F:\school\School_system-api\src\main\java\com\srms\api\modules\teacher\entity\TeacherPhotoAsset.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\assessment\repository\TermGradeRepository.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\attendance\dto\AttendanceSummary.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\hr\entity\LeaveRequest.java
