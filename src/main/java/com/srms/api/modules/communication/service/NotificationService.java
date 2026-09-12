@@ -37,7 +37,7 @@ public class NotificationService {
     private final JavaMailSender mailSender;
     private final ZamtelSmsClient smsClient;
     private final com.srms.api.modules.integration.client.AfricasTalkingSmsClient africasTalkingSmsClient;
-    private final com.srms.api.modules.integration.service.IntegrationService integrationService;
+    private final com.srms.api.modules.integration.service.IntegrationConfigService integrationConfigService;
 
     private static final Pattern FORM_OR_GRADE = Pattern.compile("(?:form|grade)\\s*(\\d{1,2})");
     /** Every contact is a literal URL path segment (see ZamtelSmsClient.send), not a request
@@ -310,7 +310,7 @@ public class NotificationService {
         // A school that has connected its own Africa's Talking account (Integrations page, "sms"
         // provider) uses that instead of the shared Zamtel sender — purely additive: a school
         // that has never touched that page behaves exactly as before, going through Zamtel.
-        boolean useAfricasTalking = integrationService.getConnected(schoolId, com.srms.api.modules.integration.client.AfricasTalkingSmsClient.CODE).isPresent();
+        boolean useAfricasTalking = integrationConfigService.isSchoolEnabled(com.srms.api.modules.integration.client.AfricasTalkingSmsClient.CODE, schoolId);
         if (useAfricasTalking) {
             int sent = 0;
             for (String to : recipients) {

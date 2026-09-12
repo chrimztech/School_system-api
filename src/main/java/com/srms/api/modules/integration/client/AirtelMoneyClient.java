@@ -1,7 +1,6 @@
 package com.srms.api.modules.integration.client;
 
-import com.srms.api.modules.integration.entity.IntegrationConnection;
-import com.srms.api.modules.integration.service.IntegrationService;
+import com.srms.api.modules.integration.service.IntegrationConfigService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpEntity;
@@ -12,14 +11,13 @@ import org.springframework.web.client.RestTemplate;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Optional;
 
 /**
- * Real client for the Airtel Money Africa Open API (https://developers.airtel.africa),
- * Collections/Merchant Payments product. Per-school credentials:
- *   - accountId = Client ID
- *   - apiKey    = Client Secret
- *   - baseUrl   = "https://openapiuat.airtel.africa" (sandbox) or the live host for the school's market
+ * Real client for the Airtel Money Africa Open API (https://developers.airtel.africa), Collections
+ * product. Configuration fields exactly match the platform's integration-configuration spec:
+ *   configuration: environment, countryCode, currency, merchantName, merchantAccountNumber,
+ *                  apiBaseUrl, collectionEnabled, refundEnabled, paymentTimeoutSeconds
+ *   credentials:   clientId, clientSecret, webhookSecret
  *
  * Same deliberate scope note as MtnMomoClient: test() performs the real OAuth2 client-credentials
  * handshake so "Test connection" reflects genuine, working credentials. Wiring an actual
@@ -31,27 +29,31 @@ import java.util.Optional;
 public class AirtelMoneyClient {
     public static final String CODE = "airtel";
 
-    private final IntegrationService integrationService;
+    private final IntegrationConfigService config;
     private final RestTemplate restTemplate = new RestTemplate();
 
+    private String str(java.util.Optional<Object> v) { return v.map(String::valueOf).orElse(null); }
+
     public IntegrationTestResult test(String schoolId) {
-        Optional<IntegrationConnection> connOpt = integrationService.getConnected(schoolId, CODE);
-        if (connOpt.isEmpty()) return IntegrationTestResult.fail("Not connected");
-        IntegrationConnection conn = connOpt.get();
-        if (isBlank(conn.getAccountId()) || isBlank(conn.getApiKey())) {
+        String clientId = config.resolveCredential(CODE, schoolId, "clientId").orElse(null);
+        String clientSecret = config.resolveCredential(CODE, schoolId, "clientSecret").orElse(null);
+        String baseUrl = str(config.resolveConfig(CODE, schoolId, "apiBaseUrl"));
+
+        if (isBlank(clientId) || isBlank(clientSecret)) {
             return IntegrationTestResult.fail("Client ID and Client Secret are both required");
         }
-        String base = isBlank(conn.getBaseUrl()) ? "https://openapiuat.airtel.africa" : conn.getBaseUrl();
+        String effectiveBaseUrl = isBlank(baseUrl) ? "https://openapiuat.airtel.africa" : baseUrl;
+
         try {
             Map<String, Object> body = new LinkedHashMap<>();
-            body.put("client_id", conn.getAccountId());
-            body.put("client_secret", conn.getApiKey());
+            body.put("client_id", clientId);
+            body.put("client_secret", clientSecret);
             body.put("grant_type", "client_credentials");
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
 
-            var response = restTemplate.postForEntity(base + "/auth/oauth2/token", new HttpEntity<>(body, headers), Map.class);
+            var response = restTemplate.postForEntity(effectiveBaseUrl + "/auth/oauth2/token", new HttpEntity<>(body, headers), Map.class);
             Map<?, ?> respBody = response.getBody();
             if (respBody != null && respBody.get("access_token") != null) {
                 return IntegrationTestResult.ok("Connected — OAuth token issued, expires in " + respBody.get("expires_in") + "s");

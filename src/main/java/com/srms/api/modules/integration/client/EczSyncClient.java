@@ -1,7 +1,6 @@
 package com.srms.api.modules.integration.client;
 
-import com.srms.api.modules.integration.entity.IntegrationConnection;
-import com.srms.api.modules.integration.service.IntegrationService;
+import com.srms.api.modules.integration.service.IntegrationConfigService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpEntity;
@@ -18,19 +17,22 @@ import java.util.Optional;
 /**
  * Client for the Examinations Council of Zambia's candidate registration/results system.
  *
- * IMPORTANT — unlike the other clients in this package, ECZ does not publish a public API
- * specification. There is no way to build or verify a client against ECZ's real system without
- * that documentation (which typically requires a data-sharing agreement between ECZ and the
- * school/vendor). This client therefore makes real outbound HTTP calls — Bearer-token
- * authenticated JSON POST/GET, the most common shape for this kind of integration — to whatever
- * base URL the school configures, so it is genuinely live once pointed at a real ECZ endpoint. But
- * the request/response field names below (candidates, examCenterNumber, results) are this
- * project's best-effort guess at the described use case ("Candidate registration and results
- * download"), not a contract confirmed against ECZ. Treat this as the wiring to finish once ECZ's
- * actual API contract is available, not as a verified integration.
+ * IMPORTANT — should not be activated until ECZ has provided formal API access, credentials,
+ * approved endpoints, and a data-sharing agreement. Unlike the other clients in this package, ECZ
+ * does not publish a public API specification; there is no way to build or verify a client
+ * against ECZ's real system without that documentation. This client therefore makes real
+ * outbound HTTP calls — Bearer-token authenticated JSON POST/GET, the most common shape for this
+ * kind of integration — to whatever base URL the school configures, so it is genuinely live once
+ * pointed at a real ECZ endpoint. But the request/response field names below are this project's
+ * best-effort guess at the described use case (candidate registration, results download), not a
+ * contract confirmed against ECZ. Treat this as the wiring to finish once ECZ's actual API
+ * contract is available, not as a verified integration. See the "Test connection"/"Sync now"
+ * warning banner on the configuration form, which repeats this caution to the admin.
  *
- * Per-school config: baseUrl = ECZ endpoint root, accountId = examination center number,
- * apiKey = Bearer token issued by ECZ for that center.
+ * Configuration fields exactly match the platform's integration-configuration spec:
+ *   configuration: environment, institutionNumber, schoolName, province, district, apiBaseUrl,
+ *                  candidateRegistrationSyncEnabled, resultsDownloadEnabled, autoSyncSchedule
+ *   credentials:   clientIdOrUsername, clientSecretOrPassword, apiKeyOrToken, certificatePrivateKey
  */
 @Slf4j
 @Service
@@ -38,22 +40,24 @@ import java.util.Optional;
 public class EczSyncClient {
     public static final String CODE = "ecz";
 
-    private final IntegrationService integrationService;
+    private final IntegrationConfigService config;
     private final RestTemplate restTemplate = new RestTemplate();
 
+    private String str(Optional<Object> v) { return v.map(String::valueOf).orElse(null); }
+
     public IntegrationTestResult test(String schoolId) {
-        Optional<IntegrationConnection> connOpt = integrationService.getConnected(schoolId, CODE);
-        if (connOpt.isEmpty()) return IntegrationTestResult.fail("Not connected");
-        IntegrationConnection conn = connOpt.get();
-        if (isBlank(conn.getBaseUrl()) || isBlank(conn.getAccountId()) || isBlank(conn.getApiKey())) {
-            return IntegrationTestResult.fail("Endpoint (Base URL), Examination center number (Account ID), and Bearer token (API key) are all required");
+        String baseUrl = str(config.resolveConfig(CODE, schoolId, "apiBaseUrl"));
+        String institutionNumber = str(config.resolveConfig(CODE, schoolId, "institutionNumber"));
+        String token = config.resolveCredential(CODE, schoolId, "apiKeyOrToken").orElse(null);
+        if (isBlank(baseUrl) || isBlank(institutionNumber) || isBlank(token)) {
+            return IntegrationTestResult.fail("API base URL, institution/centre number, and an API key or access token are all required");
         }
         try {
             HttpHeaders headers = new HttpHeaders();
-            headers.setBearerAuth(conn.getApiKey());
+            headers.setBearerAuth(token);
             headers.setAccept(List.of(MediaType.APPLICATION_JSON));
 
-            String url = conn.getBaseUrl().replaceAll("/+$", "") + "/centers/" + conn.getAccountId();
+            String url = baseUrl.replaceAll("/+$", "") + "/centers/" + institutionNumber;
             var response = restTemplate.exchange(url, HttpMethod.GET, new HttpEntity<>(headers), String.class);
             return response.getStatusCode().is2xxSuccessful()
                     ? IntegrationTestResult.ok("Endpoint reachable and accepted the configured credentials")
@@ -69,22 +73,22 @@ public class EczSyncClient {
      * provisional. Returns the raw response body on success so an admin can see exactly what ECZ
      * (or whatever endpoint is configured) actually said, rather than a fabricated confirmation. */
     public Optional<String> syncCandidates(String schoolId, Object candidatesPayload) {
-        Optional<IntegrationConnection> connOpt = integrationService.getConnected(schoolId, CODE);
-        if (connOpt.isEmpty()) return Optional.empty();
-        IntegrationConnection conn = connOpt.get();
-        if (isBlank(conn.getBaseUrl()) || isBlank(conn.getApiKey())) return Optional.empty();
+        String baseUrl = str(config.resolveConfig(CODE, schoolId, "apiBaseUrl"));
+        String institutionNumber = str(config.resolveConfig(CODE, schoolId, "institutionNumber"));
+        String token = config.resolveCredential(CODE, schoolId, "apiKeyOrToken").orElse(null);
+        if (isBlank(baseUrl) || isBlank(token)) return Optional.empty();
 
         try {
             HttpHeaders headers = new HttpHeaders();
-            headers.setBearerAuth(conn.getApiKey());
+            headers.setBearerAuth(token);
             headers.setContentType(MediaType.APPLICATION_JSON);
 
             Map<String, Object> body = Map.of(
-                    "examCenterNumber", conn.getAccountId(),
+                    "examCenterNumber", institutionNumber == null ? "" : institutionNumber,
                     "candidates", candidatesPayload
             );
 
-            String url = conn.getBaseUrl().replaceAll("/+$", "") + "/candidates/sync";
+            String url = baseUrl.replaceAll("/+$", "") + "/candidates/sync";
             var response = restTemplate.postForEntity(url, new HttpEntity<>(body, headers), String.class);
             return Optional.ofNullable(response.getBody());
         } catch (Exception e) {

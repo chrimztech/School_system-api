@@ -2,8 +2,7 @@ package com.srms.api.modules.integration.controller;
 
 import com.srms.api.common.ApiResponse;
 import com.srms.api.modules.integration.client.GoogleWorkspaceClient;
-import com.srms.api.modules.integration.entity.IntegrationConnection;
-import com.srms.api.modules.integration.service.IntegrationService;
+import com.srms.api.modules.integration.service.IntegrationConfigService;
 import com.srms.api.security.tenant.TenantRequestAttributes;
 import com.srms.api.security.tenant.TenantResolution;
 import jakarta.servlet.http.HttpServletRequest;
@@ -26,14 +25,14 @@ import java.util.Map;
 @RequestMapping("/api/public/sso")
 @RequiredArgsConstructor
 public class PublicSsoController {
-    private final IntegrationService integrationService;
+    private final IntegrationConfigService integrationConfigService;
 
     @GetMapping("/google-client-id")
     public ResponseEntity<ApiResponse<Map<String, String>>> googleClientId(HttpServletRequest request) {
         TenantResolution tenant = TenantRequestAttributes.resolution(request);
         String clientId = tenant.isTenant()
-                ? integrationService.getConnected(tenant.schoolId(), GoogleWorkspaceClient.CODE)
-                        .map(IntegrationConnection::getAccountId)
+                ? integrationConfigService.resolveConfig(GoogleWorkspaceClient.CODE, tenant.schoolId(), "oauthClientId")
+                        .map(String::valueOf)
                         .orElse(null)
                 : null;
         return ResponseEntity.ok(ApiResponse.ok(Map.of("clientId", clientId == null ? "" : clientId)));

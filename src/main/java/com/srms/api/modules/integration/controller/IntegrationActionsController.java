@@ -11,8 +11,10 @@ import com.srms.api.modules.integration.client.IntegrationTestResult;
 import com.srms.api.modules.integration.client.MtnMomoClient;
 import com.srms.api.modules.integration.client.PowerBiClient;
 import com.srms.api.modules.integration.client.ZoomClient;
-import com.srms.api.modules.integration.dto.IntegrationConnectionView;
-import com.srms.api.modules.integration.service.IntegrationService;
+import com.srms.api.modules.integration.dto.IntegrationConfigView;
+import com.srms.api.modules.integration.entity.IntegrationConfig;
+import com.srms.api.modules.integration.service.IntegrationConfigService;
+import com.srms.api.modules.payment.service.ZynlePayClient;
 import com.srms.api.modules.student.repository.StudentRepository;
 import com.srms.api.security.RoleGuard;
 import lombok.RequiredArgsConstructor;
@@ -26,17 +28,18 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Optional;
 
 /**
- * Real, live actions for the per-school integrations connected on the Integrations page —
- * separate from the CRUD in IntegrationController, which only ever stores credentials.
- * Everything here makes an actual outbound call to the provider using those credentials.
+ * Real, live actions for the school-scoped integrations configured via IntegrationConfigController
+ * — separate from that CRUD, which only ever stores credentials. Everything here makes an actual
+ * outbound call to the provider using those credentials.
  */
 @RestController
-@RequestMapping("/api/schools/{schoolId}/integrations/{code}")
+@RequestMapping("/api/schools/{schoolId}/integration-configs/{code}")
 @RequiredArgsConstructor
 public class IntegrationActionsController {
-    private final IntegrationService integrationService;
+    private final IntegrationConfigService configService;
     private final AfricasTalkingSmsClient africasTalkingSmsClient;
     private final MtnMomoClient mtnMomoClient;
     private final AirtelMoneyClient airtelMoneyClient;
@@ -44,13 +47,14 @@ public class IntegrationActionsController {
     private final ZoomClient zoomClient;
     private final EczSyncClient eczSyncClient;
     private final GoogleWorkspaceClient googleWorkspaceClient;
+    private final ZynlePayClient zynlePayClient;
     private final StudentRepository studentRepository;
     private final FeePaymentRepository feePaymentRepository;
 
     /** Runs a real, safe (non-money-moving, non-destructive) call against the provider using the
      * school's saved credentials, and records the outcome as the connection's live status. */
     @PostMapping("/test")
-    public ResponseEntity<ApiResponse<IntegrationConnectionView>> test(
+    public ResponseEntity<ApiResponse<IntegrationConfigView>> test(
             @PathVariable String schoolId, @PathVariable String code, Authentication auth) {
         RoleGuard.requireSuperAdmin(auth);
         IntegrationTestResult result = switch (code) {
@@ -61,15 +65,17 @@ public class IntegrationActionsController {
             case ZoomClient.CODE -> zoomClient.test(schoolId);
             case EczSyncClient.CODE -> eczSyncClient.test(schoolId);
             case GoogleWorkspaceClient.CODE -> googleWorkspaceClient.test(schoolId);
+            case ZynlePayClient.CODE -> zynlePayClient.isConfigured(schoolId)
+                    ? IntegrationTestResult.ok("Merchant ID, API ID, and API key are all present")
+                    : IntegrationTestResult.fail("Merchant ID, API ID, and API key are all required");
             default -> throw new BusinessException("No live test is available for \"" + code + "\" yet");
         };
-        var updated = integrationService.recordTestOutcome(schoolId, code, result.success(), result.message());
+        configService.recordTestOutcome(IntegrationConfig.ScopeType.SCHOOL, schoolId, code, result.success(), result.message());
         if (!result.success()) {
             throw new BusinessException(result.message());
         }
-        return updated
-                .map(c -> ResponseEntity.ok(ApiResponse.ok(IntegrationConnectionView.from(c))))
-                .orElseGet(() -> ResponseEntity.ok(ApiResponse.ok(null)));
+        Optional<IntegrationConfigView> updated = configService.get(IntegrationConfig.ScopeType.SCHOOL, schoolId, code);
+        return ResponseEntity.ok(ApiResponse.ok(updated.orElse(null)));
     }
 
     /** Creates a real, scheduled Zoom meeting and returns its join URL. */

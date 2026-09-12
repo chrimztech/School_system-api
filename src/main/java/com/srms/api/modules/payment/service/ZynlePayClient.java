@@ -1,8 +1,6 @@
 package com.srms.api.modules.payment.service;
 
-import com.srms.api.modules.integration.entity.IntegrationConnection;
-import com.srms.api.modules.integration.service.IntegrationService;
-import com.srms.api.modules.integration.service.PlatformIntegrationConfigService;
+import com.srms.api.modules.integration.service.IntegrationConfigService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -15,25 +13,25 @@ import org.springframework.web.client.RestTemplate;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
-import java.util.function.Function;
-import java.util.function.Supplier;
 
 /**
  * Thin client for ZynlePay's JSON API. All deposit/disbursement/balance operations share one
  * base URL and are differentiated by "channel" + "data.method"; PaymentStatus alone uses a
  * separate URL and a flat (non auth/data-wrapped) body.
  *
- * Two independent, deliberately separate credential scopes:
- *   - Per-school (IntegrationConnection, code "zynlepay", configured on that school's own
- *     Integrations page): used for every parent-facing fee payment, so money settles into that
- *     school's own merchant account, not the platform's. This is what postToGateway(schoolId,...)/
- *     checkStatus(schoolId,...)/isConfigured(schoolId) resolve, falling back to the platform-level
- *     scope below only if a school hasn't connected its own account yet.
- *   - Platform-level (PlatformIntegrationConfigService, configured from the Developer Console):
- *     the platform's own merchant account — used by getMerchantBalance() (platform admin checking
- *     their own balance) and as the fallback above. This is also the account any future
- *     school-pays-platform subscription billing would use, since that revenue is genuinely the
- *     platform's. Falls back to the original @Value env-var defaults when nothing is configured.
+ * Configuration fields (IntegrationConfigService, provider code "zynlepay"):
+ *   configuration: environment, merchantId, apiBaseUrl, paymentStatusUrl
+ *   credentials:   apiId, apiKey
+ *
+ * Two independent, deliberately separate scopes:
+ *   - SCHOOL: configured on that school's own Integrations page — used for every parent-facing
+ *     fee payment, so money settles into that school's own merchant account, not the platform's.
+ *   - PLATFORM: configured from the Developer Console — the platform's own merchant account,
+ *     used by getMerchantBalance() (platform admin checking their own balance), as the fallback
+ *     for a school that hasn't connected its own account yet, and for any future
+ *     school-pays-platform subscription billing.
+ * Falls back to the original @Value env-var defaults when nothing is configured at either scope,
+ * preserving the very first (pre-database) configuration path.
  */
 @Slf4j
 @Service
@@ -41,8 +39,7 @@ import java.util.function.Supplier;
 public class ZynlePayClient {
     public static final String CODE = "zynlepay";
 
-    private final PlatformIntegrationConfigService integrationConfig;
-    private final IntegrationService schoolIntegrationConfig;
+    private final IntegrationConfigService config;
 
     @Value("${zynlepay.baseUrl}")
     private String defaultBaseUrl;
@@ -61,17 +58,24 @@ public class ZynlePayClient {
 
     private final RestTemplate restTemplate = new RestTemplate();
 
+    private String str(Optional<Object> v) { return v.map(String::valueOf).orElse(null); }
+
     // ---- Platform-level resolution — the platform's own merchant account ----
 
-    private String platformResolve(Function<com.srms.api.modules.integration.entity.PlatformIntegrationConfig, String> field, String fallback) {
-        return integrationConfig.resolve(PlatformIntegrationConfigService.ZYNLEPAY, field, fallback);
+    private String platformConfig(String key, String fallback) {
+        String v = str(config.resolveConfig(CODE, com.srms.api.modules.integration.entity.IntegrationConfig.PLATFORM_SCOPE_SCHOOL_ID, key));
+        return notBlank(v) ? v : fallback;
     }
 
-    private String platformBaseUrl() { return platformResolve(c -> c.getBaseUrl(), defaultBaseUrl); }
-    private String platformPaymentStatusUrl() { return platformResolve(c -> c.getSecondaryUrl(), defaultPaymentStatusUrl); }
-    private String platformMerchantId() { return platformResolve(c -> c.getAccountId(), defaultMerchantId); }
-    private String platformApiId() { return platformResolve(c -> c.getClientId(), defaultApiId); }
-    private String platformApiKey() { return platformResolve(c -> c.getApiKey(), defaultApiKey); }
+    private String platformCredential(String key, String fallback) {
+        return config.resolveCredential(CODE, com.srms.api.modules.integration.entity.IntegrationConfig.PLATFORM_SCOPE_SCHOOL_ID, key).filter(ZynlePayClient::notBlank).orElse(fallback);
+    }
+
+    private String platformBaseUrl() { return platformConfig("apiBaseUrl", defaultBaseUrl); }
+    private String platformPaymentStatusUrl() { return platformConfig("paymentStatusUrl", defaultPaymentStatusUrl); }
+    private String platformMerchantId() { return platformConfig("merchantId", defaultMerchantId); }
+    private String platformApiId() { return platformCredential("apiId", defaultApiId); }
+    private String platformApiKey() { return platformCredential("apiKey", defaultApiKey); }
 
     /** Used by getMerchantBalance() only — the platform admin checking their own account. */
     public boolean isConfigured() {
@@ -80,23 +84,25 @@ public class ZynlePayClient {
 
     // ---- Per-school resolution — falls back to the platform scope above ----
 
-    private String schoolResolve(String schoolId, Function<IntegrationConnection, String> field, Supplier<String> platformFallback) {
-        Optional<IntegrationConnection> conn = schoolIntegrationConfig.getConnected(schoolId, CODE);
-        if (conn.isPresent()) {
-            String value = field.apply(conn.get());
-            if (notBlank(value)) return value;
-        }
-        return platformFallback.get();
+    private String baseUrlFor(String schoolId) {
+        return config.resolveConfig(CODE, schoolId, "apiBaseUrl").map(String::valueOf).filter(ZynlePayClient::notBlank).orElseGet(this::platformBaseUrl);
     }
 
-    private String baseUrlFor(String schoolId) { return schoolResolve(schoolId, IntegrationConnection::getBaseUrl, this::platformBaseUrl); }
-    private String paymentStatusUrlFor(String schoolId) { return schoolResolve(schoolId, IntegrationConnection::getSecondaryUrl, this::platformPaymentStatusUrl); }
-    private String merchantIdFor(String schoolId) { return schoolResolve(schoolId, IntegrationConnection::getAccountId, this::platformMerchantId); }
-    // ZynlePay's "API ID" isn't quite as sensitive as the API key, but there's no dedicated plain
-    // field for it on IntegrationConnection — apiSecret (encrypted) is the closest fit and the
-    // extra protection doesn't hurt.
-    private String apiIdFor(String schoolId) { return schoolResolve(schoolId, IntegrationConnection::getApiSecret, this::platformApiId); }
-    private String apiKeyFor(String schoolId) { return schoolResolve(schoolId, IntegrationConnection::getApiKey, this::platformApiKey); }
+    private String paymentStatusUrlFor(String schoolId) {
+        return config.resolveConfig(CODE, schoolId, "paymentStatusUrl").map(String::valueOf).filter(ZynlePayClient::notBlank).orElseGet(this::platformPaymentStatusUrl);
+    }
+
+    private String merchantIdFor(String schoolId) {
+        return config.resolveConfig(CODE, schoolId, "merchantId").map(String::valueOf).filter(ZynlePayClient::notBlank).orElseGet(this::platformMerchantId);
+    }
+
+    private String apiIdFor(String schoolId) {
+        return config.resolveCredential(CODE, schoolId, "apiId").filter(ZynlePayClient::notBlank).orElseGet(this::platformApiId);
+    }
+
+    private String apiKeyFor(String schoolId) {
+        return config.resolveCredential(CODE, schoolId, "apiKey").filter(ZynlePayClient::notBlank).orElseGet(this::platformApiKey);
+    }
 
     /** Callers check this first so a parent trying to pay fees gets an honest "not available yet"
      * message instead of ZynlePay's raw "Wrong API credentials" response. */
