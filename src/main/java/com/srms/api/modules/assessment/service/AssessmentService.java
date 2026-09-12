@@ -496,17 +496,22 @@ public class AssessmentService {
         }
     }
 
-    /** TEACHER and HOD may create/edit/enter marks for a class+subject they are personally
-     * assigned to teach (via TeacherClassSubject) — an HOD is very often also a subject
-     * teacher, and their department-head status shouldn't take that away. Verification of
-     * *other* teachers' submissions stays a separate, department-scoped power — see
+    /** TEACHER, HOD, and CAREER_GUIDANCE may create/edit/enter marks for a class+subject they
+     * are personally assigned to teach (via TeacherClassSubject) — an HOD is very often also a
+     * subject teacher, and their department-head status shouldn't take that away, and the same
+     * goes for a Career Guidance teacher (see the "CAREER_GUIDANCE_TEACHER" role alias in
+     * AuthService.parseRole — that's the same person wearing both hats, not a second role).
+     * Career Guidance's broader powers (viewing every assessment, publishing cycles) are
+     * separate and unaffected by this — this only ever grants the same personally-scoped
+     * mark-entry access a teacher has, never anything school-wide. Verification of *other*
+     * teachers' submissions stays a separate, department-scoped power — see
      * requireHodOverDepartment. */
     private void assertCanManage(String schoolId, String userId, String role,
                                  String className, String subjectName) {
         assertActorSchool(schoolId, userId, role);
         String normalRole = role == null ? "" : role.toUpperCase();
         if (FULL_ACCESS_ROLES.contains(normalRole)) return;
-        if (!"TEACHER".equals(normalRole) && !"HOD".equals(normalRole)) {
+        if (!"TEACHER".equals(normalRole) && !"HOD".equals(normalRole) && !"CAREER_GUIDANCE".equals(normalRole)) {
             throw new ForbiddenException("Your role does not have permission to manage assessments");
         }
         Set<String> assignments = teacherAssignmentKeys(schoolId, userId);
