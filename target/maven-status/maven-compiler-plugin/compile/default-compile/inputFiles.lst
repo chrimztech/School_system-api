@@ -18,6 +18,7 @@ F:\school\School_system-api\src\main\java\com\srms\api\modules\audit\entity\Audi
 F:\school\School_system-api\src\main\java\com\srms\api\modules\payroll\entity\PayrollRun.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\hostel\repository\HostelRoomRepository.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\calendar\service\CalendarService.java
+F:\school\School_system-api\src\main\java\com\srms\api\modules\integration\controller\PowerBiReportController.java
 F:\school\School_system-api\src\main\java\com\srms\api\common\PhoneUtils.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\auth\dto\LoginRequest.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\exam\entity\ExamPaper.java
@@ -56,6 +57,7 @@ F:\school\School_system-api\src\main\java\com\srms\api\modules\exam\service\Exam
 F:\school\School_system-api\src\main\java\com\srms\api\modules\health\entity\HealthRecord.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\calendar\entity\CalendarEvent.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\assessment\entity\Assessment.java
+F:\school\School_system-api\src\main\java\com\srms\api\modules\integration\repository\IntegrationEventLogRepository.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\visitor\controller\VisitorController.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\ptc\repository\PtcMemberRepository.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\incident\repository\IncidentRepository.java
@@ -69,6 +71,7 @@ F:\school\School_system-api\src\main\java\com\srms\api\modules\duty\service\Duty
 F:\school\School_system-api\src\main\java\com\srms\api\modules\exam\entity\ExamCandidate.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\admission\entity\AdmissionApplication.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\payment\controller\PlatformPaymentController.java
+F:\school\School_system-api\src\main\java\com\srms\api\modules\integration\dto\PowerBiReportDto.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\exam\service\GceCandidateService.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\welfare\service\WelfareService.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\academic\repository\AcademicTermRepository.java
@@ -106,6 +109,7 @@ F:\school\School_system-api\src\main\java\com\srms\api\modules\bursary\controlle
 F:\school\School_system-api\src\main\java\com\srms\api\security\tenant\TenantRequestAttributes.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\auth\repository\CustomRoleRepository.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\report\entity\ReportComment.java
+F:\school\School_system-api\src\main\java\com\srms\api\modules\integration\repository\PowerBiReportRepository.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\assessment\controller\TermGradeController.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\hostel\repository\HostelLeaveRepository.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\platform\service\PlatformWorkspaceService.java
@@ -180,6 +184,7 @@ F:\school\School_system-api\src\main\java\com\srms\api\modules\compliance\reposi
 F:\school\School_system-api\src\main\java\com\srms\api\modules\report\controller\ReportCommentController.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\admission\service\AdmissionService.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\lostfound\controller\LostFoundController.java
+F:\school\School_system-api\src\main\java\com\srms\api\modules\integration\service\IntegrationEventLogService.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\development\controller\DevelopmentController.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\facility\entity\WorkOrder.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\school\SlugBackfillRunner.java
@@ -200,6 +205,7 @@ F:\school\School_system-api\src\main\java\com\srms\api\modules\inventory\entity\
 F:\school\School_system-api\src\main\java\com\srms\api\modules\policy\entity\PolicyDocument.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\library\service\LibraryService.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\development\service\DevelopmentService.java
+F:\school\School_system-api\src\main\java\com\srms\api\modules\integration\dto\IntegrationEventView.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\exam\controller\GceCandidateController.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\accounting\repository\JournalEntryRepository.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\assessment\controller\GradeWeightConfigController.java
@@ -286,6 +292,7 @@ F:\school\School_system-api\src\main\java\com\srms\api\modules\facility\reposito
 F:\school\School_system-api\src\main\java\com\srms\api\modules\activities\entity\ActivityEnrolment.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\strategic\service\StrategicPlanService.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\backup\controller\PlatformBackupController.java
+F:\school\School_system-api\src\main\java\com\srms\api\modules\integration\entity\IntegrationEventLog.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\exam\controller\ExamController.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\teacher\entity\Teacher.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\development\entity\TrainingRecord.java
@@ -308,6 +315,7 @@ F:\school\School_system-api\src\main\java\com\srms\api\modules\exam\dto\GceCandi
 F:\school\School_system-api\src\main\java\com\srms\api\modules\accounting\entity\JournalEntry.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\development\entity\StaffObservation.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\library\entity\LibraryLoan.java
+F:\school\School_system-api\src\main\java\com\srms\api\modules\integration\entity\PowerBiReport.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\development\entity\StaffAppraisal.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\development\repository\TrainingRepository.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\audit\repository\AuditEventRepository.java
@@ -316,6 +324,7 @@ F:\school\School_system-api\src\main\java\com\srms\api\modules\incident\controll
 F:\school\School_system-api\src\main\java\com\srms\api\modules\accounting\repository\ExpenseRepository.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\assessment\service\GradeWeightConfigService.java
 F:\school\School_system-api\src\main\java\com\srms\api\exception\BusinessException.java
+F:\school\School_system-api\src\main\java\com\srms\api\modules\integration\controller\IntegrationWebhookController.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\procurement\service\ProcurementService.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\alumni\entity\AlumniRecord.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\integration\controller\IntegrationConfigController.java
@@ -339,6 +348,7 @@ F:\school\School_system-api\src\main\java\com\srms\api\modules\lostfound\entity\
 F:\school\School_system-api\src\main\java\com\srms\api\config\SecurityConfig.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\compliance\service\ComplianceService.java
 F:\school\School_system-api\src\main\java\com\srms\api\security\tenant\TenantResolution.java
+F:\school\School_system-api\src\main\java\com\srms\api\modules\integration\service\PowerBiReportService.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\hr\controller\HrController.java
 F:\school\School_system-api\src\main\java\com\srms\api\modules\integration\entity\IntegrationConfig.java
 F:\school\School_system-api\src\main\java\com\srms\api\exception\GlobalExceptionHandler.java
