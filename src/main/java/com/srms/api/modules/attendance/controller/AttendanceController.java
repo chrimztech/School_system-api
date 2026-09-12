@@ -1,5 +1,6 @@
 package com.srms.api.modules.attendance.controller;
 import com.srms.api.common.ApiResponse;
+import com.srms.api.common.GuardianNames;
 import com.srms.api.common.PageRequestUtil;
 import com.srms.api.common.PageResponse;
 import com.srms.api.exception.ForbiddenException;
@@ -60,12 +61,17 @@ public class AttendanceController {
      * Leadership sees everything, unfiltered. A parent has no legitimate use for this
      * school-wide feed at all (every pupil's daily present/absent status) — they read their
      * own children's attendance through the already-scoped /attendance/student/{id} below.
+     *
+     * HOD uses the same personal-classes scoping as TEACHER here, matching mark()'s write-side
+     * restriction below — an HOD's department-head status grants broader verification/write
+     * powers elsewhere, not an unscoped read of every class's daily attendance.
      */
     private List<AttendanceRecord> scopeToTeacher(String schoolId, Authentication auth, List<AttendanceRecord> records) {
-        if ("PARENT".equals(roleOf(auth))) {
+        String role = roleOf(auth);
+        if ("PARENT".equals(role)) {
             throw new ForbiddenException("Parents can only view attendance for their own children — use /attendance/student/{id}");
         }
-        if (!"TEACHER".equals(roleOf(auth))) return records;
+        if (!actsAsPersonalTeacher(role)) return records;
         String email = userRepository.findById(auth.getName()).map(AppUser::getEmail).orElse(null);
         if (email == null) return List.of();
         // AttendanceRecord.classId is populated from the register form's class selector, which
@@ -122,6 +128,11 @@ public class AttendanceController {
                 .orElseThrow(() -> new ForbiddenException("Authenticated parent was not found"));
         Student student = studentRepository.findByIdAndSchoolId(studentId, schoolId)
                 .orElseThrow(() -> new ForbiddenException("Learner is not available to this parent"));
+        // A placeholder guardian name (never actually captured) means the matching phone/email
+        // below can't be trusted as proof this is the same family — see GuardianNames' javadoc.
+        if (GuardianNames.isPlaceholder(student.getGuardian())) {
+            throw new ForbiddenException("Parents can only view attendance for their own children");
+        }
         boolean emailMatch = user.getEmail() != null && student.getGuardianEmail() != null
                 && user.getEmail().equalsIgnoreCase(student.getGuardianEmail());
         boolean phoneMatch = user.getPhone() != null && student.getGuardianPhone() != null

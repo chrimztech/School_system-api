@@ -1,6 +1,7 @@
 package com.srms.api.modules.student.service;
 
 import com.srms.api.common.BulkImportResult;
+import com.srms.api.common.GuardianNames;
 import com.srms.api.common.PhoneUtils;
 import com.srms.api.exception.BusinessException;
 import com.srms.api.exception.ResourceNotFoundException;
@@ -83,7 +84,13 @@ public class StudentService {
     }
 
     public List<Student> findByGuardianEmail(String schoolId, String email) {
-        return studentRepository.findBySchoolIdAndGuardianEmailIgnoreCase(schoolId, email);
+        // A placeholder guardian name (never actually captured) means a matching email can't be
+        // trusted as proof of the same family — see GuardianNames' javadoc. Excluding these here,
+        // at the source of every parent-portal "my children" lookup, keeps a shared fallback
+        // contact from letting one parent's login see pupils that aren't actually theirs.
+        return studentRepository.findBySchoolIdAndGuardianEmailIgnoreCase(schoolId, email).stream()
+                .filter(s -> !GuardianNames.isPlaceholder(s.getGuardian()))
+                .toList();
     }
 
     /**
@@ -95,7 +102,11 @@ public class StudentService {
     public List<Student> findByGuardianPhone(String schoolId, String phone) {
         String normalized = normalizePhone(phone);
         if (normalized.isEmpty()) return List.of();
+        // Same reasoning as findByGuardianEmail above — a phone match against a pupil whose
+        // guardian name was never actually captured can't be trusted as proof of the same
+        // family; it's just as likely to be a shared fallback number from a bulk import.
         return studentRepository.findBySchoolId(schoolId).stream()
+                .filter(s -> !GuardianNames.isPlaceholder(s.getGuardian()))
                 .filter(s -> normalized.equals(normalizePhone(s.getGuardianPhone()))
                         || normalized.equals(normalizePhone(s.getGuardianAltPhone())))
                 .toList();
