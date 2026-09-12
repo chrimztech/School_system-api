@@ -38,6 +38,11 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers("/api/auth/**", "/api/public/**", "/swagger-ui/**", "/v3/api-docs/**", "/actuator/**").permitAll()
+                // Inbound webhooks from third-party providers (MTN, Airtel, Africa's Talking,
+                // Zoom) — the provider calls these directly, with no SRMS session/JWT to send.
+                // Each receiver verifies the payload against that school's configured
+                // webhook/callback secret instead of relying on network-level trust.
+                .requestMatchers("/api/payments/callbacks/**", "/api/integrations/callbacks/**").permitAll()
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)

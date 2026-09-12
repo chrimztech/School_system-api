@@ -23,10 +23,13 @@ import java.util.Optional;
  * table so a district/board can watch this school's KPIs update live on their own Power BI
  * dashboard (https://learn.microsoft.com/en-us/power-bi/developer/embedded/embed-service-principal).
  * Configuration fields exactly match the platform's integration-configuration spec:
- *   configuration: tenantId, applicationClientId, workspaceId, reportId, datasetId, capacityId,
- *                  reportDisplayName, reportType, rowLevelSecurityRole, refreshSchedule
- *   credentials:   clientSecret, certificate, certificatePassword (certificate preferred for
- *                  production; either clientSecret or certificate is required)
+ *   configuration (IntegrationConfig): tenantId, applicationClientId
+ *   credentials (IntegrationConfig):   clientSecret, certificate, certificatePassword
+ *                                      (certificate preferred for production; either
+ *                                      clientSecret or certificate is required)
+ *   per-report (PowerBiReport, one school may publish several): workspaceId, reportId,
+ *   datasetId, capacityId, reportDisplayName, reportType, rowLevelSecurityRole, refreshSchedule —
+ *   see PowerBiReportService. The Azure AD credentials above are shared across every report.
  *
  * Auth: Azure AD OAuth2 client-credentials grant, scope https://analysis.windows.net/powerbi/api/.default
  * — this requires the Azure AD app to have been granted a Power BI service-principal application
@@ -84,12 +87,11 @@ public class PowerBiClient {
                 : IntegrationTestResult.fail("Could not obtain an Azure AD token — check the tenant ID, client ID, and client secret");
     }
 
-    /** Pushes one snapshot row of live school KPIs into the configured push dataset table
+    /** Pushes one snapshot row of live school KPIs into the given report's push dataset table
      * (expected table name: "SchoolSnapshot", columns: Timestamp, SchoolId, Enrollment,
      * FeesCollectedTotal — the district sets this table up once in Power BI when they create the
      * push dataset). Returns true only if Power BI accepted the row. */
-    public boolean publishSnapshot(String schoolId, Map<String, Object> row) {
-        String datasetId = str(config.resolveConfig(CODE, schoolId, "datasetId"));
+    public boolean publishSnapshot(String schoolId, String datasetId, Map<String, Object> row) {
         if (isBlank(datasetId)) return false;
         Optional<String> token = fetchToken(schoolId);
         if (token.isEmpty()) return false;

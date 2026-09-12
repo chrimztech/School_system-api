@@ -6,6 +6,7 @@ import com.srms.api.exception.BusinessException;
 import com.srms.api.modules.integration.dto.IntegrationConfigSaveRequest;
 import com.srms.api.modules.integration.dto.IntegrationConfigView;
 import com.srms.api.modules.integration.entity.IntegrationConfig;
+import com.srms.api.modules.integration.entity.IntegrationEventLog;
 import com.srms.api.modules.integration.repository.IntegrationConfigRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,6 +32,7 @@ import java.util.Optional;
 @Transactional
 public class IntegrationConfigService {
     private final IntegrationConfigRepository repository;
+    private final IntegrationEventLogService eventLog;
     private final ObjectMapper objectMapper;
 
     @Value("${app.base-url:http://localhost:8090}")
@@ -144,7 +146,28 @@ public class IntegrationConfigService {
         }
 
         entity.setUpdatedBy(actorId);
-        return toView(repository.save(entity));
+        IntegrationConfig saved = repository.save(entity);
+        eventLog.record(scopeType, key, providerCode, IntegrationEventLog.EventType.SAVE, true, "Configuration saved", null, actorId);
+        return toView(saved);
+    }
+
+    /** Adds or replaces one credential field's value from an uploaded file (base64-encoded by the
+     * caller) — used for certificate-type credentials (Power BI, ECZ) where pasting PEM text by
+     * hand is error-prone. Goes through the exact same encrypted-credentials JSON blob as every
+     * other secret; a "real file upload" here means a genuine multipart upload interaction, not a
+     * separate unencrypted file store. */
+    public IntegrationConfigView saveCredentialFile(IntegrationConfig.ScopeType scopeType, String schoolId, String providerCode,
+                                                     String fieldKey, String base64Content, String actorId) {
+        String key = scopeType == IntegrationConfig.ScopeType.PLATFORM ? IntegrationConfig.PLATFORM_SCOPE_SCHOOL_ID : schoolId;
+        IntegrationConfig entity = repository.findByScopeTypeAndSchoolIdAndProviderCode(scopeType, key, providerCode)
+                .orElseThrow(() -> new BusinessException("Save the rest of this integration's settings before uploading a credential file"));
+        Map<String, String> merged = new LinkedHashMap<>(readCredentialMap(entity));
+        merged.put(fieldKey, base64Content);
+        entity.setEncryptedCredentials(writeJson(merged));
+        entity.setUpdatedBy(actorId);
+        IntegrationConfig saved = repository.save(entity);
+        eventLog.record(scopeType, key, providerCode, IntegrationEventLog.EventType.SAVE, true, "Uploaded " + fieldKey, null, actorId);
+        return toView(saved);
     }
 
     public void recordTestOutcome(IntegrationConfig.ScopeType scopeType, String schoolId, String providerCode, boolean success, String message) {
@@ -162,6 +185,19 @@ public class IntegrationConfigService {
             }
             repository.save(entity);
         });
+        eventLog.record(scopeType, key, providerCode, IntegrationEventLog.EventType.TEST, success, message, null, null);
+    }
+
+    /** Records a live action (Zoom meeting created, Power BI snapshot published, ECZ sync run) or
+     * an inbound webhook — called by IntegrationActionsController and the webhook receivers. */
+    public void recordEvent(IntegrationConfig.ScopeType scopeType, String schoolId, String providerCode,
+                             IntegrationEventLog.EventType eventType, boolean success, String message, String metadataJson, String actor) {
+        eventLog.record(scopeType, schoolId, providerCode, eventType, success, message, metadataJson, actor);
+    }
+
+    public List<com.srms.api.modules.integration.dto.IntegrationEventView> recentEvents(IntegrationConfig.ScopeType scopeType, String schoolId, String providerCode) {
+        String key = scopeType == IntegrationConfig.ScopeType.PLATFORM ? IntegrationConfig.PLATFORM_SCOPE_SCHOOL_ID : schoolId;
+        return eventLog.recent(scopeType, key, providerCode, 25);
     }
 
     // ---- Accessors used by the provider clients ----
