@@ -1,6 +1,7 @@
 package com.srms.api.modules.student.service;
 
 import com.srms.api.common.BulkImportResult;
+import com.srms.api.common.GuardianNames;
 import com.srms.api.common.PhoneUtils;
 import com.srms.api.exception.BusinessException;
 import com.srms.api.exception.ResourceNotFoundException;
@@ -33,6 +34,7 @@ import com.srms.api.modules.student.repository.StudentRepository;
 import com.srms.api.modules.student.repository.StudentSpecifications;
 import com.srms.api.modules.transport.repository.TransportEnrolmentRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -43,6 +45,7 @@ import java.time.Year;
 import java.util.ArrayList;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class StudentService {
@@ -83,13 +86,10 @@ public class StudentService {
     }
 
     public List<Student> findByGuardianEmail(String schoolId, String email) {
-        // Matches on the contact alone now — a captured guardian name is no longer required.
-        // Trade-off, by explicit product decision: a pupil whose guardian email is a fallback
-        // contact shared with other, unrelated pupils (e.g. from a bulk import that never
-        // captured a real guardian) will let that shared login see all of them, not just their
-        // own child. Acceptable because deliberately-linked single-family contacts — the normal
-        // case — must work even when no guardian name was ever typed in.
-        return studentRepository.findBySchoolIdAndGuardianEmailIgnoreCase(schoolId, email);
+        // Matches on the contact alone now — a captured guardian name is no longer required, so
+        // a deliberately-linked single family works even when nobody ever typed in a guardian
+        // name. See guardSharedFallbackContact for the one case this still refuses to trust.
+        return guardSharedFallbackContact(studentRepository.findBySchoolIdAndGuardianEmailIgnoreCase(schoolId, email));
     }
 
     /**
@@ -97,16 +97,41 @@ public class StudentService {
      * format, so matching happens in-memory against a normalized (spaces/dashes stripped)
      * form rather than an exact DB match. Lets phone-only parents (no email on file) still
      * see their own children's report cards — the phone number being attached to the pupil is
-     * enough on its own; a captured guardian name is not required (see findByGuardianEmail's
-     * note on the trade-off this implies for a shared/fallback contact).
+     * enough on its own; a captured guardian name is not required (see guardSharedFallbackContact
+     * for the one case this still refuses to trust).
      */
     public List<Student> findByGuardianPhone(String schoolId, String phone) {
         String normalized = normalizePhone(phone);
         if (normalized.isEmpty()) return List.of();
-        return studentRepository.findBySchoolId(schoolId).stream()
+        List<Student> matches = studentRepository.findBySchoolId(schoolId).stream()
                 .filter(s -> normalized.equals(normalizePhone(s.getGuardianPhone()))
                         || normalized.equals(normalizePhone(s.getGuardianAltPhone())))
                 .toList();
+        return guardSharedFallbackContact(matches);
+    }
+
+    // A real family very rarely has more children than this at one school — set generously
+    // above any plausible sibling count so a genuine large family is never blocked.
+    private static final int MAX_TRUSTED_SHARED_CONTACT = 6;
+
+    /**
+     * The one case a contact match still isn't trusted: the same phone/email is attached to an
+     * implausibly large number of pupils, and not one of them has a real guardian name captured.
+     * That combination — many "children", zero real names — is the actual signature of a bulk
+     * import that fell back to one shared placeholder contact (e.g. the school office's own
+     * number) rather than capturing each pupil's real guardian; trusting it would let that one
+     * shared login see every one of those unrelated pupils. A real family, even a large one,
+     * plausibly has at least one child with a real guardian name on file, and essentially never
+     * exceeds MAX_TRUSTED_SHARED_CONTACT children at the same school — either signal is enough to
+     * keep trusting the match.
+     */
+    private List<Student> guardSharedFallbackContact(List<Student> matches) {
+        if (matches.size() <= MAX_TRUSTED_SHARED_CONTACT) return matches;
+        boolean anyRealGuardianName = matches.stream().anyMatch(s -> !GuardianNames.isPlaceholder(s.getGuardian()));
+        if (anyRealGuardianName) return matches;
+        log.warn("Refusing to trust a guardian contact shared by {} pupils, none with a real guardian name captured — "
+                + "looks like a shared fallback contact from a bulk import, not one family", matches.size());
+        return List.of();
     }
 
     private String normalizePhone(String phone) {
