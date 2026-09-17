@@ -1,7 +1,6 @@
 package com.srms.api.modules.assessment.controller;
 
 import com.srms.api.common.ApiResponse;
-import com.srms.api.common.GuardianNames;
 import com.srms.api.common.PhoneUtils;
 import com.srms.api.exception.ForbiddenException;
 import com.srms.api.modules.assessment.dto.HistoricalResultDto;
@@ -121,11 +120,9 @@ public class TermGradeController {
                 .orElseThrow(() -> new ForbiddenException("Authenticated parent was not found"));
         Student student = studentRepository.findByIdAndSchoolId(studentId, schoolId)
                 .orElseThrow(() -> new ForbiddenException("Learner is not available to this parent"));
-        // A placeholder guardian name (never actually captured) means the matching phone/email
-        // below can't be trusted as proof this is the same family — see GuardianNames' javadoc.
-        if (GuardianNames.isPlaceholder(student.getGuardian())) {
-            throw new ForbiddenException("Parents can only view report cards for their own children");
-        }
+        // A captured guardian name is not required — the email/phone match below is enough on
+        // its own to confirm ownership (product decision: must work even when the pupil's
+        // guardian name was never typed in, as long as the contact is attached to the pupil).
         boolean emailMatch = user.getEmail() != null && student.getGuardianEmail() != null
                 && user.getEmail().equalsIgnoreCase(student.getGuardianEmail());
         boolean phoneMatch = user.getPhone() != null && student.getGuardianPhone() != null

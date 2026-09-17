@@ -1,7 +1,6 @@
 package com.srms.api.modules.student.service;
 
 import com.srms.api.common.BulkImportResult;
-import com.srms.api.common.GuardianNames;
 import com.srms.api.common.PhoneUtils;
 import com.srms.api.exception.BusinessException;
 import com.srms.api.exception.ResourceNotFoundException;
@@ -84,29 +83,27 @@ public class StudentService {
     }
 
     public List<Student> findByGuardianEmail(String schoolId, String email) {
-        // A placeholder guardian name (never actually captured) means a matching email can't be
-        // trusted as proof of the same family — see GuardianNames' javadoc. Excluding these here,
-        // at the source of every parent-portal "my children" lookup, keeps a shared fallback
-        // contact from letting one parent's login see pupils that aren't actually theirs.
-        return studentRepository.findBySchoolIdAndGuardianEmailIgnoreCase(schoolId, email).stream()
-                .filter(s -> !GuardianNames.isPlaceholder(s.getGuardian()))
-                .toList();
+        // Matches on the contact alone now — a captured guardian name is no longer required.
+        // Trade-off, by explicit product decision: a pupil whose guardian email is a fallback
+        // contact shared with other, unrelated pupils (e.g. from a bulk import that never
+        // captured a real guardian) will let that shared login see all of them, not just their
+        // own child. Acceptable because deliberately-linked single-family contacts — the normal
+        // case — must work even when no guardian name was ever typed in.
+        return studentRepository.findBySchoolIdAndGuardianEmailIgnoreCase(schoolId, email);
     }
 
     /**
      * Guardian phone numbers are free-typed by school staff and not stored in one canonical
      * format, so matching happens in-memory against a normalized (spaces/dashes stripped)
      * form rather than an exact DB match. Lets phone-only parents (no email on file) still
-     * see their own children's report cards.
+     * see their own children's report cards — the phone number being attached to the pupil is
+     * enough on its own; a captured guardian name is not required (see findByGuardianEmail's
+     * note on the trade-off this implies for a shared/fallback contact).
      */
     public List<Student> findByGuardianPhone(String schoolId, String phone) {
         String normalized = normalizePhone(phone);
         if (normalized.isEmpty()) return List.of();
-        // Same reasoning as findByGuardianEmail above — a phone match against a pupil whose
-        // guardian name was never actually captured can't be trusted as proof of the same
-        // family; it's just as likely to be a shared fallback number from a bulk import.
         return studentRepository.findBySchoolId(schoolId).stream()
-                .filter(s -> !GuardianNames.isPlaceholder(s.getGuardian()))
                 .filter(s -> normalized.equals(normalizePhone(s.getGuardianPhone()))
                         || normalized.equals(normalizePhone(s.getGuardianAltPhone())))
                 .toList();
