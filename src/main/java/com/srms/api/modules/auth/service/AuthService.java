@@ -1,6 +1,7 @@
 package com.srms.api.modules.auth.service;
 
 import com.srms.api.common.PhoneUtils;
+import com.srms.api.common.GuardianNames;
 import com.srms.api.exception.BusinessException;
 import com.srms.api.exception.ForbiddenException;
 import com.srms.api.modules.audit.entity.AuditEvent;
@@ -75,6 +76,7 @@ public class AuthService {
                 .email(user.getEmail()).phone(user.getPhone()).role(user.getRole().name())
                 .schoolId(user.getSchoolId()).initials(user.getInitials())
                 .mustChangePassword(user.isMustChangePassword())
+                .bio(user.getBio())
                 .build();
     }
 
@@ -110,6 +112,7 @@ public class AuthService {
                 .email(user.getEmail()).phone(user.getPhone()).role(user.getRole().name())
                 .schoolId(user.getSchoolId()).initials(user.getInitials())
                 .mustChangePassword(user.isMustChangePassword())
+                .bio(user.getBio())
                 .build();
     }
 
@@ -242,12 +245,45 @@ public class AuthService {
      * which every non-leadership role (teacher, hod, finance, career_guidance, parent) got a
      * 403 from — "manage other accounts" and "edit my own profile" are different permissions
      * that had been conflated onto the same endpoint. */
-    public UserDto updateOwnProfile(String userId, String phone, Boolean notifyEmail, Boolean notifySms) {
+    public UserDto updateOwnProfile(String userId, String name, String phone, Boolean notifyEmail, Boolean notifySms, String bio) {
         AppUser user = findUserEntity(userId);
+        if (name != null) {
+            String trimmedName = name.trim();
+            boolean mayCompleteMissingParentName = user.getRole() == AppUser.UserRole.PARENT
+                    && GuardianNames.isPlaceholder(user.getName());
+            boolean unchanged = trimmedName.equals(user.getName() == null ? "" : user.getName().trim());
+            if (!mayCompleteMissingParentName && !unchanged) {
+                throw new BusinessException("Your name can only be set while completing a missing parent profile");
+            }
+            if (mayCompleteMissingParentName) {
+                if (GuardianNames.isPlaceholder(trimmedName)) {
+                    throw new BusinessException("Enter your full name to continue");
+                }
+                if (trimmedName.length() > 120) {
+                    throw new BusinessException("Name must be 120 characters or fewer");
+                }
+                user.setName(trimmedName);
+                user.setInitials(initialsFor(trimmedName));
+            }
+        }
         if (phone != null) user.setPhone(phone.isBlank() ? null : normalizePhone(phone));
         if (notifyEmail != null) user.setNotifyEmail(notifyEmail);
         if (notifySms != null) user.setNotifySms(notifySms);
+        if (bio != null) {
+            String trimmedBio = bio.trim();
+            if (trimmedBio.length() > 500) {
+                throw new BusinessException("Bio must be 500 characters or fewer");
+            }
+            user.setBio(trimmedBio.isBlank() ? null : trimmedBio);
+        }
         return toDto(userRepository.save(user));
+    }
+
+    private String initialsFor(String name) {
+        String[] parts = name.trim().split("\\s+");
+        return parts.length >= 2
+                ? (String.valueOf(parts[0].charAt(0)) + parts[parts.length - 1].charAt(0)).toUpperCase()
+                : String.valueOf(parts[0].charAt(0)).toUpperCase();
     }
 
     /**
@@ -362,6 +398,7 @@ public class AuthService {
                 .notifyEmail(user.isNotifyEmail())
                 .notifySms(user.isNotifySms())
                 .mustChangePassword(user.isMustChangePassword())
+                .bio(user.getBio())
                 .build();
     }
 
@@ -401,10 +438,7 @@ public class AuthService {
         // credential.
         user.setMustChangePassword(true);
         if (user.getInitials() == null && user.getName() != null) {
-            String[] parts = user.getName().trim().split("\\s+");
-            user.setInitials(parts.length >= 2
-                    ? String.valueOf(parts[0].charAt(0)) + parts[1].charAt(0)
-                    : String.valueOf(parts[0].charAt(0)));
+            user.setInitials(initialsFor(user.getName()));
         }
         AppUser saved = userRepository.save(user);
         ensureTeacherProfile(saved);

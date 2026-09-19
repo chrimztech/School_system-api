@@ -21,6 +21,7 @@ public class AppUser extends BaseEntity {
     private String schoolId; // null for SUPER_ADMIN
     @Column(unique = true)
     private String phone;
+    private String bio;
     @Builder.Default private boolean active = true;
     @Builder.Default private boolean notifyEmail = true;
     @Builder.Default private boolean notifySms = false;

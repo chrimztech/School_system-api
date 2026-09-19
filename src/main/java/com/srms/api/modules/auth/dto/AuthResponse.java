@@ -16,4 +16,5 @@ public class AuthResponse {
     private String schoolId;
     private String initials;
     private boolean mustChangePassword;
+    private String bio;
 }

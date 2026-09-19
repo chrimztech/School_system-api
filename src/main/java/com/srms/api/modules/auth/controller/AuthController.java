@@ -44,10 +44,12 @@ public class AuthController {
 
     @PatchMapping("/me")
     public ResponseEntity<ApiResponse<UserDto>> updateMe(Authentication auth, @RequestBody Map<String, Object> body) {
+        String name = body.containsKey("name") ? String.valueOf(body.get("name")) : null;
         String phone = body.containsKey("phone") ? String.valueOf(body.get("phone")) : null;
         Boolean notifyEmail = body.containsKey("notifyEmail") ? Boolean.valueOf(String.valueOf(body.get("notifyEmail"))) : null;
         Boolean notifySms = body.containsKey("notifySms") ? Boolean.valueOf(String.valueOf(body.get("notifySms"))) : null;
-        return ResponseEntity.ok(ApiResponse.ok(authService.updateOwnProfile(auth.getName(), phone, notifyEmail, notifySms)));
+        String bio = body.containsKey("bio") ? String.valueOf(body.get("bio")) : null;
+        return ResponseEntity.ok(ApiResponse.ok(authService.updateOwnProfile(auth.getName(), name, phone, notifyEmail, notifySms, bio)));
     }
 
     @PostMapping("/change-password")
