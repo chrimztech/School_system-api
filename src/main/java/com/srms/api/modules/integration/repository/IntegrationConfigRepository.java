@@ -14,4 +14,6 @@ public interface IntegrationConfigRepository extends JpaRepository<IntegrationCo
 
     List<IntegrationConfig> findByScopeTypeAndSchoolIdOrderByDisplayNameAsc(
             IntegrationConfig.ScopeType scopeType, String schoolId);
+
+    List<IntegrationConfig> findByScopeTypeAndProviderCode(IntegrationConfig.ScopeType scopeType, String providerCode);
 }

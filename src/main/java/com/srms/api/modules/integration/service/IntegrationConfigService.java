@@ -8,6 +8,7 @@ import com.srms.api.modules.integration.dto.IntegrationConfigView;
 import com.srms.api.modules.integration.entity.IntegrationConfig;
 import com.srms.api.modules.integration.entity.IntegrationEventLog;
 import com.srms.api.modules.integration.repository.IntegrationConfigRepository;
+import com.srms.api.modules.school.repository.SchoolRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -34,6 +35,7 @@ public class IntegrationConfigService {
     private final IntegrationConfigRepository repository;
     private final IntegrationEventLogService eventLog;
     private final ObjectMapper objectMapper;
+    private final SchoolRepository schoolRepository;
 
     @Value("${app.base-url:http://localhost:8090}")
     private String appBaseUrl;
@@ -227,6 +229,46 @@ public class IntegrationConfigService {
     public boolean isSchoolEnabled(String providerCode, String schoolId) {
         return repository.findByScopeTypeAndSchoolIdAndProviderCode(IntegrationConfig.ScopeType.SCHOOL, schoolId, providerCode)
                 .map(c -> Boolean.TRUE.equals(c.getEnabled())).orElse(false);
+    }
+
+    // ---- ZynlePay setup overview — which schools are running on their own merchant account vs.
+    // riding the platform's shared fallback vs. having no working payment path at all. Lets the
+    // platform team see who still needs to be onboarded onto their own account rather than
+    // settling parent fee payments through the platform's own merchant account indefinitely. ----
+
+    public record PaymentSetupRow(String schoolId, String schoolName, String status, String connectionStatus, LocalDateTime lastTestedAt) {}
+
+    private static final String PAYMENT_PROVIDER_CODE = "zynlepay";
+
+    public List<PaymentSetupRow> paymentSetupOverview() {
+        boolean platformReady = zynlepayComplete(
+                enabledConfigMap(IntegrationConfig.ScopeType.PLATFORM, IntegrationConfig.PLATFORM_SCOPE_SCHOOL_ID, PAYMENT_PROVIDER_CODE).orElse(Map.of()),
+                enabledCredentialMap(IntegrationConfig.ScopeType.PLATFORM, IntegrationConfig.PLATFORM_SCOPE_SCHOOL_ID, PAYMENT_PROVIDER_CODE).orElse(Map.of()));
+
+        Map<String, IntegrationConfig> ownConfigsBySchool = new LinkedHashMap<>();
+        for (IntegrationConfig c : repository.findByScopeTypeAndProviderCode(IntegrationConfig.ScopeType.SCHOOL, PAYMENT_PROVIDER_CODE)) {
+            ownConfigsBySchool.put(c.getSchoolId(), c);
+        }
+
+        return schoolRepository.findByActiveTrue().stream().map(school -> {
+            IntegrationConfig own = ownConfigsBySchool.get(school.getId());
+            boolean ownReady = own != null && Boolean.TRUE.equals(own.getEnabled())
+                    && zynlepayComplete(readConfigMap(own), readCredentialMap(own));
+            String status = ownReady ? "OWN_ACCOUNT" : platformReady ? "PLATFORM_FALLBACK" : "NOT_CONFIGURED";
+            return new PaymentSetupRow(school.getId(), school.getName(), status,
+                    own != null ? own.getConnectionStatus().name() : IntegrationConfig.ConnectionStatus.NOT_CONFIGURED.name(),
+                    own != null ? own.getLastTestedAt() : null);
+        }).toList();
+    }
+
+    private static boolean zynlepayComplete(Map<String, Object> configuration, Map<String, String> credentials) {
+        Object merchantId = configuration.get("merchantId");
+        return merchantId != null && !String.valueOf(merchantId).isBlank()
+                && notBlank(credentials.get("apiId")) && notBlank(credentials.get("apiKey"));
+    }
+
+    private static boolean notBlank(String s) {
+        return s != null && !s.isBlank();
     }
 
     private Optional<Map<String, Object>> enabledConfigMap(IntegrationConfig.ScopeType scopeType, String schoolId, String providerCode) {

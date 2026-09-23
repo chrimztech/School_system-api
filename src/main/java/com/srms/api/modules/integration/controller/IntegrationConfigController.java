@@ -86,6 +86,14 @@ public class IntegrationConfigController {
         return ResponseEntity.ok(ApiResponse.ok(service.recentEvents(IntegrationConfig.ScopeType.PLATFORM, IntegrationConfig.PLATFORM_SCOPE_SCHOOL_ID, providerCode)));
     }
 
+    /** Per-school breakdown of who's on their own ZynlePay merchant account vs. the platform's
+     * shared fallback vs. not set up at all — see IntegrationConfigService.paymentSetupOverview. */
+    @GetMapping("/api/platform/payment-setup")
+    public ResponseEntity<ApiResponse<List<IntegrationConfigService.PaymentSetupRow>>> paymentSetup(Authentication auth) {
+        RoleGuard.requireSuperAdmin(auth);
+        return ResponseEntity.ok(ApiResponse.ok(service.paymentSetupOverview()));
+    }
+
     /** Real file upload for a certificate-type credential (Power BI's certificate, ECZ's
      * certificate/private key) — the file's bytes are base64-encoded and stored inside the same
      * encrypted credentials blob as every other secret, so it gets identical at-rest protection;
