@@ -52,7 +52,7 @@ public class IntegrationConfigService {
             new ProviderMeta("powerbi", "Power BI", "Analytics", null),
             new ProviderMeta("google", "Google Workspace", "Identity", null),
             new ProviderMeta("zoom", "Zoom Education", "Productivity", "/api/integrations/callbacks/zoom"),
-            new ProviderMeta("llm", "AI Lesson Drafting (Anthropic)", "AI", null)
+            new ProviderMeta("llm", "AI Assistant (Anthropic)", "AI", null)
     );
 
     private static ProviderMeta metaFor(String providerCode) {

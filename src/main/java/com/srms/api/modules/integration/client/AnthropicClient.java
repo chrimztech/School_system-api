@@ -48,7 +48,7 @@ public class AnthropicClient {
     @SuppressWarnings("unchecked")
     public String complete(String schoolId, String system, String userMessage, int maxTokens) {
         String apiKey = config.schoolOwnCredential(CODE, schoolId, "apiKey").orElseThrow(() ->
-                new BusinessException("AI lesson drafting isn't connected for this school yet — add your Anthropic API key on the Integrations page"));
+                new BusinessException("AI isn't connected for this school yet — add your Anthropic API key on the Integrations page"));
         String baseUrl = config.schoolOwnConfig(CODE, schoolId, "apiBaseUrl").orElse(DEFAULT_BASE_URL);
         String model = config.schoolOwnConfig(CODE, schoolId, "model").orElse(DEFAULT_MODEL);
 
