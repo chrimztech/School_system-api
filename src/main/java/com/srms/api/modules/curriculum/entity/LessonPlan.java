@@ -31,6 +31,7 @@ public class LessonPlan extends BaseEntity {
     @Column(name = "lesson_date") private LocalDate lessonDate;
     @Column(name = "duration_minutes") private Integer durationMinutes;
     @Column(nullable = false, columnDefinition = "TEXT") private String topic;
+    @Column(name = "previous_knowledge", columnDefinition = "TEXT") private String previousKnowledge;
     @Column(columnDefinition = "TEXT") private String objectives;
     @Column(columnDefinition = "TEXT") private String materials;
     @Column(columnDefinition = "TEXT") private String introduction;
@@ -38,6 +39,9 @@ public class LessonPlan extends BaseEntity {
     @Column(columnDefinition = "TEXT") private String conclusion;
     @Column(columnDefinition = "TEXT") private String evaluation;
     @Column(columnDefinition = "TEXT") private String homework;
+    /** Filled in by the teacher after the lesson is taught — reflection notes and, when
+     * supervised, the observing HOD/head's sign-off comment. Never set by generation. */
+    @Column(name = "teacher_remarks", columnDefinition = "TEXT") private String teacherRemarks;
     @Enumerated(EnumType.STRING) @Column(nullable = false) private Status status = Status.DRAFT;
     @Enumerated(EnumType.STRING) @Column(nullable = false) private Source source = Source.MANUAL;
     @Column(name = "created_by") private String createdBy;

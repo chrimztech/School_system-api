@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.srms.api.exception.BusinessException;
 import com.srms.api.exception.ForbiddenException;
 import com.srms.api.exception.ResourceNotFoundException;
+import com.srms.api.modules.academic.entity.SchoolClass;
+import com.srms.api.modules.academic.repository.SchoolClassRepository;
 import com.srms.api.modules.curriculum.dto.LessonPlanRequests;
 import com.srms.api.modules.curriculum.entity.LessonPlan;
 import com.srms.api.modules.curriculum.entity.SchemeOfWork;
@@ -19,39 +21,53 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
 @Transactional
 public class LessonPlanService {
     private static final int DEFAULT_DURATION = 40;
+    // Mirrors SchemeService's own copy of AssessmentService's FULL_ACCESS_ROLES exactly.
+    private static final Set<String> FULL_ACCESS_ROLES = Set.of(
+            "SUPER_ADMIN", "SCHOOL_ADMIN", "PRINCIPAL", "DEPUTY_HEAD");
     private static final String SYSTEM_PROMPT = """
             You write lesson plans for teachers in Zambian schools, following the Zambian lesson plan
-            structure: introduction, development (teacher and learner activities in clear steps),
-            conclusion, evaluation and homework. Use simple, practical language and examples that
-            fit a Zambian classroom. Only refer to textbooks or materials if they are named in the
-            scheme. Respond with a single JSON object and nothing else, using exactly these keys:
-            "topic", "objectives" (array of strings), "materials" (array of strings), "introduction",
-            "development", "conclusion", "evaluation", "homework".
+            structure: previous knowledge (what learners already know that this lesson builds on),
+            introduction, development (teacher and learner activities in clear steps), conclusion,
+            evaluation and homework. Use simple, practical language and examples that fit a Zambian
+            classroom. Only refer to textbooks or materials if they are named in the scheme. Respond
+            with a single JSON object and nothing else, using exactly these keys: "topic",
+            "previousKnowledge", "objectives" (array of strings), "materials" (array of strings),
+            "introduction", "development", "conclusion", "evaluation", "homework".
             """;
 
     private final LessonPlanRepository lessonPlans;
     private final SchemeOfWorkRepository schemes;
     private final SchemeWeekRepository weeks;
+    private final SchoolClassRepository classes;
+    private final TeacherAssignmentLookup assignmentLookup;
     private final AnthropicClient anthropic;
     private final ObjectMapper objectMapper;
 
-    public List<LessonPlan> list(String schoolId, String classId) {
-        return classId == null || classId.isBlank()
+    /** Same visibility rule as SchemeService.list: a plain teacher sees their own lesson plans
+     * plus anything matching their current teaching assignment; HOD and leadership see all. */
+    public List<LessonPlan> list(String schoolId, String classId, String userId, String role) {
+        List<LessonPlan> base = classId == null || classId.isBlank()
                 ? lessonPlans.findBySchoolIdOrderByLessonDateDescCreatedAtDesc(schoolId)
                 : lessonPlans.findBySchoolIdAndClassIdOrderByLessonDateDesc(schoolId, classId);
+        if (!"TEACHER".equalsIgnoreCase(role)) return base;
+        return base.stream()
+                .filter(p -> userId.equals(p.getCreatedBy()) || assignmentLookup.isAssigned(schoolId, userId, classNameOf(schoolId, p.getClassId()), p.getClassId(), p.getSubjectName()))
+                .toList();
     }
 
-    public LessonPlan create(String schoolId, LessonPlanRequests.Save req, String actor) {
+    public LessonPlan create(String schoolId, LessonPlanRequests.Save req, String actor, String role) {
         if (req.topic() == null || req.topic().isBlank()) throw new BusinessException("A topic is required");
         if (req.classId() == null || req.classId().isBlank() || req.subjectName() == null || req.subjectName().isBlank()) {
             throw new BusinessException("A class and subject are required");
         }
+        requireAssignedIfTeacher(schoolId, actor, role, classNameOf(schoolId, req.classId()), req.classId(), req.subjectName().trim());
         LessonPlan plan = new LessonPlan();
         plan.setSchoolId(schoolId);
         plan.setClassId(req.classId());
@@ -77,14 +93,22 @@ public class LessonPlanService {
      * sections directly from the week's content; AI asks the school's own Anthropic account to
      * draft them. Either way the result is a DRAFT the teacher reviews before marking it final.
      */
-    public LessonPlan generate(String schoolId, LessonPlanRequests.Generate req, String actor) {
+    public LessonPlan generate(String schoolId, LessonPlanRequests.Generate req, String actor, String role) {
         SchemeOfWork scheme = schemes.findByIdAndSchoolId(req.schemeId(), schoolId)
                 .orElseThrow(() -> new ResourceNotFoundException("Scheme of work", req.schemeId()));
         if (scheme.getStatus() != SchemeOfWork.Status.APPROVED) {
             throw new BusinessException("Lesson plans can only be generated from an approved scheme of work");
         }
+        requireAssignedIfTeacher(schoolId, actor, role, scheme.getClassName(), scheme.getClassId(), scheme.getSubjectName());
         SchemeWeek week = weeks.findByIdAndSchemeId(req.schemeWeekId(), scheme.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Scheme week", req.schemeWeekId()));
+        List<SchemeWeek> allWeeks = weeks.findBySchemeIdOrderByWeekNumberAsc(scheme.getId());
+        SchemeWeek previousWeek = allWeeks.stream()
+                .filter(w -> w.getWeekNumber() != null && week.getWeekNumber() != null && w.getWeekNumber() == week.getWeekNumber() - 1)
+                .findFirst().orElse(null);
+        String previousKnowledgeDefault = previousWeek != null
+                ? "Builds on Week " + previousWeek.getWeekNumber() + ": " + previousWeek.getTopic() + "."
+                : "First lesson in this scheme — confirm learners' starting point before beginning.";
 
         boolean ai = "AI".equalsIgnoreCase(req.mode());
         LessonPlan plan = new LessonPlan();
@@ -99,9 +123,10 @@ public class LessonPlanService {
         plan.setStatus(LessonPlan.Status.DRAFT);
 
         if (ai) {
-            Map<String, Object> draft = parseDraft(anthropic.complete(schoolId, SYSTEM_PROMPT, weekPrompt(scheme, week, plan), 2000));
+            Map<String, Object> draft = parseDraft(anthropic.complete(schoolId, SYSTEM_PROMPT, weekPrompt(scheme, week, plan, previousKnowledgeDefault), 2000));
             plan.setSource(LessonPlan.Source.AI);
             plan.setTopic(text(draft.get("topic"), week.getTopic()));
+            plan.setPreviousKnowledge(text(draft.get("previousKnowledge"), previousKnowledgeDefault));
             plan.setObjectives(text(draft.get("objectives"), week.getObjectives()));
             plan.setMaterials(text(draft.get("materials"), week.getResources()));
             plan.setIntroduction(text(draft.get("introduction"), null));
@@ -110,7 +135,7 @@ public class LessonPlanService {
             plan.setEvaluation(text(draft.get("evaluation"), null));
             plan.setHomework(text(draft.get("homework"), null));
         } else {
-            fillFromTemplate(plan, scheme, week);
+            fillFromTemplate(plan, scheme, week, previousKnowledgeDefault);
         }
         return lessonPlans.save(plan);
     }
@@ -126,6 +151,7 @@ public class LessonPlanService {
 
     private void applySave(LessonPlan plan, LessonPlanRequests.Save req) {
         if (req.topic() != null) plan.setTopic(req.topic().trim());
+        plan.setPreviousKnowledge(req.previousKnowledge());
         plan.setObjectives(req.objectives());
         plan.setMaterials(req.materials());
         plan.setIntroduction(req.introduction());
@@ -133,6 +159,7 @@ public class LessonPlanService {
         plan.setConclusion(req.conclusion());
         plan.setEvaluation(req.evaluation());
         plan.setHomework(req.homework());
+        plan.setTeacherRemarks(req.teacherRemarks());
         if (req.lessonDate() != null) plan.setLessonDate(req.lessonDate());
         if (req.durationMinutes() != null) plan.setDurationMinutes(req.durationMinutes());
         if (req.status() != null) {
@@ -140,9 +167,10 @@ public class LessonPlanService {
         }
     }
 
-    private static void fillFromTemplate(LessonPlan plan, SchemeOfWork scheme, SchemeWeek week) {
+    private static void fillFromTemplate(LessonPlan plan, SchemeOfWork scheme, SchemeWeek week, String previousKnowledgeDefault) {
         String topic = week.getTopic();
         plan.setTopic(topic);
+        plan.setPreviousKnowledge(previousKnowledgeDefault);
         plan.setObjectives(week.getObjectives());
         plan.setMaterials(week.getResources());
         plan.setSource(LessonPlan.Source.TEMPLATE);
@@ -155,7 +183,7 @@ public class LessonPlanService {
         plan.setHomework("Complete the exercises on " + topic + " from the set textbook.");
     }
 
-    private String weekPrompt(SchemeOfWork scheme, SchemeWeek week, LessonPlan plan) {
+    private String weekPrompt(SchemeOfWork scheme, SchemeWeek week, LessonPlan plan, String previousKnowledgeDefault) {
         return """
                 Subject: %s
                 Class: %s
@@ -166,6 +194,7 @@ public class LessonPlanService {
                 Suggested activities: %s
                 Resources: %s
                 Assessment: %s
+                Prior week's topic, if any: %s
                 Lesson date: %s
                 Duration: %d minutes
 
@@ -173,8 +202,20 @@ public class LessonPlanService {
                 """.formatted(
                 scheme.getSubjectName(), scheme.getClassName(), scheme.getTerm(), scheme.getAcademicYear(),
                 week.getWeekNumber(), week.getTopic(), nz(week.getSubTopics()), nz(week.getObjectives()),
-                nz(week.getActivities()), nz(week.getResources()), nz(week.getAssessment()),
+                nz(week.getActivities()), nz(week.getResources()), nz(week.getAssessment()), previousKnowledgeDefault,
                 plan.getLessonDate(), plan.getDurationMinutes());
+    }
+
+    private void requireAssignedIfTeacher(String schoolId, String userId, String role, String className, String classId, String subjectName) {
+        String normalRole = role == null ? "" : role.toUpperCase();
+        if (FULL_ACCESS_ROLES.contains(normalRole)) return;
+        if (!assignmentLookup.isAssigned(schoolId, userId, className, classId, subjectName)) {
+            throw new ForbiddenException("You are not assigned to teach " + subjectName + " for " + className);
+        }
+    }
+
+    private String classNameOf(String schoolId, String classId) {
+        return classes.findByIdAndSchoolId(classId, schoolId).map(SchoolClass::getName).orElse(classId);
     }
 
     private Map<String, Object> parseDraft(String raw) {

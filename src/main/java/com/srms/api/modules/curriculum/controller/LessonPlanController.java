@@ -4,6 +4,7 @@ import com.srms.api.common.ApiResponse;
 import com.srms.api.modules.curriculum.dto.LessonPlanRequests;
 import com.srms.api.modules.curriculum.entity.LessonPlan;
 import com.srms.api.modules.curriculum.service.LessonPlanService;
+import com.srms.api.security.RoleGuard;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -26,19 +27,19 @@ public class LessonPlanController {
                                                               @RequestParam(required = false) String classId,
                                                               Authentication auth) {
         requireRole(auth, STAFF);
-        return ResponseEntity.ok(ApiResponse.ok(service.list(schoolId, classId)));
+        return ResponseEntity.ok(ApiResponse.ok(service.list(schoolId, classId, auth.getName(), RoleGuard.roleOf(auth))));
     }
 
     @PostMapping
     public ResponseEntity<ApiResponse<LessonPlan>> create(@PathVariable String schoolId, @RequestBody LessonPlanRequests.Save req, Authentication auth) {
         requireRole(auth, STAFF);
-        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(service.create(schoolId, req, auth.getName())));
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(service.create(schoolId, req, auth.getName(), RoleGuard.roleOf(auth))));
     }
 
     @PostMapping("/generate")
     public ResponseEntity<ApiResponse<LessonPlan>> generate(@PathVariable String schoolId, @RequestBody LessonPlanRequests.Generate req, Authentication auth) {
         requireRole(auth, STAFF);
-        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(service.generate(schoolId, req, auth.getName())));
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(service.generate(schoolId, req, auth.getName(), RoleGuard.roleOf(auth))));
     }
 
     @PutMapping("/{id}")

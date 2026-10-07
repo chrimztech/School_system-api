@@ -29,13 +29,13 @@ public class SchemeController {
     @GetMapping
     public ResponseEntity<ApiResponse<List<SchemeOfWork>>> list(@PathVariable String schoolId, Authentication auth) {
         requireRole(auth, STAFF);
-        return ResponseEntity.ok(ApiResponse.ok(service.list(schoolId)));
+        return ResponseEntity.ok(ApiResponse.ok(service.list(schoolId, auth.getName(), RoleGuard.roleOf(auth))));
     }
 
     @PostMapping
     public ResponseEntity<ApiResponse<SchemeOfWork>> create(@PathVariable String schoolId, @RequestBody SchemeRequests.Create req, Authentication auth) {
         requireRole(auth, STAFF);
-        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(service.create(schoolId, req, auth.getName())));
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(service.create(schoolId, req, auth.getName(), RoleGuard.roleOf(auth))));
     }
 
     @GetMapping("/{id}")

@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Scheme of work lifecycle: a teacher drafts it (or populates it from the curriculum topics),
@@ -29,13 +30,26 @@ import java.util.List;
 @RequiredArgsConstructor
 @Transactional
 public class SchemeService {
+    // Mirrors AssessmentService's own FULL_ACCESS_ROLES exactly — these roles bypass the
+    // "must be personally assigned to teach this class/subject" check below.
+    private static final Set<String> FULL_ACCESS_ROLES = Set.of(
+            "SUPER_ADMIN", "SCHOOL_ADMIN", "PRINCIPAL", "DEPUTY_HEAD");
+
     private final SchemeOfWorkRepository schemes;
     private final SchemeWeekRepository weeks;
     private final CurriculumTopicRepository topics;
     private final SchoolClassRepository classes;
+    private final TeacherAssignmentLookup assignmentLookup;
 
-    public List<SchemeOfWork> list(String schoolId) {
-        return schemes.findBySchoolIdOrderByCreatedAtDesc(schoolId);
+    /** A plain teacher sees their own schemes plus anything matching their current teaching
+     * assignment (e.g. a colleague's scheme for a class they've since taken over); HOD and
+     * leadership see the whole school's, since reviewing beyond one's own classes is their job. */
+    public List<SchemeOfWork> list(String schoolId, String userId, String role) {
+        List<SchemeOfWork> all = schemes.findBySchoolIdOrderByCreatedAtDesc(schoolId);
+        if (!"TEACHER".equalsIgnoreCase(role)) return all;
+        return all.stream()
+                .filter(s -> userId.equals(s.getCreatedBy()) || assignmentLookup.isAssigned(schoolId, userId, s.getClassName(), s.getClassId(), s.getSubjectName()))
+                .toList();
     }
 
     public SchemeOfWork get(String schoolId, String id) {
@@ -48,12 +62,13 @@ public class SchemeService {
         return weeks.findBySchemeIdOrderByWeekNumberAsc(schemeId);
     }
 
-    public SchemeOfWork create(String schoolId, SchemeRequests.Create req, String actor) {
+    public SchemeOfWork create(String schoolId, SchemeRequests.Create req, String actor, String role) {
         if (blank(req.classId()) || blank(req.subjectName()) || blank(req.term()) || blank(req.academicYear())) {
             throw new BusinessException("Class, subject, term and academic year are all required");
         }
         SchoolClass cls = classes.findByIdAndSchoolId(req.classId(), schoolId)
                 .orElseThrow(() -> new ResourceNotFoundException("Class", req.classId()));
+        requireAssignedIfTeacher(schoolId, actor, role, cls.getName(), cls.getId(), req.subjectName().trim());
         SchemeOfWork scheme = new SchemeOfWork();
         scheme.setSchoolId(schoolId);
         scheme.setClassId(cls.getId());
@@ -149,6 +164,14 @@ public class SchemeService {
                     + " and can no longer be edited");
         }
         return scheme;
+    }
+
+    private void requireAssignedIfTeacher(String schoolId, String userId, String role, String className, String classId, String subjectName) {
+        String normalRole = role == null ? "" : role.toUpperCase();
+        if (FULL_ACCESS_ROLES.contains(normalRole)) return;
+        if (!assignmentLookup.isAssigned(schoolId, userId, className, classId, subjectName)) {
+            throw new ForbiddenException("You are not assigned to teach " + subjectName + " for " + className);
+        }
     }
 
     private static boolean blank(String s) {
