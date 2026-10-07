@@ -4,6 +4,7 @@ import com.srms.api.common.ApiResponse;
 import com.srms.api.exception.BusinessException;
 import com.srms.api.modules.fee.repository.FeePaymentRepository;
 import com.srms.api.modules.integration.client.AfricasTalkingSmsClient;
+import com.srms.api.modules.integration.client.AnthropicClient;
 import com.srms.api.modules.integration.client.AirtelMoneyClient;
 import com.srms.api.modules.integration.client.EczSyncClient;
 import com.srms.api.modules.integration.client.GoogleWorkspaceClient;
@@ -45,6 +46,7 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class IntegrationActionsController {
     private final IntegrationConfigService configService;
+    private final AnthropicClient anthropicClient;
     private final AfricasTalkingSmsClient africasTalkingSmsClient;
     private final MtnMomoClient mtnMomoClient;
     private final AirtelMoneyClient airtelMoneyClient;
@@ -71,6 +73,7 @@ public class IntegrationActionsController {
             case ZoomClient.CODE -> zoomClient.test(schoolId);
             case EczSyncClient.CODE -> eczSyncClient.test(schoolId);
             case GoogleWorkspaceClient.CODE -> googleWorkspaceClient.test(schoolId);
+            case AnthropicClient.CODE -> anthropicClient.test(schoolId);
             case ZynlePayClient.CODE -> zynlePayClient.isConfigured(schoolId)
                     ? IntegrationTestResult.ok("Merchant ID, API ID, and API key are all present")
                     : IntegrationTestResult.fail("Merchant ID, API ID, and API key are all required");

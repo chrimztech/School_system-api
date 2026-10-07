@@ -51,7 +51,8 @@ public class IntegrationConfigService {
             new ProviderMeta("ecz", "ECZ Sync", "Government", null),
             new ProviderMeta("powerbi", "Power BI", "Analytics", null),
             new ProviderMeta("google", "Google Workspace", "Identity", null),
-            new ProviderMeta("zoom", "Zoom Education", "Productivity", "/api/integrations/callbacks/zoom")
+            new ProviderMeta("zoom", "Zoom Education", "Productivity", "/api/integrations/callbacks/zoom"),
+            new ProviderMeta("llm", "AI Lesson Drafting (Anthropic)", "AI", null)
     );
 
     private static ProviderMeta metaFor(String providerCode) {
@@ -221,6 +222,18 @@ public class IntegrationConfigService {
         if (schoolValue.isPresent()) return schoolValue;
         return enabledCredentialMap(IntegrationConfig.ScopeType.PLATFORM, IntegrationConfig.PLATFORM_SCOPE_SCHOOL_ID, providerCode)
                 .map(m -> m.get(key)).filter(v -> v != null && !v.isBlank());
+    }
+
+    /** Strictly this school's own enabled credential, never the platform fallback. Used where a
+     * school's spend or data must never ride on another account (e.g. AI lesson drafting). */
+    public Optional<String> schoolOwnCredential(String providerCode, String schoolId, String key) {
+        return enabledCredentialMap(IntegrationConfig.ScopeType.SCHOOL, schoolId, providerCode)
+                .map(m -> m.get(key)).filter(v -> v != null && !v.isBlank());
+    }
+
+    public Optional<String> schoolOwnConfig(String providerCode, String schoolId, String key) {
+        return enabledConfigMap(IntegrationConfig.ScopeType.SCHOOL, schoolId, providerCode)
+                .map(m -> m.get(key)).map(String::valueOf).filter(v -> !v.isBlank());
     }
 
     /** True only if a school (not platform fallback) has this provider connected — used where a
